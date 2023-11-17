@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {IERC20} from "./interfaces/IERC20.sol";
-import {IRewardsDripModel} from "./interfaces/IRewardsDripModel.sol";
-import {IStkAsset} from "./interfaces/IStkAsset.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
+import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {IStkToken as IStkAsset} from "../interfaces/IStkToken.sol";
 
 /// @dev Multiple asset SafetyModule.
 contract SafetyModule {

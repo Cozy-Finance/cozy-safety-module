@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {IERC20} from "./interfaces/IERC20.sol";
-import {IRewardsDripModel} from "./interfaces/IRewardsDripModel.sol";
-import {IStkAsset} from "./interfaces/IStkAsset.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
+import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {IStkToken as IStkAsset} from "../interfaces/IStkToken.sol";
 
 /// @dev Multiple asset SafetyModule.
 contract SafetyModule {
@@ -46,7 +46,8 @@ contract SafetyModule {
   /// @dev Has config for deposit fee and where to send fees
   address public cozyFeeManager;
 
-  /// @dev Expects `from_` to have approved this SafetyModule for `amount_` of `reserveAssets[assetId_]` so it can `transferFrom`
+  /// @dev Expects `from_` to have approved this SafetyModule for `amount_` of `reserveAssets[assetId_]` so it can
+  /// `transferFrom`
   function depositReserveAssets(uint16 assetId_, address from_, uint256 amount_) external {}
 
   /// @dev Expects depositer to transfer assets to the SafetyModule beforehand.
