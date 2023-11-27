@@ -2,6 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+solc_version = "0.8.22"
 optimizer = true
 optimizer_runs = 10000000
 remappings = [
@@ -9,6 +10,7 @@ remappings = [
   "openzeppelin-contracts/contracts=lib/openzeppelin-contracts/contracts/",
   "solmate/=lib/solmate/src/",
 ]
+fs_permissions = [{ access = "read", path = "./script/input"}]
 
 [profile.default.fuzz]
 runs = 1024
