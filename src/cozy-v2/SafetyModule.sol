@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.22;
+pragma solidity 0.8.22;
 
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
