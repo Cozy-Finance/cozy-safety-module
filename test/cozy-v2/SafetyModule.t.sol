@@ -13,6 +13,9 @@ contract TestSafetyModule is TestBase {
   address owner;
   address trigger;
 
+  MockERC20 tokenA = new MockERC20('TestA', 'TESTA', 6);
+  MockERC20 tokenB = new MockERC20('TestB', 'TESTB', 18);
+
   function setUp() public {
     owner = _randomAddress();
     trigger = _randomAddress();
@@ -61,11 +64,10 @@ contract TestSafetyModule is TestBase {
 
   function test_withdraw() public {
     address receiver_ = _randomAddress();
-    MockERC20 token_ = new MockERC20('Test', 'TEST', 6);
     uint256 depositAmount_ = 1000e6;
 
     // The safety module owns some tokens
-    token_.mint(address(safetyModule), depositAmount_);
+    tokenA.mint(address(safetyModule), depositAmount_);
 
     // Safety module becomes triggered
     _triggerSafetyModule();
@@ -73,22 +75,21 @@ contract TestSafetyModule is TestBase {
     // Owner withdraws tokens from the safety module
     SafetyModule.WithdrawData[] memory withdrawData_ = new SafetyModule.WithdrawData[](1);
     withdrawData_[0] =
-      SafetyModule.WithdrawData({token: IERC20(address(token_)), receiver: receiver_, amount: depositAmount_});
+      SafetyModule.WithdrawData({token: IERC20(address(tokenA)), receiver: receiver_, amount: depositAmount_});
     vm.prank(owner);
     safetyModule.withdraw(withdrawData_);
 
     // Tokens are transfered to the receiver
-    assertEq(token_.balanceOf(address(safetyModule)), 0);
-    assertEq(token_.balanceOf(receiver_), depositAmount_);
+    assertEq(tokenA.balanceOf(address(safetyModule)), 0);
+    assertEq(tokenA.balanceOf(receiver_), depositAmount_);
   }
 
   function test_withdrawTokenMultipleTimes() public {
     address receiver_ = _randomAddress();
-    MockERC20 token_ = new MockERC20('Test', 'TEST', 6);
     uint256 depositAmount_ = 1000e6;
 
     // The safety module owns some tokens
-    token_.mint(address(safetyModule), depositAmount_);
+    tokenA.mint(address(safetyModule), depositAmount_);
 
     // Safety module becomes triggered
     _triggerSafetyModule();
@@ -96,33 +97,31 @@ contract TestSafetyModule is TestBase {
     // Owner withdraws half of the tokens from the safety module
     SafetyModule.WithdrawData[] memory withdrawData_ = new SafetyModule.WithdrawData[](1);
     withdrawData_[0] =
-      SafetyModule.WithdrawData({token: IERC20(address(token_)), receiver: receiver_, amount: depositAmount_ / 2});
+      SafetyModule.WithdrawData({token: IERC20(address(tokenA)), receiver: receiver_, amount: depositAmount_ / 2});
     vm.prank(owner);
     safetyModule.withdraw(withdrawData_);
 
     // Half of the tokens are transfered to the receiver
-    assertEq(token_.balanceOf(address(safetyModule)), depositAmount_ / 2);
-    assertEq(token_.balanceOf(receiver_), depositAmount_ / 2);
+    assertEq(tokenA.balanceOf(address(safetyModule)), depositAmount_ / 2);
+    assertEq(tokenA.balanceOf(receiver_), depositAmount_ / 2);
 
     // Owner withdraws remaining tokens from the safety module
     vm.prank(owner);
     safetyModule.withdraw(withdrawData_);
 
     // The tokens are transfered to the receiver
-    assertEq(token_.balanceOf(address(safetyModule)), 0);
-    assertEq(token_.balanceOf(receiver_), depositAmount_);
+    assertEq(tokenA.balanceOf(address(safetyModule)), 0);
+    assertEq(tokenA.balanceOf(receiver_), depositAmount_);
   }
 
   function test_withdrawMultipleTokens() public {
     address receiver_ = _randomAddress();
-    MockERC20 tokenA_ = new MockERC20('TestA', 'TESTA', 6);
-    MockERC20 tokenB_ = new MockERC20('TestB', 'TESTB', 18);
     uint256 depositAmountA_ = 1000e6;
     uint256 depositAmountB_ = 500e18;
 
     // The safety module owns some tokens
-    tokenA_.mint(address(safetyModule), depositAmountA_);
-    tokenB_.mint(address(safetyModule), depositAmountB_);
+    tokenA.mint(address(safetyModule), depositAmountA_);
+    tokenB.mint(address(safetyModule), depositAmountB_);
 
     // Safety module becomes triggered
     _triggerSafetyModule();
@@ -130,29 +129,27 @@ contract TestSafetyModule is TestBase {
     // Owner withdraws the tokens from the safety module
     SafetyModule.WithdrawData[] memory withdrawData_ = new SafetyModule.WithdrawData[](2);
     withdrawData_[0] =
-      SafetyModule.WithdrawData({token: IERC20(address(tokenA_)), receiver: receiver_, amount: depositAmountA_});
+      SafetyModule.WithdrawData({token: IERC20(address(tokenA)), receiver: receiver_, amount: depositAmountA_});
     withdrawData_[1] =
-      SafetyModule.WithdrawData({token: IERC20(address(tokenB_)), receiver: receiver_, amount: depositAmountB_});
+      SafetyModule.WithdrawData({token: IERC20(address(tokenB)), receiver: receiver_, amount: depositAmountB_});
     vm.prank(owner);
     safetyModule.withdraw(withdrawData_);
 
     // The tokens are transfered to the receiver
-    assertEq(tokenA_.balanceOf(address(safetyModule)), 0);
-    assertEq(tokenB_.balanceOf(address(safetyModule)), 0);
-    assertEq(tokenA_.balanceOf(receiver_), depositAmountA_);
-    assertEq(tokenB_.balanceOf(receiver_), depositAmountB_);
+    assertEq(tokenA.balanceOf(address(safetyModule)), 0);
+    assertEq(tokenB.balanceOf(address(safetyModule)), 0);
+    assertEq(tokenA.balanceOf(receiver_), depositAmountA_);
+    assertEq(tokenB.balanceOf(receiver_), depositAmountB_);
   }
 
   function test_withdrawMultipleTokensMultipleTimes() public {
     address receiver_ = _randomAddress();
-    MockERC20 tokenA_ = new MockERC20('TestA', 'TESTA', 6);
-    MockERC20 tokenB_ = new MockERC20('TestB', 'TESTB', 18);
     uint256 depositAmountA_ = 1000e6;
     uint256 depositAmountB_ = 500e18;
 
     // The safety module owns some tokens
-    tokenA_.mint(address(safetyModule), depositAmountA_);
-    tokenB_.mint(address(safetyModule), depositAmountB_);
+    tokenA.mint(address(safetyModule), depositAmountA_);
+    tokenB.mint(address(safetyModule), depositAmountB_);
 
     // Safety module becomes triggered
     _triggerSafetyModule();
@@ -160,40 +157,41 @@ contract TestSafetyModule is TestBase {
     // Owner withdraws the tokens from the safety module
     SafetyModule.WithdrawData[] memory withdrawData_ = new SafetyModule.WithdrawData[](2);
     withdrawData_[0] =
-      SafetyModule.WithdrawData({token: IERC20(address(tokenA_)), receiver: receiver_, amount: depositAmountA_ / 2});
+      SafetyModule.WithdrawData({token: IERC20(address(tokenA)), receiver: receiver_, amount: depositAmountA_ / 2});
     withdrawData_[1] =
-      SafetyModule.WithdrawData({token: IERC20(address(tokenB_)), receiver: receiver_, amount: depositAmountB_ / 2});
+      SafetyModule.WithdrawData({token: IERC20(address(tokenB)), receiver: receiver_, amount: depositAmountB_ / 2});
     vm.prank(owner);
     safetyModule.withdraw(withdrawData_);
 
     // Half of the tokens are transfered to the receiver
-    assertEq(tokenA_.balanceOf(address(safetyModule)), depositAmountA_ / 2);
-    assertEq(tokenB_.balanceOf(address(safetyModule)), depositAmountB_ / 2);
-    assertEq(tokenA_.balanceOf(receiver_), depositAmountA_ / 2);
-    assertEq(tokenB_.balanceOf(receiver_), depositAmountB_ / 2);
+    assertEq(tokenA.balanceOf(address(safetyModule)), depositAmountA_ / 2);
+    assertEq(tokenB.balanceOf(address(safetyModule)), depositAmountB_ / 2);
+    assertEq(tokenA.balanceOf(receiver_), depositAmountA_ / 2);
+    assertEq(tokenB.balanceOf(receiver_), depositAmountB_ / 2);
 
     vm.prank(owner);
     safetyModule.withdraw(withdrawData_);
 
     // The remaining tokens are transfered to the receiver
-    assertEq(tokenA_.balanceOf(address(safetyModule)), 0);
-    assertEq(tokenB_.balanceOf(address(safetyModule)), 0);
-    assertEq(tokenA_.balanceOf(receiver_), depositAmountA_);
-    assertEq(tokenB_.balanceOf(receiver_), depositAmountB_);
+    assertEq(tokenA.balanceOf(address(safetyModule)), 0);
+    assertEq(tokenB.balanceOf(address(safetyModule)), 0);
+    assertEq(tokenA.balanceOf(receiver_), depositAmountA_);
+    assertEq(tokenB.balanceOf(receiver_), depositAmountB_);
   }
 
   function test_withdrawETH() public {
     address receiver_ = _randomAddress();
+    uint256 depositAmount_ = 500e18;
 
     // The safety module owns some ETH
-    vm.deal(address(safetyModule), 1 ether);
+    vm.deal(address(safetyModule), depositAmount_);
 
     // Safety module becomes triggered
     _triggerSafetyModule();
 
     vm.prank(owner);
-    safetyModule.withdrawETH(receiver_, 1 ether);
-    assertEq(receiver_.balance, 1 ether);
+    safetyModule.withdrawETH(receiver_, depositAmount_);
+    assertEq(receiver_.balance, depositAmount_);
     assertEq(address(safetyModule).balance, 0);
   }
 
@@ -218,5 +216,73 @@ contract TestSafetyModule is TestBase {
     safetyModule.withdrawETH(receiver_, depositAmount_ / 2);
     assertEq(receiver_.balance, depositAmount_);
     assertEq(address(safetyModule).balance, 0);
+  }
+
+  function testFuzz_RevertWithdrawUnauthorized(address caller_) public {
+    vm.assume(caller_ != owner);
+    address receiver_ = _randomAddress();
+    uint256 depositAmount_ = 1000e6;
+
+    // The safety module owns some tokens
+    tokenA.mint(address(safetyModule), depositAmount_);
+
+    // Safety module becomes triggered
+    _triggerSafetyModule();
+
+    SafetyModule.WithdrawData[] memory withdrawData_ = new SafetyModule.WithdrawData[](1);
+    withdrawData_[0] =
+      SafetyModule.WithdrawData({token: IERC20(address(tokenA)), receiver: receiver_, amount: depositAmount_ / 2});
+
+    // Withdraw failes, caller is unauthorized
+    vm.prank(caller_);
+    vm.expectRevert(Ownable.Unauthorized.selector);
+    safetyModule.withdraw(withdrawData_);
+  }
+
+  function testFuzz_RevertWithdrawInvalidState() public {
+    address receiver_ = _randomAddress();
+    uint256 depositAmount_ = 1000e6;
+
+    // The safety module owns some tokens
+    tokenA.mint(address(safetyModule), depositAmount_);
+
+    SafetyModule.WithdrawData[] memory withdrawData_ = new SafetyModule.WithdrawData[](1);
+    withdrawData_[0] =
+      SafetyModule.WithdrawData({token: IERC20(address(tokenA)), receiver: receiver_, amount: depositAmount_ / 2});
+
+    // Withdraw fails, safety module is not triggered
+    vm.prank(owner);
+    vm.expectRevert(SafetyModule.InvalidState.selector);
+    safetyModule.withdraw(withdrawData_);
+  }
+
+  function testFuzz_RevertWithdrawETHUnauthorized(address caller_) public {
+    vm.assume(caller_ != owner);
+    address receiver_ = _randomAddress();
+    uint256 depositAmount_ = 1000e18;
+
+    // The safety module owns some ETH
+    vm.deal(address(safetyModule), depositAmount_);
+
+    // Safety module becomes triggered
+    _triggerSafetyModule();
+
+    // Withdraw is unauthorized
+    vm.prank(caller_);
+    vm.expectRevert(Ownable.Unauthorized.selector);
+    safetyModule.withdrawETH(receiver_, depositAmount_);
+  }
+
+  function testFuzz_RevertWithdrawETHInvalidState() public {
+    address receiver_ = _randomAddress();
+    uint256 depositAmount_ = 1000e6;
+
+    // The safety module owns some ETH
+    vm.deal(address(safetyModule), depositAmount_);
+
+    // Withdraw failes, safety module is not triggered
+    vm.prank(owner);
+    vm.expectRevert(SafetyModule.InvalidState.selector);
+    safetyModule.withdrawETH(receiver_, depositAmount_);
   }
 }
