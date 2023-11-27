@@ -25,7 +25,6 @@ contract SafetyModule is Ownable {
   event WithdrawToken(IERC20 indexed token, address indexed receiver, uint256 amount);
   event WithdrawETH(address indexed receiver, uint256 amount);
   event Triggered();
-  event TriggerRoleTransferred(address indexed previousTrigger, address indexed newTrigger);
 
   struct WithdrawData {
     IERC20 token;
@@ -64,12 +63,6 @@ contract SafetyModule is Ownable {
   function triggerSafetyModule() external onlyTrigger {
     isTriggered = true;
     emit Triggered();
-  }
-
-  /// @notice Transfers the trigger role to a different address.
-  function transferTrigger(address newTrigger_) external onlyOwner {
-    emit TriggerRoleTransferred(trigger, newTrigger_);
-    trigger = newTrigger_;
   }
 
   modifier uninitialized() {
