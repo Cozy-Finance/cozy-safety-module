@@ -286,3 +286,44 @@ contract TestSafetyModule is TestBase {
     safetyModule.withdrawETH(receiver_, depositAmount_);
   }
 }
+
+contract TestSafetyModuleForkTest is TestBase {
+  uint256 optimismForkBlock = 112800342;
+
+  // Dogfood safety module deployed on Optimism
+  SafetyModule safetyModule = SafetyModule(0xEeA665DCA17b65124B955FBA9BF6dFF9e0eE5358);
+
+  // Cozy owned 2/3 multisig
+  address owner = 0xbD1051d14E40BD7AeAc21892eDaD9bafC6352D72;
+
+  MockERC20 token;
+
+  function setUp() public {
+    vm.createSelectFork(vm.envString("OPTIMISM_RPC_URL"), optimismForkBlock);
+    token = new MockERC20('Test', 'TEST', 6);
+  }
+
+  function test_triggerAndWithdraw() public {
+    address receiver_ = owner;
+    uint256 depositAmount_ = 1000e6;
+
+    // The safety module owns some tokens
+    token.mint(address(safetyModule), depositAmount_);
+    assertEq(token.balanceOf(receiver_), 0);
+
+    // Trigger the safety module
+    vm.prank(owner);
+    safetyModule.triggerSafetyModule();
+
+    // Owner withdraws tokens from the safety module
+    SafetyModule.WithdrawData[] memory withdrawData_ = new SafetyModule.WithdrawData[](1);
+    withdrawData_[0] =
+      SafetyModule.WithdrawData({token: IERC20(address(token)), receiver: receiver_, amount: depositAmount_});
+    vm.prank(owner);
+    safetyModule.withdraw(withdrawData_);
+
+    // Tokens are transfered to the receiver
+    assertEq(token.balanceOf(address(safetyModule)), 0);
+    assertEq(token.balanceOf(receiver_), depositAmount_);
+  }
+}
