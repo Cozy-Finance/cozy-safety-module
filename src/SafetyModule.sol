@@ -2,11 +2,15 @@
 pragma solidity ^0.8.22;
 
 import {IERC20} from "./interfaces/IERC20.sol";
+import {IManager} from "./interfaces/IManager.sol";
 import {IRewardsDripModel} from "./interfaces/IRewardsDripModel.sol";
 import {IStkToken} from "./interfaces/IStkToken.sol";
+import {IStkTokenFactory} from "./interfaces/IStkTokenFactory.sol";
+import {RewardPoolConfig} from "./lib/structs/Configs.sol";
+import {Governable} from "./lib/Governable.sol";
 
 /// @dev Multiple asset SafetyModule.
-contract SafetyModule {
+contract SafetyModule is Governable {
   struct ReservePool {
     IERC20 token;
     IStkToken stkToken;
@@ -19,6 +23,7 @@ contract SafetyModule {
   }
 
   struct UndrippedRewardPool {
+    IERC20 token;
     uint128 amount;
     IRewardsDripModel dripModel;
     uint128 lastDripTime;
@@ -62,7 +67,49 @@ contract SafetyModule {
   uint128 public unstakeDelay;
 
   /// @dev Has config for deposit fee and where to send fees
-  address public cozyManager;
+  IManager public immutable cozyManager;
+
+  /// @notice Address of the Cozy protocol stkTokenFactory.
+  IStkTokenFactory public immutable stkTokenFactory;
+
+  constructor(IManager manager_, IStkTokenFactory stkTokenFactory_) {
+    _assertAddressNotZero(address(manager_));
+    _assertAddressNotZero(address(stkTokenFactory_));
+    cozyManager = manager_;
+    stkTokenFactory = stkTokenFactory_;
+  }
+
+  function initialize(
+    address owner_,
+    address pauser_,
+    IERC20[] calldata reserveAssets_,
+    RewardPoolConfig[] calldata rewardPoolConfig_,
+    uint128 unstakeDelay_
+  ) external {
+    // Sets are minimal proxies, so the owner and pauser is set to address(0) in the constructor for the logic
+    // contract. When the set is initialized for the minimal proxy, we update the owner and pauser.
+    __initGovernable(owner_, pauser_);
+
+    // TODO: Move to configurator lib
+    // TODO: Emit event, either like cozy v2 where we use the configuration update event, or maybe specific to init
+    for (uint8 i; i < reserveAssets_.length; i++) {
+      IStkToken stkToken_ = stkTokenFactory.deployStkToken(i, reserveAssets_[i].decimals());
+      reservePools[i] = ReservePool({token: reserveAssets_[i], stkToken: stkToken_, amount: 0});
+      stkTokenToReservePoolIds[stkToken_] = IdLookup({index: i, exists: true});
+      reserveTokenToReservePoolIds[reserveAssets_[i]] = IdLookup({index: i, exists: true});
+    }
+    for (uint8 i; i < rewardPoolConfig_.length; i++) {
+      claimableRewardPools[i] = RewardPool({token: rewardPoolConfig_[i].token, amount: 0});
+      undrippedRewardPools[i] = UndrippedRewardPool({
+        token: rewardPoolConfig_[i].token,
+        amount: 0,
+        dripModel: rewardPoolConfig_[i].dripModel,
+        lastDripTime: 0
+      });
+      stkTokenRewardPoolWeights[i] = rewardPoolConfig_[i].weight;
+    }
+    unstakeDelay = unstakeDelay_;
+  }
 
   // -------------------------------------------------------------------
   // --------- TODO: Move these functions to abstract contracts --------

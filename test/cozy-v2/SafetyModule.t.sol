@@ -288,7 +288,7 @@ contract TestSafetyModule is TestBase {
 }
 
 contract TestSafetyModuleForkTest is TestBase {
-  uint256 optimismForkBlock = 112800342;
+  uint256 optimismForkBlock = 112_800_342;
 
   // Dogfood safety module deployed on Optimism
   SafetyModule safetyModule = SafetyModule(0xEeA665DCA17b65124B955FBA9BF6dFF9e0eE5358);

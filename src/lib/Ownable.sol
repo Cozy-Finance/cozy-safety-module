@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
+import {IOwnable} from "../interfaces/IOwnable.sol";
+
 /**
  * @dev Contract module providing owner functionality, intended to be used through inheritance.
  */
-abstract contract Ownable {
+abstract contract Ownable is IOwnable {
   /// @notice Contract owner.
   address public owner;
 
