@@ -5,7 +5,7 @@ import {IERC20} from "../../interfaces/IERC20.sol";
 import {IRewardsDripModel} from "../../interfaces/IRewardsDripModel.sol";
 
 struct RewardPoolConfig {
-  IERC20 token;
+  IERC20 asset;
   IRewardsDripModel dripModel;
   uint16 weight;
 }

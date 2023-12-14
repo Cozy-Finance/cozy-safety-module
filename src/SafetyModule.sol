@@ -12,7 +12,7 @@ import {Governable} from "./lib/Governable.sol";
 import {Staker} from "./lib/Staker.sol";
 import {Unstaker} from "./lib/Unstaker.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
-import {ReservePool, TokenPool, IdLookup} from "./lib/structs/Pools.sol";
+import {ReservePool, AssetPool, IdLookup} from "./lib/structs/Pools.sol";
 import {ClaimedRewards} from "./lib/structs/Rewards.sol";
 import {RewardPool, UndrippedRewardPool, ClaimedRewards} from "./lib/structs/Rewards.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
@@ -42,19 +42,18 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Staker, Unstaker {
     for (uint8 i; i < reserveAssets_.length; i++) {
       IStkToken stkToken_ = stkTokenFactory.deployStkToken(i, reserveAssets_[i].decimals());
       reservePools[i] = ReservePool({
-        token: reserveAssets_[i],
+        asset: reserveAssets_[i],
         stkToken: stkToken_,
         depositToken: IDepositToken(address(stkToken_)),
         stakeAmount: 0,
         depositAmount: 0
       });
       stkTokenToReservePoolIds[stkToken_] = IdLookup({index: i, exists: true});
-      reserveTokenToReservePoolIds[reserveAssets_[i]] = IdLookup({index: i, exists: true});
     }
     for (uint8 i; i < rewardPoolConfig_.length; i++) {
-      claimableRewardPools[i] = RewardPool({token: rewardPoolConfig_[i].token, amount: 0});
+      claimableRewardPools[i] = RewardPool({asset: rewardPoolConfig_[i].asset, amount: 0});
       undrippedRewardPools[i] = UndrippedRewardPool({
-        token: rewardPoolConfig_[i].token,
+        asset: rewardPoolConfig_[i].asset,
         amount: 0,
         dripModel: rewardPoolConfig_[i].dripModel,
         lastDripTime: 0
