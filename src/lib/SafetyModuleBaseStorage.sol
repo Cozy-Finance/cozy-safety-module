@@ -40,8 +40,8 @@ abstract contract SafetyModuleBaseStorage {
   /// @dev Has config for deposit fee and where to send fees
   IManager public immutable cozyManager;
 
-  /// @notice Address of the Cozy protocol stkTokenFactory.
-  IReceiptTokenFactory public immutable stkTokenFactory;
+  /// @notice Address of the Cozy protocol ReceiptTokenFactory.
+  IReceiptTokenFactory public immutable receiptTokenFactory;
 
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;

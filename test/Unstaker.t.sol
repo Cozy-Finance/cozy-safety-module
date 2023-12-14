@@ -61,10 +61,11 @@ contract UnstakerUnitTest is TestBase {
 
     ReceiptToken stkTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
     stkTokenLogic_.initialize(ISafetyModule(address(0)), 0);
-    ReceiptTokenFactory stkTokenFactory = new ReceiptTokenFactory(IReceiptToken(address(stkTokenLogic_)));
+    ReceiptTokenFactory receiptTokenFactory = new ReceiptTokenFactory(IReceiptToken(address(stkTokenLogic_)));
 
     vm.prank(address(component));
-    stkToken = IReceiptToken(address(stkTokenFactory.deployReceiptToken(0, IReceiptTokenFactory.PoolType.STAKE, 18)));
+    stkToken =
+      IReceiptToken(address(receiptTokenFactory.deployReceiptToken(0, IReceiptTokenFactory.PoolType.STAKE, 18)));
     vm.stopPrank();
 
     component.mockAddReservePool(

@@ -19,11 +19,11 @@ import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 
 /// @dev Multiple asset SafetyModule.
 contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Staker, Unstaker {
-  constructor(IManager manager_, IReceiptTokenFactory stkTokenFactory_) {
+  constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(manager_));
-    _assertAddressNotZero(address(stkTokenFactory_));
+    _assertAddressNotZero(address(receiptTokenFactory_));
     cozyManager = manager_;
-    stkTokenFactory = stkTokenFactory_;
+    receiptTokenFactory = receiptTokenFactory_;
   }
 
   function initialize(
@@ -39,12 +39,11 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Staker,
 
     // TODO: Move to configurator lib
     // TODO: Emit event, either like cozy v2 where we use the configuration update event, or maybe specific to init
-    // TODO: Deploy deposit token contracts through separate factories
     for (uint8 i; i < reserveAssets_.length; i++) {
       IReceiptToken stkToken_ =
-        stkTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.STAKE, reserveAssets_[i].decimals());
+        receiptTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.STAKE, reserveAssets_[i].decimals());
       IReceiptToken depositToken_ =
-        stkTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.DEPOSIT, reserveAssets_[i].decimals());
+        receiptTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.DEPOSIT, reserveAssets_[i].decimals());
       reservePools[i] = ReservePool({
         asset: reserveAssets_[i],
         stkToken: stkToken_,
@@ -58,7 +57,7 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Staker,
       claimableRewardPools[i] = RewardPool({token: rewardPoolConfig_[i].token, amount: 0});
 
       IReceiptToken depositToken_ =
-        stkTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.REWARD, reserveAssets_[i].decimals());
+        receiptTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.REWARD, reserveAssets_[i].decimals());
       undrippedRewardPools[i] = UndrippedRewardPool({
         asset: rewardPoolConfig_[i].asset,
         amount: 0,
