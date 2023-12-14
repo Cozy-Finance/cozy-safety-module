@@ -1,8 +1,7 @@
-
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-import {IDepositToken} from "../interfaces/IDepositToken.sol";
+import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {DepositPool, ReservePool, TokenPool, UndrippedRewardPool} from "./structs/Pools.sol";
 import {SafeERC20} from "./SafeERC20.sol";
@@ -21,7 +20,10 @@ abstract contract Depositor is SafetyModuleCommon {
 
   /// @dev Expects `from_` to have approved this SafetyModule for `amount_` of `reservePools[reservePoolId_]` so it can
   /// `transferFrom`
-  function depositReserveAssets(uint16 reservePoolId_, uint256 amount_, address receiver_, address from_) external returns (uint256 depositTokenAmount_) {
+  function depositReserveAssets(uint16 reservePoolId_, uint256 amount_, address receiver_, address from_)
+    external
+    returns (uint256 depositTokenAmount_)
+  {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
 
     IERC20 token_ = reservePool_.token;
@@ -38,7 +40,10 @@ abstract contract Depositor is SafetyModuleCommon {
   }
 
   /// @dev Expects depositer to transfer assets to the SafetyModule beforehand.
-  function depositReserveAssetsWithoutTransfer(uint16 reservePoolId_, uint256 amount_, address receiver_) external returns (uint256 depositTokenAmount_) {
+  function depositReserveAssetsWithoutTransfer(uint16 reservePoolId_, uint256 amount_, address receiver_)
+    external
+    returns (uint256 depositTokenAmount_)
+  {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     IERC20 token_ = reservePool_.token;
     TokenPool storage tokenPool_ = tokenPools[token_];
@@ -48,7 +53,10 @@ abstract contract Depositor is SafetyModuleCommon {
     depositTokenAmount_ = _executeReserveDeposit(amount_, receiver_, tokenPool_, reservePool_);
   }
 
-  function depositRewardAssets(uint16 claimableRewardPoolId_, uint256 amount_, address receiver_, address from_) external returns (uint256 depositTokenAmount_) {
+  function depositRewardAssets(uint16 claimableRewardPoolId_, uint256 amount_, address receiver_, address from_)
+    external
+    returns (uint256 depositTokenAmount_)
+  {
     UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[claimableRewardPoolId_];
 
     IERC20 token_ = rewardsPool_.token;
@@ -64,7 +72,10 @@ abstract contract Depositor is SafetyModuleCommon {
     depositTokenAmount_ = _executeRewardDeposit(amount_, receiver_, tokenPools[token_], rewardsPool_);
   }
 
-  function depositRewardAssetsWithoutTransfer(uint16 claimableRewardPoolId_, uint256 amount_, address receiver_) external returns (uint256 depositTokenAmount_) {
+  function depositRewardAssetsWithoutTransfer(uint16 claimableRewardPoolId_, uint256 amount_, address receiver_)
+    external
+    returns (uint256 depositTokenAmount_)
+  {
     UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[claimableRewardPoolId_];
     IERC20 token_ = rewardsPool_.token;
     TokenPool storage tokenPool_ = tokenPools[token_];
@@ -82,7 +93,7 @@ abstract contract Depositor is SafetyModuleCommon {
   ) internal returns (uint256 depositTokenAmount_) {
     if (safetyModuleState != SafetyModuleState.ACTIVE) revert InvalidState();
 
-    IDepositToken depositToken_ = reservePool_.depositToken;
+    IReceiptToken depositToken_ = reservePool_.depositToken;
 
     depositTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       amount_, depositToken_.totalSupply(), reservePool_.depositAmount
@@ -103,11 +114,10 @@ abstract contract Depositor is SafetyModuleCommon {
   ) internal returns (uint256 depositTokenAmount_) {
     if (safetyModuleState != SafetyModuleState.ACTIVE) revert InvalidState();
 
-    IDepositToken depositToken_ = rewardPool_.depositToken;
+    IReceiptToken depositToken_ = rewardPool_.depositToken;
 
-    depositTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
-      amount_, depositToken_.totalSupply(), rewardPool_.amount
-    );
+    depositTokenAmount_ =
+      SafetyModuleCalculationsLib.convertToReceiptTokenAmount(amount_, depositToken_.totalSupply(), rewardPool_.amount);
     // Increment reserve pool accounting only after calculating `depositTokenAmount_` to mint.
     rewardPool_.amount += amount_;
     tokenPool_.balance += amount_;

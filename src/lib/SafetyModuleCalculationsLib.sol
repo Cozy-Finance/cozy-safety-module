@@ -18,18 +18,18 @@ library SafetyModuleCalculationsLib {
     pure
     returns (uint256 stkTokenAmount_)
   {
-    stkTokenAmount_ = tokenSupply_ == 0
-      ? assetAmount_
-      : assetAmount_.mulDivDown(tokenSupply_, _reservePoolAmountWithFloor(reservePoolAmount_));
+    stkTokenAmount_ =
+      tokenSupply_ == 0 ? assetAmount_ : assetAmount_.mulDivDown(tokenSupply_, _reservePoolAmountWithFloor(reservePoolAmount_));
   }
 
-  /// @notice The `reserveAssetAmount_` that the safety module would exchange for `receiptTokenAmount_` of the receipt token.
+  /// @notice The `reserveAssetAmount_` that the safety module would exchange for `receiptTokenAmount_` of the receipt
+  /// token.
   /// @dev See the ERC-4626 spec for more info.
-  function convertToReserveAssetAmount(uint256 receiptTokenAmount_, uint256 receiptTokenSupply_, uint256 reservePoolAmount_)
-    internal
-    pure
-    returns (uint256 reserveAssetAmount_)
-  {
+  function convertToReserveAssetAmount(
+    uint256 receiptTokenAmount_,
+    uint256 receiptTokenSupply_,
+    uint256 reservePoolAmount_
+  ) internal pure returns (uint256 reserveAssetAmount_) {
     reserveAssetAmount_ = receiptTokenSupply_ == 0
       ? reservePoolAmount_
       : receiptTokenAmount_.mulDivDown(_reservePoolAmountWithFloor(reservePoolAmount_), receiptTokenSupply_);

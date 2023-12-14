@@ -4,9 +4,8 @@ pragma solidity ^0.8.22;
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {IRewardsDripModel} from "./interfaces/IRewardsDripModel.sol";
-import {IDepositToken} from "./interfaces/IDepositToken.sol";
-import {IStkToken} from "./interfaces/IStkToken.sol";
-import {IStkTokenFactory} from "./interfaces/IStkTokenFactory.sol";
+import {IReceiptToken} from "./interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "./interfaces/IReceiptTokenFactory.sol";
 import {RewardPoolConfig} from "./lib/structs/Configs.sol";
 import {Governable} from "./lib/Governable.sol";
 import {Staker} from "./lib/Staker.sol";
@@ -19,7 +18,7 @@ import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 
 /// @dev Multiple asset SafetyModule.
 contract SafetyModule is Governable, SafetyModuleBaseStorage, Staker, Unstaker {
-  constructor(IManager manager_, IStkTokenFactory stkTokenFactory_) {
+  constructor(IManager manager_, IReceiptTokenFactory stkTokenFactory_) {
     _assertAddressNotZero(address(manager_));
     _assertAddressNotZero(address(stkTokenFactory_));
     cozyManager = manager_;
@@ -41,24 +40,30 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Staker, Unstaker {
     // TODO: Emit event, either like cozy v2 where we use the configuration update event, or maybe specific to init
     // TODO: Deploy deposit token contracts
     for (uint8 i; i < reserveAssets_.length; i++) {
-      IStkToken stkToken_ = stkTokenFactory.deployStkToken(i, reserveAssets_[i].decimals());
+      IReceiptToken stkToken_ =
+        stkTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.STAKE, reserveAssets_[i].decimals());
+      IReceiptToken depositToken_ =
+        stkTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.DEPOSIT, reserveAssets_[i].decimals());
       reservePools[i] = ReservePool({
         asset: reserveAssets_[i],
         stkToken: stkToken_,
-        depositToken: IDepositToken(address(0)),
+        depositToken: depositToken_,
         stakeAmount: 0,
         depositAmount: 0
       });
       stkTokenToReservePoolIds[stkToken_] = IdLookup({index: i, exists: true});
     }
     for (uint8 i; i < rewardPoolConfig_.length; i++) {
-      claimableRewardPools[i] = RewardPool({asset: rewardPoolConfig_[i].asset, amount: 0});
+      claimableRewardPools[i] = RewardPool({token: rewardPoolConfig_[i].token, amount: 0});
+
+      IReceiptToken depositToken_ =
+        stkTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.REWARD, reserveAssets_[i].decimals());
       undrippedRewardPools[i] = UndrippedRewardPool({
         asset: rewardPoolConfig_[i].asset,
         amount: 0,
         dripModel: rewardPoolConfig_[i].dripModel,
         lastDripTime: 0,
-        depositToken: IDepositToken(address(0))
+        depositToken: depositToken_
       });
       stkTokenRewardPoolWeights[i] = rewardPoolConfig_[i].weight;
     }

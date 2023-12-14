@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {IERC20} from "../interfaces/IERC20.sol";
 import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
-import {IStkToken as IStkAsset} from "../interfaces/IStkToken.sol";
+import {IReceiptToken as IStkAsset} from "../interfaces/IReceiptToken.sol";
 
 /// @dev Multiple asset SafetyModule.
 contract SafetyModule {

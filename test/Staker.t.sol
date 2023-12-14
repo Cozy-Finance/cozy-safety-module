@@ -4,8 +4,7 @@ pragma solidity 0.8.22;
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
-import {IDepositToken} from "../src/interfaces/IDepositToken.sol";
-import {IStkToken} from "../src/interfaces/IStkToken.sol";
+import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IStakerErrors} from "../src/interfaces/IStakerErrors.sol";
 import {CozyMath} from "../src/lib/CozyMath.sol";
@@ -34,8 +33,8 @@ contract StakerUnitTest is TestBase {
   function setUp() public {
     ReservePool memory initialReservePool_ = ReservePool({
       asset: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
+      stkToken: IReceiptToken(address(mockStkToken)),
+      depositToken: IReceiptToken(address(mockDepositToken)),
       stakeAmount: 100e18,
       depositAmount: 99e18
     });

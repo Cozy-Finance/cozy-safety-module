@@ -2,6 +2,8 @@
 pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {Depositor} from "./Depositor.sol";
+import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {IStakerErrors} from "../interfaces/IStakerErrors.sol";
 import {ReservePool, AssetPool} from "./structs/Pools.sol";
@@ -63,6 +65,8 @@ abstract contract Staker is SafetyModuleCommon, IStakerErrors {
     ReservePool storage reservePool_
   ) internal returns (uint256 stkTokenAmount_) {
     if (safetyModuleState == SafetyModuleState.PAUSED) revert InvalidState();
+
+    IReceiptToken stkToken_ = reservePool_.stkToken;
 
     stkTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       reserveAssetAmount_, reservePool_.stkToken.totalSupply(), reservePool_.stakeAmount
