@@ -7,7 +7,7 @@ import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
-import {RewardPool, UndrippedRewardPool, ClaimedRewards} from "./structs/Rewards.sol";
+import {RewardPool, ClaimedRewards} from "./structs/Rewards.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 abstract contract SafetyModuleBaseStorage {

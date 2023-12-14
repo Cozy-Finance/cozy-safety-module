@@ -18,8 +18,9 @@ library SafetyModuleCalculationsLib {
     pure
     returns (uint256 stkTokenAmount_)
   {
-    stkTokenAmount_ =
-      tokenSupply_ == 0 ? assetAmount_ : assetAmount_.mulDivDown(tokenSupply_, _reservePoolAmountWithFloor(reservePoolAmount_));
+    stkTokenAmount_ = tokenSupply_ == 0
+      ? assetAmount_
+      : assetAmount_.mulDivDown(tokenSupply_, _reservePoolAmountWithFloor(reservePoolAmount_));
   }
 
   /// @notice The `reserveAssetAmount_` that the safety module would exchange for `receiptTokenAmount_` of the receipt

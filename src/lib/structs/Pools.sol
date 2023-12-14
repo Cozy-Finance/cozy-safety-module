@@ -21,7 +21,7 @@ struct ReservePool {
 }
 
 struct UndrippedRewardPool {
-  IERC20 token;
+  IERC20 asset;
   uint256 amount;
   IRewardsDripModel dripModel;
   uint128 lastDripTime;

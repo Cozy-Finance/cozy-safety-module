@@ -123,7 +123,7 @@ contract StakerUnitTest is TestBase {
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
   }
 
-  function test_stake_RevertSafetyModulePaused() external {
+  function testFuzz_stake_RevertSafetyModulePaused(uint256 amountToStake_) external {
     component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
 
     address staker_ = _randomAddress();
@@ -258,7 +258,7 @@ contract StakerUnitTest is TestBase {
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
   }
 
-  function test_stakeWithoutTransfer_RevertSafetyModulePaused() external {
+  function testFuzz_stakeWithoutTransfer_RevertSafetyModulePaused(uint256 amountToStake_) external {
     component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
 
     amountToStake_ = bound(amountToStake_, 1, type(uint216).max);

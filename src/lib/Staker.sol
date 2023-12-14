@@ -69,13 +69,13 @@ abstract contract Staker is SafetyModuleCommon {
     IReceiptToken stkToken_ = reservePool_.stkToken;
 
     stkTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
-      reserveAssetAmount_, reservePool_.stkToken.totalSupply(), reservePool_.stakeAmount
+      reserveAssetAmount_, stkToken_.totalSupply(), reservePool_.stakeAmount
     );
     // Increment reserve pool accounting only after calculating `stkTokenAmount_` to mint.
     reservePool_.stakeAmount += reserveAssetAmount_;
     assetPool_.amount += reserveAssetAmount_;
 
-    reservePool_.stkToken.mint(receiver_, stkTokenAmount_);
+    stkToken_.mint(receiver_, stkTokenAmount_);
     emit Staked(msg.sender, receiver_, reserveAssetAmount_, stkTokenAmount_);
   }
 }

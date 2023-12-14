@@ -54,7 +54,7 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Staker,
       stkTokenToReservePoolIds[stkToken_] = IdLookup({index: i, exists: true});
     }
     for (uint8 i; i < rewardPoolConfig_.length; i++) {
-      claimableRewardPools[i] = RewardPool({token: rewardPoolConfig_[i].token, amount: 0});
+      claimableRewardPools[i] = RewardPool({asset: rewardPoolConfig_[i].asset, amount: 0});
 
       IReceiptToken depositToken_ =
         receiptTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.REWARD, reserveAssets_[i].decimals());
