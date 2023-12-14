@@ -6,7 +6,7 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IStkToken} from "../interfaces/IStkToken.sol";
 import {IUnstakerErrors} from "../interfaces/IUnstakerErrors.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
-import {ReservePool, TokenPool} from "./structs/Pools.sol";
+import {ReservePool, AssetPool} from "./structs/Pools.sol";
 import {MathConstants} from "./MathConstants.sol";
 import {Unstake, UnstakePreview} from "./structs/Unstakes.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
@@ -44,7 +44,7 @@ abstract contract Unstaker is SafetyModuleCommon, IUnstakerErrors {
     address indexed receiver_,
     address indexed owner_,
     uint256 stkTokenAmount_,
-    uint256 reserveTokenAmount_,
+    uint256 reserveAssetAmount_,
     uint64 unstakeId_
   );
 
@@ -54,43 +54,43 @@ abstract contract Unstaker is SafetyModuleCommon, IUnstakerErrors {
     address indexed receiver_,
     address indexed owner_,
     uint256 stkTokenAmount_,
-    uint256 reserveTokenAmount,
+    uint256 reserveAssetAmount_,
     uint64 unstakeId_
   );
 
-  /// @notice Unstake by burning `stkTokenAmount_` stkTokens and sending `reserveTokenAmount_` to `receiver_`.
+  /// @notice Unstake by burning `stkTokenAmount_` stkTokens and sending `reserveAssetAmount_` to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its stkTokens.
   function unstake(uint16 reservePoolId_, uint256 stkTokenAmount_, address receiver_, address owner_)
     external
-    returns (uint64 unstakeId_, uint256 reserveTokenAmount_)
+    returns (uint64 unstakeId_, uint256 reserveAssetAmount_)
   {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
 
-    reserveTokenAmount_ = SafetyModuleCalculationsLib.convertToReserveTokenAmount(
+    reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToReserveAssetAmount(
       stkTokenAmount_, reservePool_.stkToken.totalSupply(), reservePool_.stakeAmount
     );
-    if (reserveTokenAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
+    if (reserveAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
 
-    unstakeId_ = _queueUnstake(owner_, receiver_, stkTokenAmount_, reserveTokenAmount_, reservePool_, reservePoolId_);
+    unstakeId_ = _queueUnstake(owner_, receiver_, stkTokenAmount_, reserveAssetAmount_, reservePool_, reservePoolId_);
     // TODO: Add claim rewards logic.
   }
 
   /// @notice Completes the unstake request for the specified unstake ID.
-  function completeUnstake(uint64 unstakeId_) external returns (uint256 reserveTokenAmount_) {
+  function completeUnstake(uint64 unstakeId_) external returns (uint256 reserveAssetAmount_) {
     Unstake memory unstake_ = unstakes[unstakeId_];
     delete unstakes[unstakeId_];
     return _completeUnstake(unstakeId_, unstake_);
   }
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their unstake (i.e. view the number
-  /// of reserve tokens received) at the current block, given current on-chain conditions.
+  /// of reserve assets received) at the current block, given current on-chain conditions.
   function previewUnstake(uint64 unstakeId_) external view returns (UnstakePreview memory unstakePreview_) {
     Unstake memory unstake_ = unstakes[unstakeId_];
     unstakePreview_ = UnstakePreview({
       delayRemaining: _getUnstakeDelayTimeRemaining(unstake_.queueTime, unstake_.delay).safeCastTo40(),
       stkTokenAmount: unstake_.stkTokenAmount,
-      reserveTokenAmount: _computeFinalTokensUnstaked(
-        unstake_.reservePoolId, unstake_.reserveTokenAmount, unstake_.queuedAccISF, unstake_.queuedAccISFsLength
+      reserveAssetAmount: _computeFinalReserveAssetsUnstaked(
+        unstake_.reservePoolId, unstake_.reserveAssetAmount, unstake_.queuedAccISF, unstake_.queuedAccISFsLength
         ),
       owner: unstake_.owner,
       receiver: unstake_.receiver
@@ -102,7 +102,7 @@ abstract contract Unstaker is SafetyModuleCommon, IUnstakerErrors {
     address owner_,
     address receiver_,
     uint256 stkTokenAmount_,
-    uint256 reserveTokenAmount_,
+    uint256 reserveAssetAmount_,
     ReservePool storage reservePool_,
     uint16 reservePoolId_
   ) internal returns (uint64 unstakeId_) {
@@ -122,7 +122,7 @@ abstract contract Unstaker is SafetyModuleCommon, IUnstakerErrors {
     Unstake memory unstake_ = Unstake({
       reservePoolId: reservePoolId_,
       stkTokenAmount: stkTokenAmount_.safeCastTo216(),
-      reserveTokenAmount: reserveTokenAmount_.safeCastTo128(),
+      reserveAssetAmount: reserveAssetAmount_.safeCastTo128(),
       owner: owner_,
       receiver: receiver_,
       queueTime: uint40(block.timestamp),
@@ -137,14 +137,14 @@ abstract contract Unstaker is SafetyModuleCommon, IUnstakerErrors {
       _completeUnstake(unstakeId_, unstake_);
     } else {
       unstakes[unstakeId_] = unstake_;
-      emit UnstakePending(msg.sender, receiver_, owner_, stkTokenAmount_, reserveTokenAmount_, unstakeId_);
+      emit UnstakePending(msg.sender, receiver_, owner_, stkTokenAmount_, reserveAssetAmount_, unstakeId_);
     }
   }
 
   /// @dev Logic to complete an unstake.
   function _completeUnstake(uint64 unstakeId_, Unstake memory unstake_)
     internal
-    returns (uint128 reserveTokenAmountUnstaked_)
+    returns (uint128 reserveAssetAmountUnstaked_)
   {
     if (unstake_.owner == address(0)) revert UnstakeNotFound();
 
@@ -154,21 +154,21 @@ abstract contract Unstaker is SafetyModuleCommon, IUnstakerErrors {
     }
 
     ReservePool storage reservePool_ = reservePools[unstake_.reservePoolId];
-    IERC20 reserveToken_ = reservePool_.token;
+    IERC20 reserveAsset_ = reservePool_.asset;
 
-    // Compute the final reserve tokens to unstake, which can be scaled down if triggers have occurred
+    // Compute the final reserve assets to unstake, which can be scaled down if triggers have occurred
     // since the unstake was queued.
-    reserveTokenAmountUnstaked_ = _computeFinalTokensUnstaked(
-      unstake_.reservePoolId, unstake_.reserveTokenAmount, unstake_.queuedAccISF, unstake_.queuedAccISFsLength
+    reserveAssetAmountUnstaked_ = _computeFinalReserveAssetsUnstaked(
+      unstake_.reservePoolId, unstake_.reserveAssetAmount, unstake_.queuedAccISF, unstake_.queuedAccISFsLength
     );
-    if (reserveTokenAmountUnstaked_ != 0) {
-      reservePool_.stakeAmount -= reserveTokenAmountUnstaked_;
-      tokenPools[reserveToken_].balance -= reserveTokenAmountUnstaked_;
-      reserveToken_.safeTransfer(unstake_.receiver, reserveTokenAmountUnstaked_);
+    if (reserveAssetAmountUnstaked_ != 0) {
+      reservePool_.stakeAmount -= reserveAssetAmountUnstaked_;
+      assetPools[reserveAsset_].amount -= reserveAssetAmountUnstaked_;
+      reserveAsset_.safeTransfer(unstake_.receiver, reserveAssetAmountUnstaked_);
     }
 
     emit Unstaked(
-      msg.sender, unstake_.receiver, unstake_.owner, unstake_.stkTokenAmount, reserveTokenAmountUnstaked_, unstakeId_
+      msg.sender, unstake_.receiver, unstake_.owner, unstake_.stkTokenAmount, reserveAssetAmountUnstaked_, unstakeId_
     );
   }
 
@@ -188,15 +188,15 @@ abstract contract Unstaker is SafetyModuleCommon, IUnstakerErrors {
 
   /// @dev Returns the amount of tokens to be unstaked, which may be less than the amount saved when the unstake
   /// was queued if the tokens are used in a payout for a trigger since then.
-  function _computeFinalTokensUnstaked(
+  function _computeFinalReserveAssetsUnstaked(
     uint16 reservePoolId_,
-    uint128 queuedReserveTokenAmount_,
+    uint128 queuedReserveAssetAmount_,
     uint256 queuedAccISF_,
     uint32 queuedAccISFLength_
   ) internal view returns (uint128) {
     uint256[] storage reservePoolPendingUnstakesAccISFs_ = pendingUnstakesAccISFs[reservePoolId_];
-    return UnstakerLib.computeFinalTokensUnstaked(
-      reservePoolPendingUnstakesAccISFs_, queuedReserveTokenAmount_, queuedAccISF_, queuedAccISFLength_
+    return UnstakerLib.computeFinalReserveAssetsUnstaked(
+      reservePoolPendingUnstakesAccISFs_, queuedReserveAssetAmount_, queuedAccISF_, queuedAccISFLength_
     );
   }
 }

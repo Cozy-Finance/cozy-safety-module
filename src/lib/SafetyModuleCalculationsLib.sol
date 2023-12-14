@@ -11,26 +11,26 @@ library SafetyModuleCalculationsLib {
 
   uint256 internal constant RESERVE_POOL_AMOUNT_FLOOR = 1;
 
-  /// @notice The `stkTokenAmount_` that the safety module would exchange for `amount_` of reserve token provided.
+  /// @notice The `stkTokenAmount_` that the safety module would exchange for `amount_` of reserve asset provided.
   /// @dev See the ERC-4626 spec for more info.
-  function convertToStkTokenAmount(uint256 amount_, uint256 stkTokenSupply_, uint256 reservePoolAmount_)
+  function convertToStkTokenAmount(uint256 reserveAssetAmount_, uint256 stkTokenSupply_, uint256 reservePoolAmount_)
     internal
     pure
     returns (uint256 stkTokenAmount_)
   {
     stkTokenAmount_ = stkTokenSupply_ == 0
-      ? amount_
-      : amount_.mulDivDown(stkTokenSupply_, _reservePoolAmountWithFloor(reservePoolAmount_));
+      ? reserveAssetAmount_
+      : reserveAssetAmount_.mulDivDown(stkTokenSupply_, _reservePoolAmountWithFloor(reservePoolAmount_));
   }
 
-  /// @notice The `reserveTokenAmount_` that the safety module would exchange for `stkTokenAmount_` of the stkToken.
+  /// @notice The `reserveAssetAmount_` that the safety module would exchange for `stkTokenAmount_` of the stkToken.
   /// @dev See the ERC-4626 spec for more info.
-  function convertToReserveTokenAmount(uint256 stkTokenAmount_, uint256 stkTokenSupply_, uint256 reservePoolAmount_)
+  function convertToReserveAssetAmount(uint256 stkTokenAmount_, uint256 stkTokenSupply_, uint256 reservePoolAmount_)
     internal
     pure
-    returns (uint256 reserveTokenAmount_)
+    returns (uint256 reserveAssetAmount_)
   {
-    reserveTokenAmount_ = stkTokenSupply_ == 0
+    reserveAssetAmount_ = stkTokenSupply_ == 0
       ? reservePoolAmount_
       : stkTokenAmount_.mulDivDown(_reservePoolAmountWithFloor(reservePoolAmount_), stkTokenSupply_);
   }

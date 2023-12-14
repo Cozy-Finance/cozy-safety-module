@@ -13,7 +13,7 @@ import {MathConstants} from "../src/lib/MathConstants.sol";
 import {Staker} from "../src/lib/Staker.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
-import {TokenPool} from "../src/lib/structs/Pools.sol";
+import {AssetPool} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -31,7 +31,18 @@ contract StakerUnitTest is TestBase {
 
   event Staked(address indexed caller_, address indexed receiver_, uint256 amount_, uint256 stkTokenAmount_);
 
-  function setUp() public {}
+  function setUp() public {
+    ReservePool memory initialReservePool_ = ReservePool({
+      asset: IERC20(address(mockAsset)),
+      stkToken: IStkToken(address(mockStkToken)),
+      depositToken: IDepositToken(address(mockDepositToken)),
+      stakeAmount: 100e18,
+      depositAmount: 99e18
+    });
+    AssetPool memory initialAssetPool_ = AssetPool({amount: 150e18});
+    component.mockAddReservePool(initialReservePool_);
+    component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
+  }
 
   function test_stake_StkTokensAndStorageUpdates() external {
     component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
@@ -39,17 +50,6 @@ contract StakerUnitTest is TestBase {
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
     uint128 amountToStake_ = 20e18;
-
-    ReservePool memory initialReservePool_ = ReservePool({
-      token: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
-      stakeAmount: 100e18,
-      depositAmount: 99e18
-    });
-    TokenPool memory initialTokenPool_ = TokenPool({balance: 150e18});
-    component.mockAddReservePool(initialReservePool_);
-    component.mockAddTokenPool(IERC20(address(mockAsset)), initialTokenPool_);
 
     // Mint initial asset balance for set.
     mockAsset.mint(address(component), 150e18);
@@ -70,13 +70,13 @@ contract StakerUnitTest is TestBase {
     assertEq(stkTokenAmount_, expectedStkTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
-    TokenPool memory finalTokenPool_ = component.getTokenPool(IERC20(address(mockAsset)));
+    AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
     // 100e18 + 20e18
     assertEq(finalReservePool_.stakeAmount, 120e18);
     // No change
     assertEq(finalReservePool_.depositAmount, 99e18);
     // 150e18 + 20e18
-    assertEq(finalTokenPool_.balance, 170e18);
+    assertEq(finalAssetPool_.amount, 170e18);
     assertEq(mockAsset.balanceOf(address(component)), 170e18);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
@@ -89,17 +89,6 @@ contract StakerUnitTest is TestBase {
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
     uint128 amountToStake_ = 20e18;
-
-    ReservePool memory initialReservePool_ = ReservePool({
-      token: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
-      stakeAmount: 100e18,
-      depositAmount: 99e18
-    });
-    TokenPool memory initialTokenPool_ = TokenPool({balance: 150e18});
-    component.mockAddReservePool(initialReservePool_);
-    component.mockAddTokenPool(IERC20(address(mockAsset)), initialTokenPool_);
 
     // Mint initial asset balance for set.
     mockAsset.mint(address(component), 150e18);
@@ -123,11 +112,11 @@ contract StakerUnitTest is TestBase {
     assertEq(stkTokenAmount_, expectedStkTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
-    TokenPool memory finalTokenPool_ = component.getTokenPool(IERC20(address(mockAsset)));
+    AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
     // 100e18 + 20e18
     assertEq(finalReservePool_.stakeAmount, 120e18);
     // 150e18 + 20e18
-    assertEq(finalTokenPool_.balance, 170e18);
+    assertEq(finalAssetPool_.amount, 170e18);
     assertEq(mockAsset.balanceOf(address(component)), 170e18);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
@@ -139,18 +128,8 @@ contract StakerUnitTest is TestBase {
 
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
-    uint128 amountToStake_ = 20e18;
 
-    ReservePool memory initialReservePool_ = ReservePool({
-      token: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
-      stakeAmount: 100e18,
-      depositAmount: 99e18
-    });
-    TokenPool memory initialTokenPool_ = TokenPool({balance: 150e18});
-    component.mockAddReservePool(initialReservePool_);
-    component.mockAddTokenPool(IERC20(address(mockAsset)), initialTokenPool_);
+    amountToStake_ = bound(amountToStake_, 1, type(uint216).max);
 
     // Mint initial asset balance for set.
     mockAsset.mint(address(component), 150e18);
@@ -174,17 +153,6 @@ contract StakerUnitTest is TestBase {
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
 
-    ReservePool memory initialReservePool_ = ReservePool({
-      token: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
-      stakeAmount: 100e18,
-      depositAmount: 99e18
-    });
-    TokenPool memory initialTokenPool_ = TokenPool({balance: 150e18});
-    component.mockAddReservePool(initialReservePool_);
-    component.mockAddTokenPool(IERC20(address(mockAsset)), initialTokenPool_);
-
     _expectPanic(INDEX_OUT_OF_BOUNDS);
     vm.prank(staker_);
     component.stake(1, 10e18, receiver_, staker_);
@@ -197,17 +165,6 @@ contract StakerUnitTest is TestBase {
 
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
-
-    ReservePool memory initialReservePool_ = ReservePool({
-      token: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
-      stakeAmount: 100e18,
-      depositAmount: 99e18
-    });
-    TokenPool memory initialTokenPool_ = TokenPool({balance: 150e18});
-    component.mockAddReservePool(initialReservePool_);
-    component.mockAddTokenPool(IERC20(address(mockAsset)), initialTokenPool_);
 
     // Mint insufficient assets for staker.
     mockAsset.mint(staker_, amountToStake_ - 1);
@@ -226,17 +183,6 @@ contract StakerUnitTest is TestBase {
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
     uint128 amountToStake_ = 20e18;
-
-    ReservePool memory initialReservePool_ = ReservePool({
-      token: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
-      stakeAmount: 100e18,
-      depositAmount: 99e18
-    });
-    TokenPool memory initialTokenPool_ = TokenPool({balance: 150e18});
-    component.mockAddReservePool(initialReservePool_);
-    component.mockAddTokenPool(IERC20(address(mockAsset)), initialTokenPool_);
 
     // Mint initial asset balance for set.
     mockAsset.mint(address(component), 150e18);
@@ -257,13 +203,13 @@ contract StakerUnitTest is TestBase {
     assertEq(stkTokenAmount_, expectedStkTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
-    TokenPool memory finalTokenPool_ = component.getTokenPool(IERC20(address(mockAsset)));
+    AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
     // 100e18 + 20e18
     assertEq(finalReservePool_.stakeAmount, 120e18);
     // No change
     assertEq(finalReservePool_.depositAmount, 99e18);
     // 150e18 + 20e18
-    assertEq(finalTokenPool_.balance, 170e18);
+    assertEq(finalAssetPool_.amount, 170e18);
     assertEq(mockAsset.balanceOf(address(component)), 170e18);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
@@ -276,17 +222,6 @@ contract StakerUnitTest is TestBase {
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
     uint128 amountToStake_ = 20e18;
-
-    ReservePool memory initialReservePool_ = ReservePool({
-      token: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
-      stakeAmount: 100e18,
-      depositAmount: 99e18
-    });
-    TokenPool memory initialTokenPool_ = TokenPool({balance: 150e18});
-    component.mockAddReservePool(initialReservePool_);
-    component.mockAddTokenPool(IERC20(address(mockAsset)), initialTokenPool_);
 
     // Mint initial asset balance for set.
     mockAsset.mint(address(component), 150e18);
@@ -310,13 +245,13 @@ contract StakerUnitTest is TestBase {
     assertEq(stkTokenAmount_, expectedStkTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
-    TokenPool memory finalTokenPool_ = component.getTokenPool(IERC20(address(mockAsset)));
+    AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
     // 100e18 + 20e18
     assertEq(finalReservePool_.stakeAmount, 120e18);
     // No change
     assertEq(finalReservePool_.depositAmount, 99e18);
     // 150e18 + 20e18
-    assertEq(finalTokenPool_.balance, 170e18);
+    assertEq(finalAssetPool_.amount, 170e18);
     assertEq(mockAsset.balanceOf(address(component)), 170e18);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
@@ -326,20 +261,10 @@ contract StakerUnitTest is TestBase {
   function testFuzz_stakeWithoutTransfer_RevertSafetyModulePaused(uint256 amountToStake_) external {
     component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
 
+    amountToStake_ = bound(amountToStake_, 1, type(uint216).max);
+
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
-    uint128 amountToStake_ = 20e18;
-
-    ReservePool memory initialReservePool_ = ReservePool({
-      token: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
-      stakeAmount: 100e18,
-      depositAmount: 99e18
-    });
-    TokenPool memory initialTokenPool_ = TokenPool({balance: 150e18});
-    component.mockAddReservePool(initialReservePool_);
-    component.mockAddTokenPool(IERC20(address(mockAsset)), initialTokenPool_);
 
     // Mint initial asset balance for set.
     mockAsset.mint(address(component), 150e18);
@@ -361,17 +286,6 @@ contract StakerUnitTest is TestBase {
 
     address receiver_ = _randomAddress();
 
-    ReservePool memory initialReservePool_ = ReservePool({
-      token: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
-      stakeAmount: 100e18,
-      depositAmount: 99e18
-    });
-    TokenPool memory initialTokenPool_ = TokenPool({balance: 150e18});
-    component.mockAddReservePool(initialReservePool_);
-    component.mockAddTokenPool(IERC20(address(mockAsset)), initialTokenPool_);
-
     _expectPanic(INDEX_OUT_OF_BOUNDS);
     component.stakeWithoutTransfer(1, 10e18, receiver_);
   }
@@ -383,17 +297,6 @@ contract StakerUnitTest is TestBase {
 
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
-
-    ReservePool memory initialReservePool_ = ReservePool({
-      token: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
-      stakeAmount: 100e18,
-      depositAmount: 99e18
-    });
-    TokenPool memory initialTokenPool_ = TokenPool({balance: 150e18});
-    component.mockAddReservePool(initialReservePool_);
-    component.mockAddTokenPool(IERC20(address(mockAsset)), initialTokenPool_);
 
     // Mint initial asset balance for set.
     mockAsset.mint(address(component), 150e18);
@@ -427,8 +330,8 @@ contract TestableStaker is Staker {
     reservePools.push(reservePool_);
   }
 
-  function mockAddTokenPool(IERC20 token_, TokenPool memory tokenPool_) external {
-    tokenPools[token_] = tokenPool_;
+  function mockAddAssetPool(IERC20 asset_, AssetPool memory assetPool_) external {
+    assetPools[asset_] = assetPool_;
   }
 
   // -------- Mock getters --------
@@ -436,8 +339,8 @@ contract TestableStaker is Staker {
     return reservePools[reservePoolId_];
   }
 
-  function getTokenPool(IERC20 token_) external view returns (TokenPool memory) {
-    return tokenPools[token_];
+  function getAssetPool(IERC20 asset_) external view returns (AssetPool memory) {
+    return assetPools[asset_];
   }
 
   // -------- Overridden abstract function placeholders --------

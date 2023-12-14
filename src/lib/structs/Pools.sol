@@ -6,15 +6,15 @@ import {IRewardsDripModel} from "../../interfaces/IRewardsDripModel.sol";
 import {IStkToken} from "../../interfaces/IStkToken.sol";
 import {IDepositToken} from "../../interfaces/IDepositToken.sol";
 
-struct TokenPool {
-  // The total balance of tokens held by a SafetyModule, should be equivalent to
-  // token.balanceOf(address(this)), discounting any tokens directly sent
+struct AssetPool {
+  // The total balance of assets held by a SafetyModule, should be equivalent to
+  // token.balanceOf(address(this)), discounting any assets directly sent
   // to the SafetyModule via direct transfer.
-  uint256 balance;
+  uint256 amount;
 }
 
 struct ReservePool {
-  IERC20 token;
+  IERC20 asset;
   IStkToken stkToken;
   IDepositToken depositToken;
   uint256 stakeAmount;

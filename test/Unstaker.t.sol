@@ -18,7 +18,7 @@ import {StkToken} from "../src/StkToken.sol";
 import {StkTokenFactory} from "../src/StkTokenFactory.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
-import {TokenPool} from "../src/lib/structs/Pools.sol";
+import {AssetPool} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -41,7 +41,7 @@ contract UnstakerUnitTest is TestBase {
     address indexed receiver_,
     address indexed owner_,
     uint256 stkTokenAmount_,
-    uint256 reserveTokenAmount_,
+    uint256 reserveAssetAmount_,
     uint64 unstakeId_
   );
 
@@ -50,7 +50,7 @@ contract UnstakerUnitTest is TestBase {
     address indexed receiver_,
     address indexed owner_,
     uint256 stkTokenAmount_,
-    uint256 reserveTokenAmount,
+    uint256 reserveAssetAmount_,
     uint64 unstakeId_
   );
 
@@ -69,45 +69,55 @@ contract UnstakerUnitTest is TestBase {
 
     component.mockAddReservePool(
       ReservePool({
-        token: IERC20(address(mockAsset)),
+        asset: IERC20(address(mockAsset)),
         stkToken: IStkToken(address(stkToken)),
         depositToken: IDepositToken(address(mockDepositToken)),
         stakeAmount: 0,
         depositAmount: 0
       })
     );
-    component.mockAddTokenPool(IERC20(address(mockAsset)), TokenPool({balance: 0}));
+    component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
   }
 
   function test_unstake_canUnstakeAllInstantly_whenUnstakeDelayIsZero() external {
     component.mockSetUnstakeDelay(0);
 
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
 
     _expectEmit();
     emit Transfer(staker_, address(0), stkTokenAmount_);
     _expectEmit();
-    emit Unstaked(staker_, receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit Unstaked(staker_, receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
 
     vm.prank(staker_);
-    (uint64 resultUnstakeId_, uint256 resultReserveTokenAmount_) =
+    (uint64 resultUnstakeId_, uint256 resultReserveAssetAmount_) =
       component.unstake(0, stkTokenAmount_, receiver_, staker_);
 
     assertEq(resultUnstakeId_, nextUnstakeId_, "unstakeId");
-    assertEq(resultReserveTokenAmount_, amountStaked_, "reserve token assets received");
-    assertEq(stkToken.balanceOf(staker_), 0, "shares balanceOf");
-    assertEq(mockAsset.balanceOf(receiver_), resultReserveTokenAmount_, "reserve token assets balanceOf");
+    assertEq(resultReserveAssetAmount_, reserveAssetAmountStaked_, "reserve assets received");
+    assertEq(stkToken.balanceOf(staker_), 0, "stkTokens balanceOf");
+    assertEq(mockAsset.balanceOf(receiver_), resultReserveAssetAmount_, "reserve assets balanceOf");
     assertEq(component.getUnstakeIdCounter(), 1, "unstakeIdCounter");
   }
 
   function test_unstake_canUnstakeAllInstantly_whenSafetyModuleIsPaused() external {
     component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
 
     _expectEmit();
-    emit Unstaked(staker_, receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit Unstaked(staker_, receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
     vm.prank(staker_);
     component.unstake(0, stkTokenAmount_, receiver_, staker_);
   }
@@ -115,75 +125,86 @@ contract UnstakerUnitTest is TestBase {
   function test_unstake_canUnstakePartialInstantly() external {
     component.mockSetUnstakeDelay(0);
 
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
 
-    uint256 stkTokensToUnstake_ = stkTokenAmount_ / 2 - 1;
-    uint256 reserveAssetsToReceive_ = uint256(amountStaked_).mulDivDown(stkTokensToUnstake_, stkTokenAmount_);
+    uint256 stkTokenAmountToUnstake_ = stkTokenAmount_ / 2 - 1;
+    uint256 reserveAssetsToReceive_ =
+      uint256(reserveAssetAmountStaked_).mulDivDown(stkTokenAmountToUnstake_, stkTokenAmount_);
 
     _expectEmit();
-    emit Transfer(staker_, address(0), stkTokensToUnstake_);
+    emit Transfer(staker_, address(0), stkTokenAmountToUnstake_);
     _expectEmit();
-    emit Unstaked(staker_, receiver_, staker_, stkTokensToUnstake_, reserveAssetsToReceive_, nextUnstakeId_);
+    emit Unstaked(staker_, receiver_, staker_, stkTokenAmountToUnstake_, reserveAssetsToReceive_, nextUnstakeId_);
 
     vm.prank(staker_);
-    (uint64 resultUnstakeId_, uint256 resultReserveTokenAmount_) =
-      component.unstake(0, stkTokensToUnstake_, receiver_, staker_);
+    (uint64 resultUnstakeId_, uint256 resultReserveAssetAmount_) =
+      component.unstake(0, stkTokenAmountToUnstake_, receiver_, staker_);
 
     assertEq(resultUnstakeId_, nextUnstakeId_, "unstakeId");
-    assertEq(resultReserveTokenAmount_, reserveAssetsToReceive_, "reserve token assets received");
-    assertEq(stkToken.balanceOf(staker_), stkTokenAmount_ - stkTokensToUnstake_, "shares balanceOf");
-    assertEq(mockAsset.balanceOf(receiver_), reserveAssetsToReceive_, "reserve token assets balanceOf");
+    assertEq(resultReserveAssetAmount_, reserveAssetsToReceive_, "reserve assets received");
+    assertEq(stkToken.balanceOf(staker_), stkTokenAmount_ - stkTokenAmountToUnstake_, "shares balanceOf");
+    assertEq(mockAsset.balanceOf(receiver_), reserveAssetsToReceive_, "reserve assets balanceOf");
     assertEq(component.getUnstakeIdCounter(), 1, "unstakeIdCounter");
   }
 
   function test_unstake_canUnstakeTotalInstantlyInTwoUnstakes() external {
     component.mockSetUnstakeDelay(0);
 
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
 
-    uint256 stkTokensToUnstake_ = stkTokenAmount_ / 2 - 1;
-    uint256 reserveAssetsToReceive_ = uint256(amountStaked_).mulDivDown(stkTokensToUnstake_, stkTokenAmount_);
+    uint256 stkTokenAmountToUnstake_ = stkTokenAmount_ / 2 - 1;
+    uint256 reserveAssetsToReceive_ =
+      uint256(reserveAssetAmountStaked_).mulDivDown(stkTokenAmountToUnstake_, stkTokenAmount_);
 
     _expectEmit();
-    emit Transfer(staker_, address(0), stkTokensToUnstake_);
+    emit Transfer(staker_, address(0), stkTokenAmountToUnstake_);
     _expectEmit();
-    emit Unstaked(staker_, receiver_, staker_, stkTokensToUnstake_, reserveAssetsToReceive_, nextUnstakeId_);
+    emit Unstaked(staker_, receiver_, staker_, stkTokenAmountToUnstake_, reserveAssetsToReceive_, nextUnstakeId_);
 
     vm.prank(staker_);
-    (uint64 resultUnstakeId_, uint256 resultReserveTokenAmount_) =
-      component.unstake(0, stkTokensToUnstake_, receiver_, staker_);
+    (uint64 resultUnstakeId_, uint256 resultReserveAssetAmount_) =
+      component.unstake(0, stkTokenAmountToUnstake_, receiver_, staker_);
 
     assertEq(resultUnstakeId_, nextUnstakeId_, "unstakeId");
-    assertEq(resultReserveTokenAmount_, reserveAssetsToReceive_, "reserve token assets received");
-    assertEq(stkToken.balanceOf(staker_), stkTokenAmount_ - stkTokensToUnstake_, "shares balanceOf");
-    assertEq(mockAsset.balanceOf(receiver_), reserveAssetsToReceive_, "reserve token assets balanceOf");
+    assertEq(resultReserveAssetAmount_, reserveAssetsToReceive_, "reserve assets received");
+    assertEq(stkToken.balanceOf(staker_), stkTokenAmount_ - stkTokenAmountToUnstake_, "shares balanceOf");
+    assertEq(mockAsset.balanceOf(receiver_), reserveAssetsToReceive_, "reserve assets balanceOf");
     assertEq(component.getUnstakeIdCounter(), 1, "unstakeIdCounter");
 
-    stkTokensToUnstake_ = stkTokenAmount_ - stkTokensToUnstake_;
-    reserveAssetsToReceive_ = amountStaked_ - reserveAssetsToReceive_;
+    stkTokenAmountToUnstake_ = stkTokenAmount_ - stkTokenAmountToUnstake_;
+    reserveAssetsToReceive_ = reserveAssetAmountStaked_ - reserveAssetsToReceive_;
     nextUnstakeId_ += 1;
 
     _expectEmit();
-    emit Transfer(staker_, address(0), stkTokensToUnstake_);
+    emit Transfer(staker_, address(0), stkTokenAmountToUnstake_);
     _expectEmit();
-    emit Unstaked(staker_, receiver_, staker_, stkTokensToUnstake_, reserveAssetsToReceive_, nextUnstakeId_);
+    emit Unstaked(staker_, receiver_, staker_, stkTokenAmountToUnstake_, reserveAssetsToReceive_, nextUnstakeId_);
 
     vm.prank(staker_);
-    (resultUnstakeId_, resultReserveTokenAmount_) = component.unstake(0, stkTokensToUnstake_, receiver_, staker_);
+    (resultUnstakeId_, resultReserveAssetAmount_) = component.unstake(0, stkTokenAmountToUnstake_, receiver_, staker_);
 
     assertEq(resultUnstakeId_, nextUnstakeId_, "unstakeId");
-    assertEq(resultReserveTokenAmount_, reserveAssetsToReceive_, "reserve token assets received");
+    assertEq(resultReserveAssetAmount_, reserveAssetsToReceive_, "reserve assets received");
     assertEq(stkToken.balanceOf(staker_), 0, "shares balanceOf");
-    assertEq(mockAsset.balanceOf(receiver_), amountStaked_, "reserve token assets balanceOf");
+    assertEq(mockAsset.balanceOf(receiver_), reserveAssetAmountStaked_, "reserve assets balanceOf");
     assertEq(component.getUnstakeIdCounter(), 2, "unstakeIdCounter");
   }
 
   function test_unstake_cannotUnstakeIfSafetyModuleTriggered() external {
     component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (address staker_, address receiver_,, uint256 stkTokenAmount_,) = _setupDefaultSingleUserFixture(0);
 
     vm.expectRevert(ICommonErrors.InvalidState.selector);
     vm.prank(staker_);
@@ -191,8 +212,7 @@ contract UnstakerUnitTest is TestBase {
   }
 
   function test_unstake_cannotUnstakeMoreStkTokensThanOwned() external {
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (address staker_, address receiver_,, uint256 stkTokenAmount_,) = _setupDefaultSingleUserFixture(0);
 
     // Stake some extra that belongs to someone else.
     _stake(0, _randomAddress(), 1e6, 1e18);
@@ -205,9 +225,9 @@ contract UnstakerUnitTest is TestBase {
   function test_unstake_cannotUnstakeIfRoundsDownToZeroAssets() external {
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
-    uint256 amountToStake_ = 1;
+    uint256 reserveAssetAmountStaked_ = 1;
     uint256 stkTokenAmount_ = 3;
-    _stake(0, staker_, amountToStake_, stkTokenAmount_);
+    _stake(0, staker_, reserveAssetAmountStaked_, stkTokenAmount_);
 
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
     vm.prank(staker_);
@@ -217,14 +237,19 @@ contract UnstakerUnitTest is TestBase {
   function test_unstake_canUnstakeAllInstantly_ThroughAllowance() external {
     component.mockSetUnstakeDelay(0);
 
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
     address spender_ = _randomAddress();
     vm.prank(staker_);
     stkToken.approve(spender_, stkTokenAmount_ + 1); // Allowance is 1 extra.
 
     _expectEmit();
-    emit Unstaked(spender_, receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit Unstaked(spender_, receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
 
     vm.prank(spender_);
     component.unstake(0, stkTokenAmount_, receiver_, staker_);
@@ -235,8 +260,7 @@ contract UnstakerUnitTest is TestBase {
   function test_unstake_cannotUnstake_ThroughAllowance_WithInsufficientAllowance() external {
     component.mockSetUnstakeDelay(0);
 
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (address staker_, address receiver_,, uint256 stkTokenAmount_,) = _setupDefaultSingleUserFixture(0);
     address spender_ = _randomAddress();
     vm.prank(staker_);
     stkToken.approve(spender_, stkTokenAmount_ - 1); // Allowance is 1 less.
@@ -247,62 +271,77 @@ contract UnstakerUnitTest is TestBase {
   }
 
   function test_unstake_canQueueUnstakeAll_ThenCompleteAfterDelay() external {
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
 
     // Queue.
     _expectEmit();
-    emit UnstakePending(staker_, receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit UnstakePending(staker_, receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
     vm.prank(staker_);
     {
-      (uint64 resultUnstakeId_, uint256 resultUnstakedAssets_) =
+      (uint64 resultUnstakeId_, uint256 resultReserveAssetAmount_) =
         component.unstake(0, stkTokenAmount_, receiver_, staker_);
-      assertEq(resultUnstakeId_, nextUnstakeId_, "redemptionId");
-      assertEq(resultUnstakedAssets_, amountStaked_, "redeemed assets");
+      assertEq(resultUnstakeId_, nextUnstakeId_, "unstakeId");
+      assertEq(resultReserveAssetAmount_, reserveAssetAmountStaked_, "reserve assets received");
     }
 
     skip(component.unstakeDelay());
     // Complete.
     _expectEmit();
-    emit Unstaked(address(this), receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit Unstaked(address(this), receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
     component.completeUnstake(nextUnstakeId_);
 
     assertEq(stkToken.balanceOf(staker_), 0, "stkToken balanceOf");
-    assertEq(mockAsset.balanceOf(receiver_), amountStaked_, "assets balanceOf");
+    assertEq(mockAsset.balanceOf(receiver_), reserveAssetAmountStaked_, "assets balanceOf");
   }
 
   function test_unstake_canQueueUnstakeAll_ThenCompleteIfSafetyModuleIsPaused() external {
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
 
     // Queue.
     _expectEmit();
-    emit UnstakePending(staker_, receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit UnstakePending(staker_, receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
     vm.prank(staker_);
     {
-      (uint64 resultUnstakeId_, uint256 resultUnstakedAssets_) =
+      (uint64 resultUnstakeId_, uint256 resultReserveAssetAmount_) =
         component.unstake(0, stkTokenAmount_, receiver_, staker_);
-      assertEq(resultUnstakeId_, nextUnstakeId_, "redemptionId");
-      assertEq(resultUnstakedAssets_, amountStaked_, "redeemed assets");
+      assertEq(resultUnstakeId_, nextUnstakeId_, "unstakeId");
+      assertEq(resultReserveAssetAmount_, reserveAssetAmountStaked_, "reserve assets received");
     }
 
     component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
     // Complete.
     _expectEmit();
-    emit Unstaked(address(this), receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit Unstaked(address(this), receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
     component.completeUnstake(nextUnstakeId_);
 
     assertEq(stkToken.balanceOf(staker_), 0, "stkToken balanceOf");
-    assertEq(mockAsset.balanceOf(receiver_), amountStaked_, "assets balanceOf");
+    assertEq(mockAsset.balanceOf(receiver_), reserveAssetAmountStaked_, "assets balanceOf");
   }
 
   function test_unstake_delayedUnstakeAll_IsNotAffectedByNewStake() external {
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
 
     // Queue.
     _expectEmit();
-    emit UnstakePending(staker_, receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit UnstakePending(staker_, receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
     vm.prank(staker_);
     component.unstake(0, stkTokenAmount_, receiver_, staker_);
 
@@ -312,20 +351,25 @@ contract UnstakerUnitTest is TestBase {
     skip(component.unstakeDelay());
     // Complete.
     _expectEmit();
-    emit Unstaked(address(this), receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit Unstaked(address(this), receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
     component.completeUnstake(nextUnstakeId_);
 
     assertEq(stkToken.balanceOf(staker_), 0, "stkToken balanceOf");
-    assertEq(mockAsset.balanceOf(receiver_), amountStaked_, "assets balanceOf");
+    assertEq(mockAsset.balanceOf(receiver_), reserveAssetAmountStaked_, "assets balanceOf");
   }
 
   function test_unstake_cannotCompleteUnstakeBeforeDelayPasses() external {
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
 
     // Queue.
     _expectEmit();
-    emit UnstakePending(staker_, receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit UnstakePending(staker_, receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
     vm.prank(staker_);
     component.unstake(0, stkTokenAmount_, receiver_, staker_);
 
@@ -336,12 +380,17 @@ contract UnstakerUnitTest is TestBase {
   }
 
   function test_unstake_cannotCompleteUnstakeSameUnstakeIdTwice() external {
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
 
     // Queue.
     _expectEmit();
-    emit UnstakePending(staker_, receiver_, staker_, stkTokenAmount_, amountStaked_, nextUnstakeId_);
+    emit UnstakePending(staker_, receiver_, staker_, stkTokenAmount_, reserveAssetAmountStaked_, nextUnstakeId_);
     vm.prank(staker_);
     component.unstake(0, stkTokenAmount_, receiver_, staker_);
 
@@ -353,27 +402,34 @@ contract UnstakerUnitTest is TestBase {
   }
 
   function test_unstake_triggerCanReduceExchangeRateForPendingUnstakes() external {
-    (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_) =
-      _setupDefaultSingleUserFixture(0);
+    (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    ) = _setupDefaultSingleUserFixture(0);
     uint256 stkTokensToUnstake = stkTokenAmount_; // Unstake 1/4 of all stkTokens.
-    uint256 oldReservePoolAmount_ = amountStaked_;
+    uint256 oldReservePoolAmount_ = reserveAssetAmountStaked_;
     uint256 slashAmount_ = oldReservePoolAmount_ / 10; // Slash 1/10 of the reserve pool.
 
     // Queue.
     vm.prank(staker_);
-    (, uint256 reserveTokensToReceive_) = component.unstake(0, stkTokensToUnstake, receiver_, staker_);
+    (, uint256 queueResultReserveAssetAmount_) = component.unstake(0, stkTokensToUnstake, receiver_, staker_);
     assertEq(
-      reserveTokensToReceive_, stkTokensToUnstake.mulDivDown(amountStaked_, stkTokenAmount_), "reserveTokensToReceive"
+      queueResultReserveAssetAmount_,
+      stkTokensToUnstake.mulDivDown(reserveAssetAmountStaked_, stkTokenAmount_),
+      "resultReserveAssetAmount"
     );
 
-    // Trigger, slashing 1/10 of the reserve pool.
+    // Trigger, taking 10% of the reserve pool.
     component.updateUnstakesAfterTrigger(0, oldReservePoolAmount_, slashAmount_);
 
     skip(component.unstakeDelay());
-    uint256 reserveTokensReceived_ = component.completeUnstake(nextUnstakeId_);
+    uint256 resultReserveAssetAmount_ = component.completeUnstake(nextUnstakeId_);
     // stkTokens are now worth 90% of what they were before the trigger.
-    assertEq(reserveTokensReceived_, reserveTokensToReceive_ * 9 / 10 - 1, "assets redeemed");
-    assertEq(stkToken.balanceOf(staker_), 0, "shares balanceOf");
+    assertEq(resultReserveAssetAmount_, queueResultReserveAssetAmount_ * 9 / 10 - 1, "reserve assets received");
+    assertEq(stkToken.balanceOf(staker_), 0, "stkTokens balanceOf");
   }
 
   function test_unstake_triggerWhileNoneBeingUnstaked() external {
@@ -415,9 +471,9 @@ contract UnstakerUnitTest is TestBase {
     // We should be able to exceed NEW_ACCUM_INV_SCALING_FACTOR_THRESHOLD and require a new entry
     // with 2 100% losses.
 
-    // Trigger, taking 100% out of collateral.
+    // Trigger, taking 100% out of pool.
     component.updateUnstakesAfterTrigger(0, assets_, assets_);
-    // Trigger, taking 100% out of collateral.
+    // Trigger, taking 100% out of pool.
     component.updateUnstakesAfterTrigger(0, assets_, assets_);
 
     uint256 expectedAcc0_ = UnstakerLib.INF_INV_SCALING_FACTOR.mulWadDown(UnstakerLib.INF_INV_SCALING_FACTOR) + 1;
@@ -426,7 +482,7 @@ contract UnstakerUnitTest is TestBase {
     assertEq(accs_[0], expectedAcc0_, "accs_[0]");
     assertEq(accs_[1], MathConstants.WAD, "accs_[1]");
 
-    // Trigger, taking 33% out of collateral.
+    // Trigger, taking 33% out of pool.
     component.updateUnstakesAfterTrigger(0, assets_, assets_ * 33 / 100);
     accs_ = component.getPendingUnstakesAccISFs(0);
     assertEq(accs_.length, 2, "accs_.length");
@@ -444,7 +500,6 @@ contract UnstakerUnitTest is TestBase {
     oldReservePoolAmount_ = bound(oldReservePoolAmount_, 0, type(uint128).max);
     slashAmount_ = bound(slashAmount_, 0, type(uint128).max);
     unstakes_ = bound(unstakes_, 0, type(uint128).max);
-    uint256 claimable_ = oldReservePoolAmount_ + unstakes_;
     component.mockSetLastAccISF(0, acc_);
     component.updateUnstakesAfterTrigger(0, oldReservePoolAmount_, slashAmount_);
 
@@ -459,32 +514,40 @@ contract UnstakerUnitTest is TestBase {
     else assertEq(accs_[0], acc_.mulWadUp(UnstakerLib.INF_INV_SCALING_FACTOR), "accs_[0]");
   }
 
-  // TODO: Fuzz tests for multiple redeems
+  // TODO: Fuzz tests for multiple user unstakes
+  // TODO: Preview unstake tests
+  // TODO: Full accounting check at the end of each unit test?
   struct FuzzUserInfo {
     address staker;
     address receiver;
     uint216 stkTokenAmount;
     uint64 unstakeId;
-    uint128 assetsUnstaked;
-    uint216 stkTokensUnstaked;
+    uint128 reserveAssetsUnstaked;
+    uint216 stkTokenAmountToUnstake;
   }
 
-  // TODO: Preview tests
-
-  function _stake(uint16 reservePoolId_, address staker_, uint256 amountToStake_, uint256 stkTokenAmount_) private {
-    component.mockStake(reservePoolId_, staker_, amountToStake_, stkTokenAmount_);
+  function _stake(uint16 reservePoolId_, address staker_, uint256 reserveAssetAmountStaked_, uint256 stkTokenAmount_)
+    private
+  {
+    component.mockStake(reservePoolId_, staker_, reserveAssetAmountStaked_, stkTokenAmount_);
   }
 
   function _setupDefaultSingleUserFixture(uint16 reservePoolId_)
     private
-    returns (address staker_, address receiver_, uint256 amountStaked_, uint256 stkTokenAmount_, uint64 nextUnstakeId_)
+    returns (
+      address staker_,
+      address receiver_,
+      uint256 reserveAssetAmountStaked_,
+      uint256 stkTokenAmount_,
+      uint64 nextUnstakeId_
+    )
   {
     staker_ = _randomAddress();
     receiver_ = _randomAddress();
-    amountStaked_ = 1e6;
+    reserveAssetAmountStaked_ = 1e6;
     stkTokenAmount_ = 1e18;
     nextUnstakeId_ = component.getUnstakeIdCounter();
-    _stake(reservePoolId_, staker_, amountStaked_, stkTokenAmount_);
+    _stake(reservePoolId_, staker_, reserveAssetAmountStaked_, stkTokenAmount_);
   }
 }
 
@@ -495,17 +558,19 @@ contract TestableUnstaker is Unstaker {
     mockManager = MockManager(address(manager_));
   }
 
-  function mockStake(uint16 reservePoolId_, address staker_, uint256 amountToStake_, uint256 stkTokenAmount_) external {
-    mockStakeAssets(reservePoolId_, amountToStake_);
+  function mockStake(uint16 reservePoolId_, address staker_, uint256 reserveAssetAmountStaked_, uint256 stkTokenAmount_)
+    external
+  {
+    mockStakeAssets(reservePoolId_, reserveAssetAmountStaked_);
     mockMintStkTokens(reservePoolId_, staker_, stkTokenAmount_);
   }
 
-  function mockStakeAssets(uint16 reservePoolId_, uint256 amountToStake_) public {
-    if (amountToStake_ > 0) {
+  function mockStakeAssets(uint16 reservePoolId_, uint256 reserveAssetAmountStaked_) public {
+    if (reserveAssetAmountStaked_ > 0) {
       ReservePool storage reservePool_ = reservePools[reservePoolId_];
-      MockERC20(address(reservePool_.token)).mint(address(this), amountToStake_);
-      reservePool_.stakeAmount += amountToStake_;
-      tokenPools[reservePool_.token].balance += amountToStake_;
+      MockERC20(address(reservePool_.asset)).mint(address(this), reserveAssetAmountStaked_);
+      reservePool_.stakeAmount += reserveAssetAmountStaked_;
+      assetPools[reservePool_.asset].amount += reserveAssetAmountStaked_;
     }
   }
 
@@ -526,8 +591,8 @@ contract TestableUnstaker is Unstaker {
     reservePools.push(reservePool_);
   }
 
-  function mockAddTokenPool(IERC20 token_, TokenPool memory tokenPool_) public {
-    tokenPools[token_] = tokenPool_;
+  function mockAddAssetPool(IERC20 asset_, AssetPool memory assetPool_) external {
+    assetPools[asset_] = assetPool_;
   }
 
   function mockSetLastAccISF(uint16 reservePoolId_, uint256 acc_) external {
@@ -541,8 +606,8 @@ contract TestableUnstaker is Unstaker {
     return reservePools[reservePoolId_];
   }
 
-  function getTokenPool(IERC20 token_) external view returns (TokenPool memory) {
-    return tokenPools[token_];
+  function getAssetPool(IERC20 asset_) external view returns (AssetPool memory) {
+    return assetPools[asset_];
   }
 
   function getUnstakeIdCounter() external view returns (uint64) {

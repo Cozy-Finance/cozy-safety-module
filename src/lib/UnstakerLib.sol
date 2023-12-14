@@ -2,7 +2,6 @@
 pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {MintData} from "./structs/MintData.sol";
 import {CozyMath} from "./CozyMath.sol";
 import {MathConstants} from "./MathConstants.sol";
 import {SafeCastLib} from "./SafeCastLib.sol";
@@ -44,12 +43,12 @@ library UnstakerLib {
 
   // @dev Compute the tokens settled by a pending unstaking, which will be scaled (down) by the accumulated
   // scaling factors of triggers that happened after it was queued.
-  function computeFinalTokensUnstaked(
+  function computeFinalReserveAssetsUnstaked(
     uint256[] storage accISFs_,
-    uint128 queuedReserveTokenAmount_,
+    uint128 queuedReserveAssetAmount_,
     uint256 queuedAccISF_,
     uint32 queuedAccISFsLength_
-  ) external view returns (uint128 reserveTokenAmountUnstaked_) {
+  ) external view returns (uint128 reserveAssetAmountUnstaked_) {
     // If a trigger occurs after the unstake was queued, the tokens returned will need to be scaled down
     // by a factor equivalent to how much was taken out relative to the usable reserve assets
     // (which includes pending unstakes):
@@ -68,7 +67,7 @@ library UnstakerLib {
       invScalingFactor_ = currentScalingFactorAtQueueIndex_.divWadUp(queuedAccISF_);
     }
     // The queuedAccISF_ and queuedAccISFsLength_ are the last value of accISFs_ and the length of
-    // that array when the redemption was queued. If the array has had more entries added to it since
+    // that array when the unstake was queued. If the array has had more entries added to it since
     // then, we need to scale our factor with each of those as well, to account for the effects of
     // ALL triggers since we queued.
     uint256 ScalingFactorsLength_ = accISFs_.length;
@@ -88,29 +87,29 @@ library UnstakerLib {
     uint256 scalingFactor_ =
       invScalingFactor_ >= INF_INV_SCALING_FACTOR ? 0 : MathConstants.WAD.divWadDown(invScalingFactor_);
     // Now we can just scale the queued tokens by this scaling factor to get the final tokens unstaked.
-    reserveTokenAmountUnstaked_ = scalingFactor_.mulWadDown(queuedReserveTokenAmount_).safeCastTo128();
+    reserveAssetAmountUnstaked_ = scalingFactor_.mulWadDown(queuedReserveAssetAmount_).safeCastTo128();
   }
 
   /// @dev Prepares pending unstakes to have their exchange rates adjusted after a trigger.
   function updateUnstakesAfterTrigger(
     uint256 stakeAmount_,
     uint128 slashAmount_,
-    uint256[] storage pendingUnstakingAccISFs_
+    uint256[] storage pendingUnstakesAccISFs_
   ) external {
-    uint256 numScalingFactors_ = pendingUnstakingAccISFs_.length;
-    uint256 currAccISF_ = numScalingFactors_ == 0 ? MathConstants.WAD : pendingUnstakingAccISFs_[numScalingFactors_ - 1];
+    uint256 numScalingFactors_ = pendingUnstakesAccISFs_.length;
+    uint256 currAccISF_ = numScalingFactors_ == 0 ? MathConstants.WAD : pendingUnstakesAccISFs_[numScalingFactors_ - 1];
     uint256 accISF_ = computeNewPendingUnstakesAccumulatedScalingFactor(currAccISF_, stakeAmount_, slashAmount_);
     if (numScalingFactors_ == 0) {
       // First trigger for this safety module. Create an accumulator entry.
-      pendingUnstakingAccISFs_.push(accISF_);
+      pendingUnstakesAccISFs_.push(accISF_);
     } else {
       // Update the last accumulator entry.
-      pendingUnstakingAccISFs_[numScalingFactors_ - 1] = accISF_;
+      pendingUnstakesAccISFs_[numScalingFactors_ - 1] = accISF_;
     }
     if (accISF_ > UnstakerLib.NEW_ACCUM_INV_SCALING_FACTOR_THRESHOLD) {
       // The new entry is very large and cannot be safely combined with the next trigger, so append
       // a new 1.0 entry for next time.
-      pendingUnstakingAccISFs_.push(MathConstants.WAD);
+      pendingUnstakesAccISFs_.push(MathConstants.WAD);
     }
   }
 
