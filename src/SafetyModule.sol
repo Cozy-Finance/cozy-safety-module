@@ -7,6 +7,7 @@ import {IRewardsDripModel} from "./interfaces/IRewardsDripModel.sol";
 import {IReceiptToken} from "./interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "./interfaces/IReceiptTokenFactory.sol";
 import {RewardPoolConfig} from "./lib/structs/Configs.sol";
+import {Depositor} from "./lib/Depositor.sol";
 import {Governable} from "./lib/Governable.sol";
 import {Staker} from "./lib/Staker.sol";
 import {Unstaker} from "./lib/Unstaker.sol";
@@ -17,7 +18,7 @@ import {RewardPool, ClaimedRewards} from "./lib/structs/Rewards.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 
 /// @dev Multiple asset SafetyModule.
-contract SafetyModule is Governable, SafetyModuleBaseStorage, Staker, Unstaker {
+contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Staker, Unstaker {
   constructor(IManager manager_, IReceiptTokenFactory stkTokenFactory_) {
     _assertAddressNotZero(address(manager_));
     _assertAddressNotZero(address(stkTokenFactory_));
@@ -38,7 +39,7 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Staker, Unstaker {
 
     // TODO: Move to configurator lib
     // TODO: Emit event, either like cozy v2 where we use the configuration update event, or maybe specific to init
-    // TODO: Deploy deposit token contracts
+    // TODO: Deploy deposit token contracts through separate factories
     for (uint8 i; i < reserveAssets_.length; i++) {
       IReceiptToken stkToken_ =
         stkTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.STAKE, reserveAssets_[i].decimals());

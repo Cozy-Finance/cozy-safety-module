@@ -623,4 +623,12 @@ contract TestableUnstaker is Unstaker {
   function updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 oldStakeAmount_, uint256 slashAmount_) external {
     _updateUnstakesAfterTrigger(reservePoolId_, uint128(oldStakeAmount_), uint128(slashAmount_));
   }
+
+  function _assertValidDeposit(IERC20, /* token_ */ uint256, /* tokenPoolBalance_ */ uint256 /* depositAmount_ */ )
+    internal
+    view
+    override
+  {
+    __readStub__();
+  }
 }

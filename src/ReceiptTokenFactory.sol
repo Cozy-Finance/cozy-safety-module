@@ -26,10 +26,8 @@ contract ReceiptTokenFactory is IReceiptTokenFactory {
   }
 
   /// @notice Creates a new ReceiptToken contract with the given number of `decimals_`. The ReceiptToken's safety module
-  /// is
-  /// identified by the caller address. The pool id of the ReceiptToken in the safety module and its `PoolType` is used
-  /// to
-  /// generate a unique salt for deploy.
+  /// is identified by the caller address. The pool id of the ReceiptToken in the safety module and its `PoolType` is
+  /// used to generate a unique salt for deploy.
   function deployReceiptToken(uint8 poolId_, PoolType poolType_, uint8 decimals_)
     external
     returns (IReceiptToken receiptToken_)

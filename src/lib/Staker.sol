@@ -3,9 +3,9 @@ pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Depositor} from "./Depositor.sol";
-import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
+import {IDepositorErrors} from "../interfaces/IDepositorErrors.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
-import {IStakerErrors} from "../interfaces/IStakerErrors.sol";
+import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {ReservePool, AssetPool} from "./structs/Pools.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {SafeCastLib} from "./SafeCastLib.sol";
@@ -13,7 +13,7 @@ import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 
-abstract contract Staker is SafetyModuleCommon, IStakerErrors {
+abstract contract Staker is SafetyModuleCommon {
   using SafeERC20 for IERC20;
   using SafeCastLib for uint256;
 
@@ -38,7 +38,7 @@ abstract contract Staker is SafetyModuleCommon, IStakerErrors {
     // required to support fee on transfer tokens, for example if USDT enables a fee.
     // Also, we need to transfer before minting or ERC777s could reenter.
     reserveAsset_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
-    if (reserveAsset_.balanceOf(address(this)) - assetPool_.amount < reserveAssetAmount_) revert InvalidStake();
+    _assertValidDeposit(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
 
     stkTokenAmount_ = _executeStake(reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
@@ -53,7 +53,7 @@ abstract contract Staker is SafetyModuleCommon, IStakerErrors {
     IERC20 reserveAsset_ = reservePool_.asset;
     AssetPool storage assetPool_ = assetPools[reserveAsset_];
 
-    if (reserveAsset_.balanceOf(address(this)) - assetPool_.amount < reserveAssetAmount_) revert InvalidStake();
+    _assertValidDeposit(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
 
     stkTokenAmount_ = _executeStake(reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }

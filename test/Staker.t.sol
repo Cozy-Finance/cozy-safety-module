@@ -6,9 +6,10 @@ import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
-import {IStakerErrors} from "../src/interfaces/IStakerErrors.sol";
+import {IDepositorErrors} from "../src/interfaces/IDepositorErrors.sol";
 import {CozyMath} from "../src/lib/CozyMath.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
+import {Depositor} from "../src/lib/Depositor.sol";
 import {Staker} from "../src/lib/Staker.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
@@ -122,7 +123,7 @@ contract StakerUnitTest is TestBase {
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
   }
 
-  function testFuzz_stake_RevertSafetyModulePaused(uint256 amountToStake_) external {
+  function test_stake_RevertSafetyModulePaused() external {
     component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
 
     address staker_ = _randomAddress();
@@ -257,7 +258,7 @@ contract StakerUnitTest is TestBase {
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
   }
 
-  function testFuzz_stakeWithoutTransfer_RevertSafetyModulePaused(uint256 amountToStake_) external {
+  function test_stakeWithoutTransfer_RevertSafetyModulePaused() external {
     component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
 
     amountToStake_ = bound(amountToStake_, 1, type(uint216).max);
@@ -305,13 +306,13 @@ contract StakerUnitTest is TestBase {
     vm.prank(staker_);
     mockAsset.transfer(address(component), amountToStake_ - 1);
 
-    vm.expectRevert(IStakerErrors.InvalidStake.selector);
+    vm.expectRevert(IDepositorErrors.InvalidDeposit.selector);
     vm.prank(staker_);
     component.stakeWithoutTransfer(0, amountToStake_, receiver_);
   }
 }
 
-contract TestableStaker is Staker {
+contract TestableStaker is Staker, Depositor {
   MockManager public immutable mockManager;
   MockERC20 public immutable mockAsset;
 
@@ -343,10 +344,11 @@ contract TestableStaker is Staker {
   }
 
   // -------- Overridden abstract function placeholders --------
-  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint128 oldStakeAmount_, uint128 slashAmount_)
-    internal
-    override
-  {
+  function _updateUnstakesAfterTrigger(
+    uint16, /* reservePoolId_ */
+    uint128, /* oldStakeAmount_ */
+    uint128 /* slashAmount_ */
+  ) internal view override {
     __readStub__();
   }
 }
