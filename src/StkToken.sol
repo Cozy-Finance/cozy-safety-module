@@ -3,10 +3,9 @@ pragma solidity 0.8.22;
 
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
-import {MintData} from "./lib/structs/MintData.sol";
-import {LFT} from "./lib/LFT.sol";
+import {ERC20} from "./lib/ERC20.sol";
 
-contract StkToken is LFT {
+contract StkToken is ERC20 {
   /// @notice Address of the Cozy protocol manager.
   IManager public immutable cozyManager;
 
@@ -33,26 +32,16 @@ contract StkToken is LFT {
   /// @param decimals_ The decimal places of the token.
   function initialize(ISafetyModule safetyModule_, uint8 decimals_) external {
     // TODO: Name and symbol?
-    __initLFT("Cozy Stake Token", "cozyStk", decimals_);
+    __initERC20("Cozy Stake Token", "cozyStk", decimals_);
     safetyModule = safetyModule_;
   }
 
-  // -------- LFT Implementation --------
-
-  /// @notice Returns the balance of matured tokens held by `user_`.
-  function balanceOfMatured(address user_) public view override returns (uint256 balance_) {
-    // We read the number of total tokens they have, and subtract any un-matured protection. This is required
-    // to ensure that tokens transferred to the user are counted, as they would not be in the protections array.
-    balance_ = balanceOf[user_];
-    // TODO: Balance of matured
-  }
-
   /// @notice Mints `amount_` of tokens to `to_`.
-  function mint(address to_, uint216 amount_) external onlySafetyModule {
-    _mintTokens(to_, amount_);
+  function mint(address to_, uint256 amount_) external onlySafetyModule {
+    _mint(to_, amount_);
   }
 
-  function burn(address caller_, address owner_, uint216 amount_) external onlySafetyModule {
+  function burn(address caller_, address owner_, uint256 amount_) external onlySafetyModule {
     if (caller_ != owner_) {
       uint256 allowed_ = allowance[owner_][caller_]; // Saves gas for limited approvals.
       if (allowed_ != type(uint256).max) _setAllowance(owner_, caller_, allowed_ - amount_);

@@ -13,8 +13,8 @@ contract TestSafetyModule is TestBase {
   address owner;
   address trigger;
 
-  MockERC20 tokenA = new MockERC20('TestA', 'TESTA', 6);
-  MockERC20 tokenB = new MockERC20('TestB', 'TESTB', 18);
+  MockERC20 tokenA = new MockERC20("TestA", "TESTA", 6);
+  MockERC20 tokenB = new MockERC20("TestB", "TESTB", 18);
 
   function setUp() public {
     owner = _randomAddress();
@@ -300,7 +300,7 @@ contract TestSafetyModuleForkTest is TestBase {
 
   function setUp() public {
     vm.createSelectFork(vm.envString("OPTIMISM_RPC_URL"), optimismForkBlock);
-    token = new MockERC20('Test', 'TEST', 6);
+    token = new MockERC20("Test", "TEST", 6);
   }
 
   function test_triggerAndWithdraw() public {

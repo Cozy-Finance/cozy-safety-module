@@ -4,74 +4,21 @@ pragma solidity ^0.8.22;
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {IRewardsDripModel} from "./interfaces/IRewardsDripModel.sol";
+import {IDepositToken} from "./interfaces/IDepositToken.sol";
 import {IStkToken} from "./interfaces/IStkToken.sol";
 import {IStkTokenFactory} from "./interfaces/IStkTokenFactory.sol";
 import {RewardPoolConfig} from "./lib/structs/Configs.sol";
 import {Governable} from "./lib/Governable.sol";
+import {Staker} from "./lib/Staker.sol";
+import {Unstaker} from "./lib/Unstaker.sol";
+import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
+import {ReservePool, TokenPool, IdLookup} from "./lib/structs/Pools.sol";
+import {ClaimedRewards} from "./lib/structs/Rewards.sol";
+import {RewardPool, UndrippedRewardPool, ClaimedRewards} from "./lib/structs/Rewards.sol";
+import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 
 /// @dev Multiple asset SafetyModule.
-contract SafetyModule is Governable {
-  struct ReservePool {
-    IERC20 token;
-    IStkToken stkToken;
-    uint256 amount;
-  }
-
-  struct RewardPool {
-    IERC20 token;
-    uint256 amount;
-  }
-
-  struct UndrippedRewardPool {
-    IERC20 token;
-    uint128 amount;
-    IRewardsDripModel dripModel;
-    uint128 lastDripTime;
-  }
-
-  struct IdLookup {
-    uint128 index;
-    bool exists;
-  }
-
-  struct ClaimedRewards {
-    IERC20 token;
-    uint128 amount;
-  }
-
-  /// @dev reserve pool index in this array is its ID
-  ReservePool[] public reservePools;
-
-  /// @dev claimable reward pool index in this array is its ID
-  RewardPool[] public claimableRewardPools;
-
-  /// @dev undripped reward pool index in this array is its ID
-  UndrippedRewardPool[] public undrippedRewardPools;
-
-  /// @dev claimable and undripped reward pools are mapped 1:1
-  mapping(IERC20 asset_ => uint16[] ids_) public rewardPoolIds;
-
-  /// @dev Used when claiming rewards
-  mapping(IStkToken stkToken_ => IdLookup reservePoolId_) public stkTokenToReservePoolIds;
-
-  /// @dev Used when depositing
-  mapping(IERC20 reserveToken_ => IdLookup reservePoolId_) public reserveTokenToReservePoolIds;
-
-  /// @dev The weighting of each stkToken's claim to all reward pools. Must sum to 1.
-  /// e.g. stkTokenA = 10%, means they're eligible for up to 10% of each pool, scaled to their balance of stkTokenA
-  /// wrt totalSupply.
-  uint16[] public stkTokenRewardPoolWeights;
-
-  /// @dev Two step delay for unstaking.
-  /// Need to accomodate for multiple triggers when unstaking
-  uint128 public unstakeDelay;
-
-  /// @dev Has config for deposit fee and where to send fees
-  IManager public immutable cozyManager;
-
-  /// @notice Address of the Cozy protocol stkTokenFactory.
-  IStkTokenFactory public immutable stkTokenFactory;
-
+contract SafetyModule is Governable, SafetyModuleBaseStorage, Staker, Unstaker {
   constructor(IManager manager_, IStkTokenFactory stkTokenFactory_) {
     _assertAddressNotZero(address(manager_));
     _assertAddressNotZero(address(stkTokenFactory_));
@@ -94,7 +41,13 @@ contract SafetyModule is Governable {
     // TODO: Emit event, either like cozy v2 where we use the configuration update event, or maybe specific to init
     for (uint8 i; i < reserveAssets_.length; i++) {
       IStkToken stkToken_ = stkTokenFactory.deployStkToken(i, reserveAssets_[i].decimals());
-      reservePools[i] = ReservePool({token: reserveAssets_[i], stkToken: stkToken_, amount: 0});
+      reservePools[i] = ReservePool({
+        token: reserveAssets_[i],
+        stkToken: stkToken_,
+        depositToken: IDepositToken(address(stkToken_)),
+        stakeAmount: 0,
+        depositAmount: 0
+      });
       stkTokenToReservePoolIds[stkToken_] = IdLookup({index: i, exists: true});
       reserveTokenToReservePoolIds[reserveAssets_[i]] = IdLookup({index: i, exists: true});
     }
@@ -134,26 +87,6 @@ contract SafetyModule is Governable {
     uint256 rewardsPercentage_,
     uint256 reservePercentage_
   ) external {}
-
-  function stake(uint16 reservePoolId_, uint256 amount_, address receiver_, address from_)
-    external
-    returns (uint256 stkTokenAmount_)
-  {}
-
-  function stakeWithoutTransfer(uint16 reservePoolId_, uint256 amount_, address receiver_)
-    external
-    returns (uint256 stkTokenAmount_)
-  {}
-
-  function unStake(uint16 reservePoolId_, uint256 amount_, address receiver_, address from_)
-    external
-    returns (uint256 reserveTokenAmount_)
-  {}
-
-  function unStakeWithoutTransfer(uint16 reservePoolId_, uint256 amount_, address receiver_)
-    external
-    returns (uint256 reserveTokenAmount_)
-  {}
 
   function claimRewards(address owner_) external returns (ClaimedRewards[] memory claimedRewards_) {}
 }

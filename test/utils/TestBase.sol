@@ -4,6 +4,13 @@ pragma solidity 0.8.22;
 import {Test} from "forge-std/Test.sol";
 
 contract TestBase is Test {
+  uint256 internal constant PANIC_ASSERT = 0x01;
+  uint256 internal constant PANIC_MATH_UNDEROVERFLOW = 0x11;
+  uint256 internal constant PANIC_MATH_DIVIDE_BY_ZERO = 0x12;
+  uint256 internal constant INDEX_OUT_OF_BOUNDS = 0x32;
+
+  bytes4 internal constant PANIC_SELECTOR = bytes4(keccak256("Panic(uint256)"));
+
   function _expectEmit() internal {
     vm.expectEmit(true, true, true, true);
   }
@@ -44,5 +51,26 @@ contract TestBase is Test {
 
   function _randomUint256() internal view returns (uint256) {
     return uint256(_randomBytes32());
+  }
+
+  function _randomUint256(uint256 modulo_) internal view returns (uint256) {
+    return uint256(_randomBytes32()) % modulo_;
+  }
+
+  function _randomIndices(uint256 count_) internal view returns (uint256[] memory idxs_) {
+    idxs_ = new uint256[](count_);
+    for (uint256 i; i < count_; ++i) {
+      idxs_[i] = i;
+    }
+    for (uint256 i; i < count_; ++i) {
+      if (idxs_[i] == i) {
+        uint256 r = i + _randomUint256(count_ - i);
+        (idxs_[i], idxs_[r]) = (idxs_[r], idxs_[i]);
+      }
+    }
+  }
+
+  function _expectPanic(uint256 code_) internal {
+    vm.expectRevert(abi.encodeWithSelector(PANIC_SELECTOR, code_));
   }
 }
