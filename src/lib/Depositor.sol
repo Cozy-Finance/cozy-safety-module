@@ -25,14 +25,14 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
   {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
 
-    IERC20 token_ = reservePool_.asset;
-    AssetPool storage assetPool_ = assetPools[token_];
+    IERC20 reserveAsset_ = reservePool_.asset;
+    AssetPool storage assetPool_ = assetPools[reserveAsset_];
 
     // Pull in stake tokens. After the transfer we ensure we no longer need any assets. This check is
     // required to support fee on transfer tokens, for example if USDT enables a fee.
     // Also, we need to transfer before minting or ERC777s could reenter.
-    token_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
-    _assertValidDeposit(token_, assetPool_.amount, reserveAssetAmount_);
+    reserveAsset_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
+    _assertValidDeposit(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
 
     depositTokenAmount_ = _executeReserveDeposit(reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
@@ -43,10 +43,10 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     returns (uint256 depositTokenAmount_)
   {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
-    IERC20 token_ = reservePool_.asset;
-    AssetPool storage assetPool_ = assetPools[token_];
+    IERC20 reserveAsset_ = reservePool_.asset;
+    AssetPool storage assetPool_ = assetPools[reserveAsset_];
 
-    _assertValidDeposit(token_, assetPool_.amount, reserveAssetAmount_);
+    _assertValidDeposit(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
 
     depositTokenAmount_ = _executeReserveDeposit(reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
@@ -59,14 +59,14 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
   ) external returns (uint256 depositTokenAmount_) {
     UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[claimableRewardPoolId_];
 
-    IERC20 token_ = rewardsPool_.asset;
-    AssetPool storage assetPool_ = assetPools[token_];
+    IERC20 reserveAsset_ = rewardsPool_.asset;
+    AssetPool storage assetPool_ = assetPools[reserveAsset_];
 
     // Pull in stake tokens. After the transfer we ensure we no longer need any assets. This check is
     // required to support fee on transfer tokens, for example if USDT enables a fee.
     // Also, we need to transfer before minting or ERC777s could reenter.
-    token_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
-    _assertValidDeposit(token_, assetPool_.amount, reserveAssetAmount_);
+    reserveAsset_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
+    _assertValidDeposit(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
 
     depositTokenAmount_ = _executeRewardDeposit(reserveAssetAmount_, receiver_, assetPool_, rewardsPool_);
   }
@@ -77,10 +77,10 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     address receiver_
   ) external returns (uint256 depositTokenAmount_) {
     UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[claimableRewardPoolId_];
-    IERC20 token_ = rewardsPool_.asset;
-    AssetPool storage assetPool_ = assetPools[token_];
+    IERC20 reserveAsset_ = rewardsPool_.asset;
+    AssetPool storage assetPool_ = assetPools[reserveAsset_];
 
-    _assertValidDeposit(token_, assetPool_.amount, reserveAssetAmount_);
+    _assertValidDeposit(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
 
     depositTokenAmount_ = _executeRewardDeposit(reserveAssetAmount_, receiver_, assetPool_, rewardsPool_);
   }
@@ -127,7 +127,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     emit Deposited(msg.sender, receiver_, reserveAssetAmount_, depositTokenAmount_);
   }
 
-  function _assertValidDeposit(IERC20 token_, uint256 assetPoolBalance_, uint256 depositAmount_) internal view override {
-    if (token_.balanceOf(address(this)) - assetPoolBalance_ < depositAmount_) revert InvalidDeposit();
+  function _assertValidDeposit(IERC20 asset_, uint256 assetPoolBalance_, uint256 depositAmount_) internal view override {
+    if (asset_.balanceOf(address(this)) - assetPoolBalance_ < depositAmount_) revert InvalidDeposit();
   }
 }

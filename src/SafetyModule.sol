@@ -43,7 +43,7 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Staker,
       IReceiptToken stkToken_ =
         receiptTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.STAKE, reserveAssets_[i].decimals());
       IReceiptToken depositToken_ =
-        receiptTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.DEPOSIT, reserveAssets_[i].decimals());
+        receiptTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.RESERVE, reserveAssets_[i].decimals());
       reservePools[i] = ReservePool({
         asset: reserveAssets_[i],
         stkToken: stkToken_,
