@@ -6,7 +6,7 @@ import {IManager} from "../interfaces/IManager.sol";
 import {IStkToken} from "../interfaces/IStkToken.sol";
 import {IStkTokenFactory} from "../interfaces/IStkTokenFactory.sol";
 import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
-import {ReservePool, AssetPool, IdLookup} from "./structs/Pools.sol";
+import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
 import {RewardPool, UndrippedRewardPool, ClaimedRewards} from "./structs/Rewards.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 

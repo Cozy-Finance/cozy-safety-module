@@ -21,6 +21,19 @@ struct ReservePool {
   uint256 depositAmount;
 }
 
+struct UndrippedRewardPool {
+  IERC20 token;
+  uint256 amount;
+  IRewardsDripModel dripModel;
+  uint128 lastDripTime;
+  IDepositToken depositToken;
+}
+
+struct DepositPool {
+  IDepositToken depositToken;
+  uint256 depositAmount;
+}
+
 struct IdLookup {
   uint128 index;
   bool exists;

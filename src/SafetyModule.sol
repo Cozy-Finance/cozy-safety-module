@@ -12,9 +12,9 @@ import {Governable} from "./lib/Governable.sol";
 import {Staker} from "./lib/Staker.sol";
 import {Unstaker} from "./lib/Unstaker.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
-import {ReservePool, AssetPool, IdLookup} from "./lib/structs/Pools.sol";
+import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./lib/structs/Pools.sol";
 import {ClaimedRewards} from "./lib/structs/Rewards.sol";
-import {RewardPool, UndrippedRewardPool, ClaimedRewards} from "./lib/structs/Rewards.sol";
+import {RewardPool, ClaimedRewards} from "./lib/structs/Rewards.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 
 /// @dev Multiple asset SafetyModule.
@@ -39,12 +39,13 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Staker, Unstaker {
 
     // TODO: Move to configurator lib
     // TODO: Emit event, either like cozy v2 where we use the configuration update event, or maybe specific to init
+    // TODO: Deploy deposit token contracts
     for (uint8 i; i < reserveAssets_.length; i++) {
       IStkToken stkToken_ = stkTokenFactory.deployStkToken(i, reserveAssets_[i].decimals());
       reservePools[i] = ReservePool({
         asset: reserveAssets_[i],
         stkToken: stkToken_,
-        depositToken: IDepositToken(address(stkToken_)),
+        depositToken: IDepositToken(address(0)),
         stakeAmount: 0,
         depositAmount: 0
       });
@@ -56,7 +57,8 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Staker, Unstaker {
         asset: rewardPoolConfig_[i].asset,
         amount: 0,
         dripModel: rewardPoolConfig_[i].dripModel,
-        lastDripTime: 0
+        lastDripTime: 0,
+        depositToken: IDepositToken(address(0))
       });
       stkTokenRewardPoolWeights[i] = rewardPoolConfig_[i].weight;
     }

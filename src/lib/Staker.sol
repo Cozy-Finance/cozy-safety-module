@@ -64,7 +64,7 @@ abstract contract Staker is SafetyModuleCommon, IStakerErrors {
   ) internal returns (uint256 stkTokenAmount_) {
     if (safetyModuleState == SafetyModuleState.PAUSED) revert InvalidState();
 
-    stkTokenAmount_ = SafetyModuleCalculationsLib.convertToStkTokenAmount(
+    stkTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       reserveAssetAmount_, reservePool_.stkToken.totalSupply(), reservePool_.stakeAmount
     );
     // Increment reserve pool accounting only after calculating `stkTokenAmount_` to mint.
