@@ -28,11 +28,6 @@ struct UndrippedRewardPool {
   IReceiptToken depositToken;
 }
 
-struct DepositPool {
-  IReceiptToken depositToken;
-  uint256 depositAmount;
-}
-
 struct IdLookup {
   uint128 index;
   bool exists;

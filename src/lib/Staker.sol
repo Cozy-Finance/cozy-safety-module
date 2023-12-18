@@ -38,7 +38,7 @@ abstract contract Staker is SafetyModuleCommon {
     // required to support fee on transfer tokens, for example if USDT enables a fee.
     // Also, we need to transfer before minting or ERC777s could reenter.
     reserveAsset_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
-    _assertValidDeposit(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
+    _assertValidDepositBalance(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
 
     stkTokenAmount_ = _executeStake(reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
@@ -53,7 +53,7 @@ abstract contract Staker is SafetyModuleCommon {
     IERC20 reserveAsset_ = reservePool_.asset;
     AssetPool storage assetPool_ = assetPools[reserveAsset_];
 
-    _assertValidDeposit(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
+    _assertValidDepositBalance(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
 
     stkTokenAmount_ = _executeStake(reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
