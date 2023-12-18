@@ -8,7 +8,10 @@ import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   /// @dev Helper to assert that the safety module has a balance of tokens that matches the required amount for a
   /// deposit.
-  function _assertValidDepositBalance(IERC20 token_, uint256 tokenPoolBalance_, uint256 depositAmount_) internal view virtual;
+  function _assertValidDepositBalance(IERC20 token_, uint256 tokenPoolBalance_, uint256 depositAmount_)
+    internal
+    view
+    virtual;
 
   /// @dev Prepares pending unstakes to have their exchange rates adjusted after a trigger. Defined in `Unstaker`.
   function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint128 stakeAmount_, uint128 slashAmount_)

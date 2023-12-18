@@ -305,7 +305,6 @@ contract StakerUnitTest is TestBase {
 }
 
 contract TestableStaker is Staker, Depositor {
-
   // -------- Mock setters --------
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;

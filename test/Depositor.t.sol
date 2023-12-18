@@ -48,7 +48,6 @@ abstract contract DepositorUnitTest is TestBase {
 }
 
 contract ReservePoolDepositorUnitTest is DepositorUnitTest {
-
   function test_depositReserve_DepositTokensAndStorageUpdates() external {
     address depositor_ = _randomAddress();
     address receiver_ = _randomAddress();
@@ -284,7 +283,9 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
     component.depositReserveAssetsWithoutTransfer(1, 10e18, receiver_);
   }
 
-  function testFuzz_depositReserveAssetsWithoutTransfer_RevertInsufficientAssetsAvailable(uint256 amountToDeposit_) external {
+  function testFuzz_depositReserveAssetsWithoutTransfer_RevertInsufficientAssetsAvailable(uint256 amountToDeposit_)
+    external
+  {
     amountToDeposit_ = bound(amountToDeposit_, 1, type(uint216).max);
 
     address depositor_ = _randomAddress();
@@ -303,7 +304,6 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
 }
 
 contract TestableDepositor is Depositor {
-
   // -------- Mock setters --------
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;

@@ -33,7 +33,8 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     // Also, we need to transfer before minting or ERC777s could reenter.
     underlyingToken_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
 
-    depositTokenAmount_ = _executeReserveDeposit(underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
+    depositTokenAmount_ =
+      _executeReserveDeposit(underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
 
   /// @dev Expects depositer to transfer assets to the SafetyModule beforehand.
@@ -45,7 +46,8 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     IERC20 underlyingToken_ = reservePool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
 
-    depositTokenAmount_ = _executeReserveDeposit(underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
+    depositTokenAmount_ =
+      _executeReserveDeposit(underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
 
   function depositRewardAssets(
@@ -64,7 +66,8 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     // Also, we need to transfer before minting or ERC777s could reenter.
     underlyingToken_.safeTransferFrom(from_, address(this), rewardAssetAmount_);
 
-    depositTokenAmount_ = _executeRewardDeposit(underlyingToken_, rewardAssetAmount_, receiver_, assetPool_, rewardsPool_);
+    depositTokenAmount_ =
+      _executeRewardDeposit(underlyingToken_, rewardAssetAmount_, receiver_, assetPool_, rewardsPool_);
   }
 
   function depositRewardAssetsWithoutTransfer(
@@ -76,7 +79,8 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     IERC20 underlyingToken_ = rewardsPool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
 
-    depositTokenAmount_ = _executeRewardDeposit(underlyingToken_, rewardAssetAmount_, receiver_, assetPool_, rewardsPool_);
+    depositTokenAmount_ =
+      _executeRewardDeposit(underlyingToken_, rewardAssetAmount_, receiver_, assetPool_, rewardsPool_);
   }
 
   function _executeReserveDeposit(
@@ -125,7 +129,11 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     emit Deposited(msg.sender, receiver_, rewardAssetAmount_, depositTokenAmount_);
   }
 
-  function _assertValidDepositBalance(IERC20 token_, uint256 assetPoolBalance_, uint256 depositAmount_) internal view override {
+  function _assertValidDepositBalance(IERC20 token_, uint256 assetPoolBalance_, uint256 depositAmount_)
+    internal
+    view
+    override
+  {
     if (token_.balanceOf(address(this)) - assetPoolBalance_ < depositAmount_) revert InvalidDeposit();
   }
 
