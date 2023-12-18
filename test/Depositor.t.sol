@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
+import {IDepositorErrors} from "../src/interfaces/IDepositorErrors.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
@@ -14,16 +15,25 @@ import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
+enum DepositType {
+  RESERVE,
+  REWARDS
+}
+
 abstract contract DepositorUnitTest is TestBase {
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
   MockERC20 mockReserveDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
-  MockERC20 mockRewardPoolDepositTorkn = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
+  MockERC20 mockRewardPoolDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
   TestableDepositor component = new TestableDepositor();
 
   /// @dev Emitted when a user stakes.
   event Deposited(address indexed caller_, address indexed receiver_, uint256 amount_, uint256 depositTokenAmount_);
 
   uint256 initialSafetyModuleBal = 200e18;
+
+  // Test contract specific variables.
+  DepositType depositType;
+  MockERC20 mockDepositToken;
 
   function setUp() public {
     ReservePool memory initialReservePool_ = ReservePool({
@@ -35,7 +45,7 @@ abstract contract DepositorUnitTest is TestBase {
     });
     UndrippedRewardPool memory initialUndrippedRewardPool_ = UndrippedRewardPool({
       asset: IERC20(address(mockAsset)),
-      depositToken: IReceiptToken(address(mockRewardPoolDepositTorkn)),
+      depositToken: IReceiptToken(address(mockRewardPoolDepositToken)),
       dripModel: IRewardsDripModel(address(0)),
       lastDripTime: 0,
       amount: 50e18
@@ -45,9 +55,30 @@ abstract contract DepositorUnitTest is TestBase {
     component.mockAddUndrippedRewardPool(initialUndrippedRewardPool_);
     component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
   }
-}
 
-contract ReservePoolDepositorUnitTest is DepositorUnitTest {
+  function _deposit(
+    DepositType depositType_,
+    bool withoutTransfer_,
+    uint16 poolId_,
+    uint256 amountToDeposit_,
+    address receiver_,
+    address depositor_
+  ) internal returns (uint256 depositTokenAmount_) {
+    if (depositType_ == DepositType.RESERVE) {
+      if (withoutTransfer_) {
+        depositTokenAmount_ = component.depositReserveAssetsWithoutTransfer(poolId_, amountToDeposit_, receiver_);
+      } else {
+        depositTokenAmount_ = component.depositReserveAssets(poolId_, amountToDeposit_, receiver_, depositor_);
+      }
+    } else {
+      if (withoutTransfer_) {
+        depositTokenAmount_ = component.depositRewardAssetsWithoutTransfer(poolId_, amountToDeposit_, receiver_);
+      } else {
+        depositTokenAmount_ = component.depositRewardAssets(poolId_, amountToDeposit_, receiver_, depositor_);
+      }
+    }
+  }
+
   function test_depositReserve_DepositTokensAndStorageUpdates() external {
     address depositor_ = _randomAddress();
     address receiver_ = _randomAddress();
@@ -67,22 +98,35 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
     emit Deposited(depositor_, receiver_, amountToDeposit_, expectedDepositTokenAmount_);
 
     vm.prank(depositor_);
-    uint256 depositTokenAmount_ = component.depositReserveAssets(0, amountToDeposit_, receiver_, depositor_);
+    uint256 depositTokenAmount_ = _deposit(depositType, false, 0, amountToDeposit_, receiver_, depositor_);
 
     assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
+    UndrippedRewardPool memory finalUndrippedRewardPool_ = component.getUndrippedRewardPool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
     // No change
     assertEq(finalReservePool_.stakeAmount, 100e18);
-    // 50e18 + 10e18
-    assertEq(finalReservePool_.depositAmount, 60e18);
+    if (depositType == DepositType.RESERVE) {
+      // 50e18 + 10e18
+      assertEq(finalReservePool_.depositAmount, 60e18);
+    } else {
+      // No change
+      assertEq(finalReservePool_.depositAmount, 50e18);
+    }
+    if (depositType == DepositType.REWARDS) {
+      // 50e18 + 10e18
+      assertEq(finalUndrippedRewardPool_.amount, 60e18);
+    } else {
+      // No change
+      assertEq(finalUndrippedRewardPool_.amount, 50e18);
+    }
     // 200e18 + 10e18
     assertEq(finalAssetPool_.amount, 210e18);
     assertEq(mockAsset.balanceOf(address(component)), 210e18);
 
     assertEq(mockAsset.balanceOf(depositor_), 0);
-    assertEq(mockReserveDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
+    assertEq(mockDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
   }
 
   function test_depositReserve_DepositTokensAndStorageUpdatesNonZeroSupply() external {
@@ -96,7 +140,7 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
     mockAsset.mint(depositor_, amountToDeposit_);
     // Mint/burn some depositTokens.
     uint256 initialDepositTokenSupply_ = 50e18;
-    mockReserveDepositToken.mint(address(0), initialDepositTokenSupply_);
+    mockDepositToken.mint(address(0), initialDepositTokenSupply_);
     // Approve safety module to spend asset.
     vm.prank(depositor_);
     mockAsset.approve(address(component), amountToDeposit_);
@@ -107,22 +151,35 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
     emit Deposited(depositor_, receiver_, amountToDeposit_, expectedDepositTokenAmount_);
 
     vm.prank(depositor_);
-    uint256 depositTokenAmount_ = component.depositReserveAssets(0, amountToDeposit_, receiver_, depositor_);
+    uint256 depositTokenAmount_ = _deposit(depositType, false, 0, amountToDeposit_, receiver_, depositor_);
 
     assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
+    UndrippedRewardPool memory finalUndrippedRewardPool_ = component.getUndrippedRewardPool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
 
     // No change
     assertEq(finalReservePool_.stakeAmount, 100e18);
-    // 50e18 + 20e18
-    assertEq(finalReservePool_.depositAmount, 70e18);
+    if (depositType == DepositType.RESERVE) {
+      // 50e18 + 20e18
+      assertEq(finalReservePool_.depositAmount, 70e18);
+    } else {
+      // No change
+      assertEq(finalReservePool_.depositAmount, 50e18);
+    }
+    if (depositType == DepositType.REWARDS) {
+      // 50e18 + 20e18
+      assertEq(finalUndrippedRewardPool_.amount, 70e18);
+    } else {
+      // No change
+      assertEq(finalUndrippedRewardPool_.amount, 50e18);
+    }
     // 200e18 + 20e18
     assertEq(finalAssetPool_.amount, 220e18);
     assertEq(mockAsset.balanceOf(address(component)), 220e18);
     assertEq(mockAsset.balanceOf(depositor_), 0);
-    assertEq(mockReserveDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
+    assertEq(mockDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
   }
 
   function testFuzz_depositReserve_RevertSafetyModulePaused(uint256 amountToDeposit_) external {
@@ -139,14 +196,14 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
     mockAsset.mint(depositor_, amountToDeposit_);
     // Mint/burn some depositTokens.
     uint256 initialDepositTokenSupply_ = 50e18;
-    mockReserveDepositToken.mint(address(0), initialDepositTokenSupply_);
+    mockDepositToken.mint(address(0), initialDepositTokenSupply_);
     // Approve safety module to spend asset.
     vm.prank(depositor_);
     mockAsset.approve(address(component), amountToDeposit_);
 
     vm.expectRevert(ICommonErrors.InvalidState.selector);
     vm.prank(depositor_);
-    component.depositReserveAssets(0, amountToDeposit_, receiver_, depositor_);
+    _deposit(depositType, false, 0, amountToDeposit_, receiver_, depositor_);
   }
 
   function test_depositReserve_RevertOutOfBoundsReservePoolId() external {
@@ -155,7 +212,7 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
 
     _expectPanic(INDEX_OUT_OF_BOUNDS);
     vm.prank(depositor_);
-    component.depositReserveAssets(1, 10e18, receiver_, depositor_);
+    _deposit(depositType, false, 1, 10e18, receiver_, depositor_);
   }
 
   function testFuzz_depositReserve_RevertInsufficientAssetsAvailable(uint256 amountToDeposit_) external {
@@ -172,7 +229,7 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
 
     _expectPanic(PANIC_MATH_UNDEROVERFLOW);
     vm.prank(depositor_);
-    component.depositReserveAssets(0, amountToDeposit_, receiver_, depositor_);
+    _deposit(depositType, false, 0, amountToDeposit_, receiver_, depositor_);
   }
 
   function test_depositReserveAssetsWithoutTransfer_DepositTokensAndStorageUpdates() external {
@@ -194,22 +251,35 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
     emit Deposited(depositor_, receiver_, amountToDeposit_, expectedDepositTokenAmount_);
 
     vm.prank(depositor_);
-    uint256 depositTokenAmount_ = component.depositReserveAssetsWithoutTransfer(0, amountToDeposit_, receiver_);
+    uint256 depositTokenAmount_ = _deposit(depositType, true, 0, amountToDeposit_, receiver_, receiver_);
 
     assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
+    UndrippedRewardPool memory finalUndrippedRewardPool_ = component.getUndrippedRewardPool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
     // No change
     assertEq(finalReservePool_.stakeAmount, 100e18);
-    // 50e18 + 10e18
-    assertEq(finalReservePool_.depositAmount, 60e18);
+    if (depositType == DepositType.RESERVE) {
+      // 50e18 + 10e18
+      assertEq(finalReservePool_.depositAmount, 60e18);
+    } else {
+      // No change
+      assertEq(finalReservePool_.depositAmount, 50e18);
+    }
+    if (depositType == DepositType.REWARDS) {
+      // 50e18 + 10e18
+      assertEq(finalUndrippedRewardPool_.amount, 60e18);
+    } else {
+      // No change
+      assertEq(finalUndrippedRewardPool_.amount, 50e18);
+    }
     // 200e18 + 10e18
     assertEq(finalAssetPool_.amount, 210e18);
     assertEq(mockAsset.balanceOf(address(component)), 210e18);
 
     assertEq(mockAsset.balanceOf(depositor_), 0);
-    assertEq(mockReserveDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
+    assertEq(mockDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
   }
 
   function test_depositReserveAssetsWithoutTransfer_DepositTokensAndStorageUpdatesNonZeroSupply() external {
@@ -223,7 +293,7 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
     mockAsset.mint(depositor_, amountToDeposit_);
     // Mint/burn some depositTokens.
     uint256 initialDepositTokenSupply_ = 50e18;
-    mockReserveDepositToken.mint(address(0), initialDepositTokenSupply_);
+    mockDepositToken.mint(address(0), initialDepositTokenSupply_);
     // Transfer to safety module.
     vm.prank(depositor_);
     mockAsset.transfer(address(component), amountToDeposit_);
@@ -234,22 +304,35 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
     emit Deposited(depositor_, receiver_, amountToDeposit_, expectedDepositTokenAmount_);
 
     vm.prank(depositor_);
-    uint256 depositTokenAmount_ = component.depositReserveAssetsWithoutTransfer(0, amountToDeposit_, receiver_);
+    uint256 depositTokenAmount_ = _deposit(depositType, true, 0, amountToDeposit_, receiver_, receiver_);
 
     assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
+    UndrippedRewardPool memory finalUndrippedRewardPool_ = component.getUndrippedRewardPool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
     // No change
     assertEq(finalReservePool_.stakeAmount, 100e18);
-    // 50e18 + 20e18
-    assertEq(finalReservePool_.depositAmount, 70e18);
+    if (depositType == DepositType.RESERVE) {
+      // 50e18 + 20e18
+      assertEq(finalReservePool_.depositAmount, 70e18);
+    } else {
+      // No change
+      assertEq(finalReservePool_.depositAmount, 50e18);
+    }
+    if (depositType == DepositType.REWARDS) {
+      // 50e18 + 20e18
+      assertEq(finalUndrippedRewardPool_.amount, 70e18);
+    } else {
+      // No change
+      assertEq(finalUndrippedRewardPool_.amount, 50e18);
+    }
     // 200e18 + 20e18
     assertEq(finalAssetPool_.amount, 220e18);
     assertEq(mockAsset.balanceOf(address(component)), 220e18);
 
     assertEq(mockAsset.balanceOf(depositor_), 0);
-    assertEq(mockReserveDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
+    assertEq(mockDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
   }
 
   function testFuzz_depositReserveAssetsWithoutTransfer_RevertSafetyModulePaused(uint256 amountToDeposit_) external {
@@ -266,28 +349,27 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
     mockAsset.mint(depositor_, amountToDeposit_);
     // Mint/burn some depositTokens.
     uint256 initialDepositTokenSupply_ = 50e18;
-    mockReserveDepositToken.mint(address(0), initialDepositTokenSupply_);
+    mockDepositToken.mint(address(0), initialDepositTokenSupply_);
     // Transfer to safety module.
     vm.prank(depositor_);
     mockAsset.transfer(address(component), amountToDeposit_);
 
     vm.expectRevert(ICommonErrors.InvalidState.selector);
     vm.prank(depositor_);
-    component.depositReserveAssetsWithoutTransfer(0, amountToDeposit_, receiver_);
+    _deposit(depositType, true, 0, amountToDeposit_, receiver_, receiver_);
   }
 
   function test_depositReserveAssetsWithoutTransfer_RevertOutOfBoundsReservePoolId() external {
     address receiver_ = _randomAddress();
 
     _expectPanic(INDEX_OUT_OF_BOUNDS);
-    component.depositReserveAssetsWithoutTransfer(1, 10e18, receiver_);
+    _deposit(depositType, true, 1, 10e18, receiver_, receiver_);
   }
 
   function testFuzz_depositReserveAssetsWithoutTransfer_RevertInsufficientAssetsAvailable(uint256 amountToDeposit_)
     external
   {
-    amountToDeposit_ = bound(amountToDeposit_, 1, type(uint216).max);
-
+    amountToDeposit_ = bound(amountToDeposit_, 1, type(uint256).max);
     address depositor_ = _randomAddress();
     address receiver_ = _randomAddress();
 
@@ -297,9 +379,24 @@ contract ReservePoolDepositorUnitTest is DepositorUnitTest {
     vm.prank(depositor_);
     mockAsset.transfer(address(component), amountToDeposit_ - 1);
 
-    _expectPanic(PANIC_MATH_UNDEROVERFLOW);
+    if (amountToDeposit_ - 1 < initialSafetyModuleBal) _expectPanic(PANIC_MATH_UNDEROVERFLOW);
+    else vm.expectRevert(IDepositorErrors.InvalidDeposit.selector);
     vm.prank(depositor_);
-    component.depositReserveAssets(0, amountToDeposit_, receiver_, depositor_);
+    _deposit(depositType, true, 0, amountToDeposit_, receiver_, address(0));
+  }
+}
+
+contract ReservePoolDepositorUnitTest is DepositorUnitTest {
+  constructor() {
+    depositType = DepositType.RESERVE;
+    mockDepositToken = mockReserveDepositToken;
+  }
+}
+
+contract RewardPoolDepositorUnitTest is DepositorUnitTest {
+  constructor() {
+    depositType = DepositType.REWARDS;
+    mockDepositToken = mockRewardPoolDepositToken;
   }
 }
 
