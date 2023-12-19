@@ -3,7 +3,7 @@ pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
-import {IStkToken} from "../interfaces/IStkToken.sol";
+import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IUnstakerErrors} from "../interfaces/IUnstakerErrors.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {ReservePool, AssetPool} from "./structs/Pools.sol";

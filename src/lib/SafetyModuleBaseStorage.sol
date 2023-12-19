@@ -3,11 +3,11 @@ pragma solidity 0.8.22;
 
 import {IERC20} from "../interfaces/IERC20.sol";
 import {IManager} from "../interfaces/IManager.sol";
-import {IStkToken} from "../interfaces/IStkToken.sol";
-import {IStkTokenFactory} from "../interfaces/IStkTokenFactory.sol";
+import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
-import {ReservePool, AssetPool, IdLookup} from "./structs/Pools.sol";
-import {RewardPool, UndrippedRewardPool, ClaimedRewards} from "./structs/Rewards.sol";
+import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
+import {RewardPool, ClaimedRewards} from "./structs/Rewards.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 abstract contract SafetyModuleBaseStorage {
@@ -24,7 +24,7 @@ abstract contract SafetyModuleBaseStorage {
   mapping(IERC20 asset_ => uint16[] ids_) public rewardPoolIds;
 
   /// @dev Used when claiming rewards
-  mapping(IStkToken stkToken_ => IdLookup reservePoolId_) public stkTokenToReservePoolIds;
+  mapping(IReceiptToken stkToken_ => IdLookup reservePoolId_) public stkTokenToReservePoolIds;
 
   /// @dev Used for doing aggregate accounting of reserve assets.
   mapping(IERC20 reserveAsset_ => AssetPool assetPool_) public assetPools;
@@ -40,8 +40,8 @@ abstract contract SafetyModuleBaseStorage {
   /// @dev Has config for deposit fee and where to send fees
   IManager public immutable cozyManager;
 
-  /// @notice Address of the Cozy protocol stkTokenFactory.
-  IStkTokenFactory public immutable stkTokenFactory;
+  /// @notice Address of the Cozy protocol ReceiptTokenFactory.
+  IReceiptTokenFactory public immutable receiptTokenFactory;
 
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;

@@ -5,8 +5,8 @@ import "forge-std/console2.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
-import {IStkToken} from "../src/interfaces/IStkToken.sol";
-import {IDepositToken} from "../src/interfaces/IDepositToken.sol";
+import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IUnstakerErrors} from "../src/interfaces/IUnstakerErrors.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
@@ -14,8 +14,8 @@ import {CozyMath} from "../src/lib/CozyMath.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {Unstaker} from "../src/lib/Unstaker.sol";
 import {UnstakerLib} from "../src/lib/UnstakerLib.sol";
-import {StkToken} from "../src/StkToken.sol";
-import {StkTokenFactory} from "../src/StkTokenFactory.sol";
+import {ReceiptToken} from "../src/ReceiptToken.sol";
+import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {AssetPool} from "../src/lib/structs/Pools.sol";
@@ -28,7 +28,7 @@ contract UnstakerUnitTest is TestBase {
   using CozyMath for uint256;
   using FixedPointMathLib for uint256;
 
-  IStkToken stkToken;
+  IReceiptToken stkToken;
   MockManager public mockManager = new MockManager();
   TestableUnstaker component = new TestableUnstaker(IManager(address(mockManager)));
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
@@ -59,19 +59,20 @@ contract UnstakerUnitTest is TestBase {
   function setUp() public {
     component.mockSetUnstakeDelay(UNSTAKE_DELAY);
 
-    StkToken stkTokenLogic_ = new StkToken(IManager(address(mockManager)));
+    ReceiptToken stkTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
     stkTokenLogic_.initialize(ISafetyModule(address(0)), 0);
-    StkTokenFactory stkTokenFactory = new StkTokenFactory(IStkToken(address(stkTokenLogic_)));
+    ReceiptTokenFactory receiptTokenFactory = new ReceiptTokenFactory(IReceiptToken(address(stkTokenLogic_)));
 
     vm.prank(address(component));
-    stkToken = IStkToken(address(stkTokenFactory.deployStkToken(0, 18)));
+    stkToken =
+      IReceiptToken(address(receiptTokenFactory.deployReceiptToken(0, IReceiptTokenFactory.PoolType.STAKE, 18)));
     vm.stopPrank();
 
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
-        stkToken: IStkToken(address(stkToken)),
-        depositToken: IDepositToken(address(mockDepositToken)),
+        stkToken: IReceiptToken(address(stkToken)),
+        depositToken: IReceiptToken(address(mockDepositToken)),
         stakeAmount: 0,
         depositAmount: 0
       })
@@ -622,5 +623,13 @@ contract TestableUnstaker is Unstaker {
 
   function updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 oldStakeAmount_, uint256 slashAmount_) external {
     _updateUnstakesAfterTrigger(reservePoolId_, uint128(oldStakeAmount_), uint128(slashAmount_));
+  }
+
+  function _assertValidDepositBalance(
+    IERC20, /* token_ */
+    uint256, /* tokenPoolBalance_ */
+    uint256 /* depositAmount_ */
+  ) internal view override {
+    __readStub__();
   }
 }

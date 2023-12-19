@@ -1,41 +1,33 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
-import {IDepositToken} from "../src/interfaces/IDepositToken.sol";
-import {IStkToken} from "../src/interfaces/IStkToken.sol";
+import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
-import {IStakerErrors} from "../src/interfaces/IStakerErrors.sol";
-import {CozyMath} from "../src/lib/CozyMath.sol";
+import {IDepositorErrors} from "../src/interfaces/IDepositorErrors.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
+import {Depositor} from "../src/lib/Depositor.sol";
 import {Staker} from "../src/lib/Staker.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
-import {ReservePool} from "../src/lib/structs/Pools.sol";
-import {AssetPool} from "../src/lib/structs/Pools.sol";
+import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
-import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
 contract StakerUnitTest is TestBase {
-  using CozyMath for uint256;
-  using FixedPointMathLib for uint256;
-
-  MockManager public mockManager = new MockManager();
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
   MockERC20 mockStkToken = new MockERC20("Mock Cozy Stake Token", "cozyStk", 6);
   MockERC20 mockDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
-  TestableStaker component = new TestableStaker(IManager(address(mockManager)));
+  TestableStaker component = new TestableStaker();
 
   event Staked(address indexed caller_, address indexed receiver_, uint256 amount_, uint256 stkTokenAmount_);
 
   function setUp() public {
     ReservePool memory initialReservePool_ = ReservePool({
       asset: IERC20(address(mockAsset)),
-      stkToken: IStkToken(address(mockStkToken)),
-      depositToken: IDepositToken(address(mockDepositToken)),
+      stkToken: IReceiptToken(address(mockStkToken)),
+      depositToken: IReceiptToken(address(mockDepositToken)),
       stakeAmount: 100e18,
       depositAmount: 99e18
     });
@@ -51,11 +43,11 @@ contract StakerUnitTest is TestBase {
     address receiver_ = _randomAddress();
     uint128 amountToStake_ = 20e18;
 
-    // Mint initial asset balance for set.
+    // Mint initial asset balance for safety module.
     mockAsset.mint(address(component), 150e18);
     // Mint initial balance for staker.
     mockAsset.mint(staker_, amountToStake_);
-    // Approve staker to spend asset.
+    // Approve safety module to spend asset.
     vm.prank(staker_);
     mockAsset.approve(address(component), amountToStake_);
 
@@ -90,14 +82,14 @@ contract StakerUnitTest is TestBase {
     address receiver_ = _randomAddress();
     uint128 amountToStake_ = 20e18;
 
-    // Mint initial asset balance for set.
+    // Mint initial asset balance for safety module.
     mockAsset.mint(address(component), 150e18);
     // Mint initial balance for staker.
     mockAsset.mint(staker_, amountToStake_);
     // Mint/burn some stkTokens.
     uint256 initialStkTokenSupply_ = 50e18;
     mockStkToken.mint(address(0), initialStkTokenSupply_);
-    // Approve staker to spend asset.
+    // Approve safety module to spend asset.
     vm.prank(staker_);
     mockAsset.approve(address(component), amountToStake_);
 
@@ -131,14 +123,14 @@ contract StakerUnitTest is TestBase {
 
     amountToStake_ = bound(amountToStake_, 1, type(uint216).max);
 
-    // Mint initial asset balance for set.
+    // Mint initial asset balance for safety module.
     mockAsset.mint(address(component), 150e18);
     // Mint initial balance for staker.
     mockAsset.mint(staker_, amountToStake_);
     // Mint/burn some stkTokens.
     uint256 initialStkTokenSupply_ = 50e18;
     mockStkToken.mint(address(0), initialStkTokenSupply_);
-    // Approve staker to spend asset.
+    // Approve safety module to spend asset.
     vm.prank(staker_);
     mockAsset.approve(address(component), amountToStake_);
 
@@ -168,7 +160,7 @@ contract StakerUnitTest is TestBase {
 
     // Mint insufficient assets for staker.
     mockAsset.mint(staker_, amountToStake_ - 1);
-    // Approve staker to spend asset.
+    // Approve safety module to spend asset.
     vm.prank(staker_);
     mockAsset.approve(address(component), amountToStake_);
 
@@ -184,7 +176,7 @@ contract StakerUnitTest is TestBase {
     address receiver_ = _randomAddress();
     uint128 amountToStake_ = 20e18;
 
-    // Mint initial asset balance for set.
+    // Mint initial asset balance for safety module.
     mockAsset.mint(address(component), 150e18);
     // Mint initial balance for staker.
     mockAsset.mint(staker_, amountToStake_);
@@ -223,7 +215,7 @@ contract StakerUnitTest is TestBase {
     address receiver_ = _randomAddress();
     uint128 amountToStake_ = 20e18;
 
-    // Mint initial asset balance for set.
+    // Mint initial asset balance for safety module.
     mockAsset.mint(address(component), 150e18);
     // Mint initial balance for staker.
     mockAsset.mint(staker_, amountToStake_);
@@ -266,7 +258,7 @@ contract StakerUnitTest is TestBase {
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
 
-    // Mint initial asset balance for set.
+    // Mint initial asset balance for safety module.
     mockAsset.mint(address(component), 150e18);
     // Mint initial balance for staker.
     mockAsset.mint(staker_, amountToStake_);
@@ -298,7 +290,7 @@ contract StakerUnitTest is TestBase {
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
 
-    // Mint initial asset balance for set.
+    // Mint initial asset balance for safety module.
     mockAsset.mint(address(component), 150e18);
     // Mint assets for staker.
     mockAsset.mint(staker_, amountToStake_);
@@ -306,21 +298,13 @@ contract StakerUnitTest is TestBase {
     vm.prank(staker_);
     mockAsset.transfer(address(component), amountToStake_ - 1);
 
-    vm.expectRevert(IStakerErrors.InvalidStake.selector);
+    vm.expectRevert(IDepositorErrors.InvalidDeposit.selector);
     vm.prank(staker_);
     component.stakeWithoutTransfer(0, amountToStake_, receiver_);
   }
 }
 
-contract TestableStaker is Staker {
-  MockManager public immutable mockManager;
-  MockERC20 public immutable mockAsset;
-
-  constructor(IManager manager_) {
-    mockManager = MockManager(address(manager_));
-    mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
-  }
-
+contract TestableStaker is Staker, Depositor {
   // -------- Mock setters --------
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;
@@ -344,10 +328,11 @@ contract TestableStaker is Staker {
   }
 
   // -------- Overridden abstract function placeholders --------
-  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint128 oldStakeAmount_, uint128 slashAmount_)
-    internal
-    override
-  {
+  function _updateUnstakesAfterTrigger(
+    uint16, /* reservePoolId_ */
+    uint128, /* oldStakeAmount_ */
+    uint128 /* slashAmount_ */
+  ) internal view override {
     __readStub__();
   }
 }

@@ -3,8 +3,7 @@ pragma solidity 0.8.22;
 
 import {IERC20} from "../../interfaces/IERC20.sol";
 import {IRewardsDripModel} from "../../interfaces/IRewardsDripModel.sol";
-import {IStkToken} from "../../interfaces/IStkToken.sol";
-import {IDepositToken} from "../../interfaces/IDepositToken.sol";
+import {IReceiptToken} from "../../interfaces/IReceiptToken.sol";
 
 struct AssetPool {
   // The total balance of assets held by a SafetyModule, should be equivalent to
@@ -15,10 +14,18 @@ struct AssetPool {
 
 struct ReservePool {
   IERC20 asset;
-  IStkToken stkToken;
-  IDepositToken depositToken;
+  IReceiptToken stkToken;
+  IReceiptToken depositToken;
   uint256 stakeAmount;
   uint256 depositAmount;
+}
+
+struct UndrippedRewardPool {
+  IERC20 asset;
+  uint256 amount;
+  IRewardsDripModel dripModel;
+  uint128 lastDripTime;
+  IReceiptToken depositToken;
 }
 
 struct IdLookup {
