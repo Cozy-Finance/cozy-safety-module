@@ -13,8 +13,10 @@ import {SafetyModuleState} from "./SafetyModuleStates.sol";
 abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
   using SafeERC20 for IERC20;
 
-  /// @dev Emitted when a user stakes.
-  event Deposited(address indexed caller_, address indexed receiver_, uint256 amount_, uint256 depositTokenAmount_);
+  /// @dev Emitted when a user deposits.
+  event Deposited(
+    address indexed caller_, address indexed receiver_, uint256 assetAmount_, uint256 depositTokenAmount_
+  );
 
   /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
   /// `reservePools[reservePoolId_]` so it can
@@ -28,7 +30,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     IERC20 underlyingToken_ = reservePool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
 
-    // Pull in stake tokens. After the transfer we ensure we no longer need any assets. This check is
+    // Pull in deposited assets. After the transfer we ensure we no longer need any assets. This check is
     // required to support fee on transfer tokens, for example if USDT enables a fee.
     // Also, we need to transfer before minting or ERC777s could reenter.
     underlyingToken_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
@@ -50,18 +52,16 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
       _executeReserveDeposit(underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
 
-  function depositRewardAssets(
-    uint16 claimableRewardPoolId_,
-    uint256 rewardAssetAmount_,
-    address receiver_,
-    address from_
-  ) external returns (uint256 depositTokenAmount_) {
-    UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[claimableRewardPoolId_];
+  function depositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_, address from_)
+    external
+    returns (uint256 depositTokenAmount_)
+  {
+    UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[rewardPoolId_];
 
     IERC20 underlyingToken_ = rewardsPool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
 
-    // Pull in stake tokens. After the transfer we ensure we no longer need any assets. This check is
+    // Pull in deposited assets. After the transfer we ensure we no longer need any assets. This check is
     // required to support fee on transfer tokens, for example if USDT enables a fee.
     // Also, we need to transfer before minting or ERC777s could reenter.
     underlyingToken_.safeTransferFrom(from_, address(this), rewardAssetAmount_);
@@ -121,7 +121,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     depositTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       rewardAssetAmount_, depositToken_.totalSupply(), rewardPool_.amount
     );
-    // Increment reserve pool accounting only after calculating `depositTokenAmount_` to mint.
+    // Increment reward pool accounting only after calculating `depositTokenAmount_` to mint.
     rewardPool_.amount += rewardAssetAmount_;
     assetPool_.amount += rewardAssetAmount_;
 
