@@ -34,8 +34,11 @@ abstract contract SafetyModuleBaseStorage {
   /// wrt totalSupply.
   uint16[] public stkTokenRewardPoolWeights;
 
-  /// @dev Delay for two-step unstake process.
-  uint256 public unstakeDelay;
+  /// @dev Delay for two-step unstake process (for staked assets).
+  uint128 public unstakeDelay;
+
+  /// @dev Delay for two-step withdraw process (for deposited assets).
+  uint128 public withdrawDelay;
 
   /// @dev Has config for deposit fee and where to send fees
   IManager public immutable cozyManager;

@@ -432,6 +432,14 @@ contract TestableDepositor is Depositor {
   }
 
   // -------- Overridden abstract function placeholders --------
+  function _updateWithdrawalsAfterTrigger(
+    uint16, /* reservePoolId_ */
+    uint128, /* oldAmount_ */
+    uint128 /* slashAmount_ */
+  ) internal view override {
+    __readStub__();
+  }
+
   function _updateUnstakesAfterTrigger(
     uint16, /* reservePoolId_ */
     uint128, /* oldStakeAmount_ */

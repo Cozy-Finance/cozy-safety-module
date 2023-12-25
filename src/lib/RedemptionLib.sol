@@ -9,9 +9,9 @@ import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {ReservePool} from "./structs/Pools.sol";
 
 /**
- * @notice Read-only logic for unstaking.
+ * @notice Read-only logic for redemptions.
  */
-library UnstakerLib {
+library RedemptionLib {
   using CozyMath for uint256;
   using FixedPointMathLib for uint256;
   using SafeCastLib for uint256;
@@ -41,17 +41,17 @@ library UnstakerLib {
   uint256 internal constant MAX_ACCUM_INV_SCALING_FACTOR_VALUE =
     115_792_089_237_316_195_307_778_895_771_371_712_661_283_089_237_316_195_307_779;
 
-  // @dev Compute the tokens settled by a pending unstaking, which will be scaled (down) by the accumulated
+  // @dev Compute the tokens settled by a pending redemption, which will be scaled (down) by the accumulated
   // scaling factors of triggers that happened after it was queued.
-  function computeFinalReserveAssetsUnstaked(
+  function computeFinalReserveAssetsRedeemed(
     uint256[] storage accISFs_,
     uint128 queuedReserveAssetAmount_,
     uint256 queuedAccISF_,
     uint32 queuedAccISFsLength_
-  ) external view returns (uint128 reserveAssetAmountUnstaked_) {
-    // If a trigger occurs after the unstake was queued, the tokens returned will need to be scaled down
+  ) external view returns (uint128 reserveAssetAmountRedeemed_) {
+    // If a trigger occurs after the redemption was queued, the tokens returned will need to be scaled down
     // by a factor equivalent to how much was taken out relative to the usable reserve assets
-    // (which includes pending unstakes):
+    // (which includes pending redemptions):
     //    factor = 1 - slashedAmount / reservePool.amount
     // The values of `accISFs_` are the product of the inverse of this scaling factor
     // after each trigger, with the last one being the most recent. We cache the latest scaling factor at queue time
@@ -67,7 +67,7 @@ library UnstakerLib {
       invScalingFactor_ = currentScalingFactorAtQueueIndex_.divWadUp(queuedAccISF_);
     }
     // The queuedAccISF_ and queuedAccISFsLength_ are the last value of accISFs_ and the length of
-    // that array when the unstake was queued. If the array has had more entries added to it since
+    // that array when the redemption was queued. If the array has had more entries added to it since
     // then, we need to scale our factor with each of those as well, to account for the effects of
     // ALL triggers since we queued.
     uint256 ScalingFactorsLength_ = accISFs_.length;
@@ -86,38 +86,38 @@ library UnstakerLib {
     // We need to do this step separately from the next to minimize rounding errors.
     uint256 scalingFactor_ =
       invScalingFactor_ >= INF_INV_SCALING_FACTOR ? 0 : MathConstants.WAD.divWadDown(invScalingFactor_);
-    // Now we can just scale the queued tokens by this scaling factor to get the final tokens unstaked.
-    reserveAssetAmountUnstaked_ = scalingFactor_.mulWadDown(queuedReserveAssetAmount_).safeCastTo128();
+    // Now we can just scale the queued tokens by this scaling factor to get the final tokens redeemed.
+    reserveAssetAmountRedeemed_ = scalingFactor_.mulWadDown(queuedReserveAssetAmount_).safeCastTo128();
   }
 
-  /// @dev Prepares pending unstakes to have their exchange rates adjusted after a trigger.
-  function updateUnstakesAfterTrigger(
-    uint256 stakeAmount_,
+  /// @dev Prepares pending redemptions to have their exchange rates adjusted after a trigger.
+  function updateRedemptionsAfterTrigger(
+    uint256 redemptionAmount_,
     uint128 slashAmount_,
-    uint256[] storage pendingUnstakesAccISFs_
+    uint256[] storage pendingAccISFs_
   ) external {
-    uint256 numScalingFactors_ = pendingUnstakesAccISFs_.length;
-    uint256 currAccISF_ = numScalingFactors_ == 0 ? MathConstants.WAD : pendingUnstakesAccISFs_[numScalingFactors_ - 1];
-    uint256 accISF_ = computeNewPendingUnstakesAccumulatedScalingFactor(currAccISF_, stakeAmount_, slashAmount_);
+    uint256 numScalingFactors_ = pendingAccISFs_.length;
+    uint256 currAccISF_ = numScalingFactors_ == 0 ? MathConstants.WAD : pendingAccISFs_[numScalingFactors_ - 1];
+    uint256 accISF_ = computeNewPendingRedemptionsAccumulatedScalingFactor(currAccISF_, redemptionAmount_, slashAmount_);
     if (numScalingFactors_ == 0) {
       // First trigger for this safety module. Create an accumulator entry.
-      pendingUnstakesAccISFs_.push(accISF_);
+      pendingAccISFs_.push(accISF_);
     } else {
       // Update the last accumulator entry.
-      pendingUnstakesAccISFs_[numScalingFactors_ - 1] = accISF_;
+      pendingAccISFs_[numScalingFactors_ - 1] = accISF_;
     }
-    if (accISF_ > UnstakerLib.NEW_ACCUM_INV_SCALING_FACTOR_THRESHOLD) {
+    if (accISF_ > NEW_ACCUM_INV_SCALING_FACTOR_THRESHOLD) {
       // The new entry is very large and cannot be safely combined with the next trigger, so append
       // a new 1.0 entry for next time.
-      pendingUnstakesAccISFs_.push(MathConstants.WAD);
+      pendingAccISFs_.push(MathConstants.WAD);
     }
   }
 
-  // @dev Compute the scaled tokens pending unstaking and accumulated inverse scaling factor
+  // @dev Compute the scaled tokens pending redemptions and accumulated inverse scaling factor
   // as a result of a trigger.
-  function computeNewPendingUnstakesAccumulatedScalingFactor(
+  function computeNewPendingRedemptionsAccumulatedScalingFactor(
     uint256 currAccISF_,
-    uint256 oldStakeAmount_,
+    uint256 oldRedemptionAmount_,
     uint256 slashAmount_
   ) internal pure returns (uint256 newAccISF_) {
     // The incoming accumulator should be less than the threshold to use a new one.
@@ -126,7 +126,7 @@ library UnstakerLib {
     // should only ever increase (or stay the same). This is because scalingFactor will always <= 1.0 and
     // we accumulate *= 1/scalingFactor.
     assert(currAccISF_ >= MathConstants.WAD);
-    uint256 scalingFactor_ = computeNextPendingUnstakesScalingFactorForTrigger(oldStakeAmount_, slashAmount_);
+    uint256 scalingFactor_ = computeNextPendingRedemptionsScalingFactorForTrigger(oldRedemptionAmount_, slashAmount_);
     // Computed scaling factor as a result of this trigger should be <= 1.0.
     assert(scalingFactor_ <= MathConstants.WAD);
     // The accumulator is actually the products of the inverse of each scaling factor.
@@ -136,28 +136,29 @@ library UnstakerLib {
     assert(newAccISF_ <= MAX_ACCUM_INV_SCALING_FACTOR_VALUE);
   }
 
-  function computeNextPendingUnstakesScalingFactorForTrigger(uint256 oldStakeAmount_, uint256 slashAmount_)
+  function computeNextPendingRedemptionsScalingFactorForTrigger(uint256 oldRedemptionAmount_, uint256 slashAmount_)
     internal
     pure
     returns (uint256 scalingFactor_)
   {
-    // Because the slash amount will be removed from the stake amount, the value of all
-    // staked tokens will be scaled (down) by:
-    //      scalingFactor = 1 - slashAmount_ / oldStakeAmount_
-    if (slashAmount_ > oldStakeAmount_) return 0;
-    if (oldStakeAmount_ == 0) return 0;
-    return MathConstants.WAD - slashAmount_.divWadDown(oldStakeAmount_);
+    // Because the slash amount will be removed from the redemption amount, the value of all
+    // redeemed tokens will be scaled (down) by:
+    //      scalingFactor = 1 - slashAmount_ / oldRedemptionAmount_
+    if (slashAmount_ > oldRedemptionAmount_) return 0;
+    if (oldRedemptionAmount_ == 0) return 0;
+    return MathConstants.WAD - slashAmount_.divWadDown(oldRedemptionAmount_);
   }
 
-  /// @dev Gets the amount of time remaining that must elapse before a queued unstake can be completed.
-  function getUnstakeDelayTimeRemaining(
+  /// @dev Gets the amount of time remaining that must elapse before a queued redemption can be completed.
+  function getRedemptionDelayTimeRemaining(
     SafetyModuleState safetyModuleState_,
-    uint256 unstakeQueueTime_,
-    uint256 unstakingDelay_,
+    uint256 redemptionQueueTime_,
+    uint256 redemptionDelay_,
     uint256 now_
   ) public pure returns (uint256) {
-    // Unstakes can occur immediately when the safety module is paused.
-    return
-      safetyModuleState_ == SafetyModuleState.PAUSED ? 0 : unstakingDelay_.differenceOrZero(now_ - unstakeQueueTime_);
+    // Redemptions can occur immediately when the safety module is paused.
+    return safetyModuleState_ == SafetyModuleState.PAUSED
+      ? 0
+      : redemptionDelay_.differenceOrZero(now_ - redemptionQueueTime_);
   }
 }
