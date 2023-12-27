@@ -26,7 +26,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   ///         on a reward pool basis.
   /// @dev Every time there is a trigger, a scaling factor is retroactively applied to every pending
   ///      redemption equiv to:
-  ///        x = 1 - slashedAmount / reservePool.depositAmount
+  ///        x = 1 - slashedAmount / reservePool.depositAmount (or stakeAmount for unstakes)
   ///      The last value of this array (a) will be updated to be a = a * 1 / x (scaled by WAD).
   ///      Because x will always be <= 1, the accumulated scaling factor will always INCREASE by a factor of 1/x
   ///      and can run out of usable bits (see RedemptionLib.MAX_SAFE_ACCUM_INV_SCALING_FACTOR_VALUE).
