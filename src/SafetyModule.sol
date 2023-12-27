@@ -9,8 +9,8 @@ import {IReceiptTokenFactory} from "./interfaces/IReceiptTokenFactory.sol";
 import {RewardPoolConfig} from "./lib/structs/Configs.sol";
 import {Depositor} from "./lib/Depositor.sol";
 import {Governable} from "./lib/Governable.sol";
+import {Redeemer} from "./lib/Redeemer.sol";
 import {Staker} from "./lib/Staker.sol";
-import {Unstaker} from "./lib/Unstaker.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./lib/structs/Pools.sol";
 import {ClaimedRewards} from "./lib/structs/Rewards.sol";
@@ -18,7 +18,7 @@ import {RewardPool, ClaimedRewards} from "./lib/structs/Rewards.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 
 /// @dev Multiple asset SafetyModule.
-contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Staker, Unstaker {
+contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeemer, Staker {
   constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(manager_));
     _assertAddressNotZero(address(receiptTokenFactory_));
@@ -31,7 +31,8 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Staker,
     address pauser_,
     IERC20[] calldata reserveAssets_,
     RewardPoolConfig[] calldata rewardPoolConfig_,
-    uint128 unstakeDelay_
+    uint128 unstakeDelay_,
+    uint128 withdrawDelay_
   ) external {
     // Safety Modules are minimal proxies, so the owner and pauser is set to address(0) in the constructor for the logic
     // contract. When the set is initialized for the minimal proxy, we update the owner and pauser.
@@ -68,6 +69,7 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Staker,
       stkTokenRewardPoolWeights[i] = rewardPoolConfig_[i].weight;
     }
     unstakeDelay = unstakeDelay_;
+    withdrawDelay = withdrawDelay_;
   }
 
   // -------------------------------------------------------------------
