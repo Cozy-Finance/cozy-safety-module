@@ -241,12 +241,12 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   }
 
   /// @inheritdoc SafetyModuleCommon
-  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint128 oldAmount_, uint128 slashAmount_)
+  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint128 oldDepositAmount_, uint128 slashAmount_)
     internal
     override
   {
     uint256[] storage reservePoolPendingRedemptionsAccISFs = pendingRedemptionAccISFs[reservePoolId_].withdrawals;
-    RedemptionLib.updateRedemptionsAfterTrigger(oldAmount_, slashAmount_, reservePoolPendingRedemptionsAccISFs);
+    RedemptionLib.updateRedemptionsAfterTrigger(oldDepositAmount_, slashAmount_, reservePoolPendingRedemptionsAccISFs);
   }
 
   /// @inheritdoc SafetyModuleCommon
