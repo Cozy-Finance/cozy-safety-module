@@ -90,6 +90,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
     (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, true, stkTokenAmount_, receiver_, owner_);
+    claimRewards(reservePoolId_, receiver_);
   }
 
   /// @notice Redeem by burning `depositTokenAmount_` of `rewardPoolId_` reward pool deposit tokens and sending
@@ -178,8 +179,6 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     redemptionId_ = _queueRedemption(
       owner_, receiver_, receiptToken_, receiptTokenAmount_, reserveAssetAmount_, reservePoolId_, isUnstake_
     );
-
-    if (isUnstake_) claimRewards(reservePoolId_, receiver_);
   }
 
   /// @dev Logic to queue a redemption.
