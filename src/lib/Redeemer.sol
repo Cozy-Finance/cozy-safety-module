@@ -83,7 +83,8 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   }
 
   /// @notice Redeem by burning `stkTokenAmount_` of `reservePoolId_` reserve pool stake tokens and sending
-  /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
+  /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`. Also claims any outstanding rewards
+  /// and sends them to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its stake tokens.
   function unstake(uint16 reservePoolId_, uint256 stkTokenAmount_, address receiver_, address owner_)
     external
