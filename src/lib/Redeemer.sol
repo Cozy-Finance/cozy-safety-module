@@ -182,12 +182,14 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 lastDripTime_,
     uint256 deltaT_
   ) internal view returns (uint256 rewardAssetAmount_) {
-    rewardAssetAmount_ = SafetyModuleCalculationsLib.convertToRewardAssetAmount(
-      depositTokenAmount_,
-      depositToken_.totalSupply(),
-      totalUndrippedRewardPoolAmount_
-        - _getNextRewardsDripAmount(totalUndrippedRewardPoolAmount_, dripModel_, lastDripTime_, deltaT_)
-    );
+    uint256 nextTotalUndrippedRewardPoolAmount_ = totalUndrippedRewardPoolAmount_
+      - _getNextRewardsDripAmount(totalUndrippedRewardPoolAmount_, dripModel_, lastDripTime_, deltaT_);
+
+    rewardAssetAmount_ = nextTotalUndrippedRewardPoolAmount_ == 0
+      ? 0
+      : SafetyModuleCalculationsLib.convertToAssetAmount(
+        depositTokenAmount_, depositToken_.totalSupply(), nextTotalUndrippedRewardPoolAmount_
+      );
     if (rewardAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
   }
 
@@ -210,7 +212,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     IReceiptToken receiptToken_ = isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken;
 
-    reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToReserveAssetAmount(
+    reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
       receiptTokenAmount_,
       receiptToken_.totalSupply(),
       isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount
