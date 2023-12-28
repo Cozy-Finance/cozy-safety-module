@@ -92,6 +92,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, true, stkTokenAmount_, receiver_, owner_);
   }
 
+  /// @notice Redeem by burning `depositTokenAmount_` of `undrippedRewardPoolId_` reward pool deposit tokens and sending
+  /// `rewardAssetAmount_` of `undrippedRewardPoolId_` reward pool assets to `receiver_`.
+  /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
   function redeemUndrippedRewards(
     uint16 undrippedRewardPoolId_,
     uint256 depositTokenAmount_,
