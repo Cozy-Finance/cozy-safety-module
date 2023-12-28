@@ -18,22 +18,20 @@ struct ReservePool {
   IReceiptToken depositToken;
   uint256 stakeAmount;
   uint256 depositAmount;
+  /// @dev The weighting of each stkToken's claim to all reward pools in terms of a ZOC. Must sum to 1.
+  /// e.g. stkTokenA = 10%, means they're eligible for up to 10% of each pool, scaled to their balance of stkTokenA
+  /// wrt totalSupply.
+  uint16 rewardsPoolsWeight;
 }
 
 struct UndrippedRewardPool {
   IERC20 asset;
   uint256 amount;
   IRewardsDripModel dripModel;
-  uint128 lastDripTime;
   IReceiptToken depositToken;
-}
-
-struct DepositPool {
-  IReceiptToken depositToken;
-  uint256 depositAmount;
 }
 
 struct IdLookup {
-  uint128 index;
+  uint16 index;
   bool exists;
 }

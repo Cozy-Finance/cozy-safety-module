@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {Clones} from "openzeppelin-contracts/contracts/proxy/Clones.sol";
-import {RewardPoolConfig} from "./lib/structs/Configs.sol";
+import {UndrippedRewardPoolConfig} from "./lib/structs/Configs.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
@@ -39,14 +39,14 @@ contract SafetyModuleFactory is ISafetyModuleFactory {
   /// @param owner_ The owner of the safety module.
   /// @param pauser_ The pauser of the safety module.
   /// @param reserveAssets_ Array of reserve pool assets for the safety module.
-  /// @param rewardPoolConfig_ Array of reward pool configurations.
+  /// @param undrippedRewardPoolConfig_ Array of undripped reward pool configurations.
   /// @param unstakeDelay_ Delay before a staker can unstake their assets for the two step unstake process.
   /// @param baseSalt_ Used to compute the resulting address of the set.
   function deploySafetyModule(
     address owner_,
     address pauser_,
     IERC20[] calldata reserveAssets_,
-    RewardPoolConfig[] calldata rewardPoolConfig_,
+    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfig_,
     uint128 unstakeDelay_,
     bytes32 baseSalt_
   ) public returns (ISafetyModule safetyModule_) {
@@ -55,7 +55,7 @@ contract SafetyModuleFactory is ISafetyModuleFactory {
     if (msg.sender != address(cozyManager)) revert Unauthorized();
 
     safetyModule_ = ISafetyModule(address(safetyModuleLogic).cloneDeterministic(salt(baseSalt_)));
-    safetyModule_.initialize(owner_, pauser_, reserveAssets_, rewardPoolConfig_, unstakeDelay_);
+    safetyModule_.initialize(owner_, pauser_, reserveAssets_, undrippedRewardPoolConfig_, unstakeDelay_);
     emit SafetyModuleDeployed(safetyModule_, reserveAssets_);
   }
 

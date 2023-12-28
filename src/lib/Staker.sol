@@ -14,6 +14,7 @@ import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 
 abstract contract Staker is SafetyModuleCommon {
+  using FixedPointMathLib for uint256;
   using SafeERC20 for IERC20;
   using SafeCastLib for uint256;
 
@@ -38,9 +39,9 @@ abstract contract Staker is SafetyModuleCommon {
     // required to support fee on transfer tokens, for example if USDT enables a fee.
     // Also, we need to transfer before minting or ERC777s could reenter.
     reserveAsset_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
-    _assertValidDeposit(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
+    _assertValidDepositBalance(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
 
-    stkTokenAmount_ = _executeStake(reserveAssetAmount_, receiver_, assetPool_, reservePool_);
+    stkTokenAmount_ = _executeStake(reservePoolId_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
 
   /// @notice Stake by minting `stkTokenAmount_` stkTokens to `receiver_`.
@@ -53,12 +54,13 @@ abstract contract Staker is SafetyModuleCommon {
     IERC20 reserveAsset_ = reservePool_.asset;
     AssetPool storage assetPool_ = assetPools[reserveAsset_];
 
-    _assertValidDeposit(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
+    _assertValidDepositBalance(reserveAsset_, assetPool_.amount, reserveAssetAmount_);
 
-    stkTokenAmount_ = _executeStake(reserveAssetAmount_, receiver_, assetPool_, reservePool_);
+    stkTokenAmount_ = _executeStake(reservePoolId_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
 
   function _executeStake(
+    uint16 reservePoolId_,
     uint256 reserveAssetAmount_,
     address receiver_,
     AssetPool storage assetPool_,
@@ -74,6 +76,11 @@ abstract contract Staker is SafetyModuleCommon {
     // Increment reserve pool accounting only after calculating `stkTokenAmount_` to mint.
     reservePool_.stakeAmount += reserveAssetAmount_;
     assetPool_.amount += reserveAssetAmount_;
+
+    // Update user rewards before minting any new stkTokens.
+    _updateUserRewards(
+      stkToken_.balanceOf(receiver_), claimableRewardsIndices[reservePoolId_], userRewards[reservePoolId_][receiver_]
+    );
 
     stkToken_.mint(receiver_, stkTokenAmount_);
     emit Staked(msg.sender, receiver_, reserveAssetAmount_, stkTokenAmount_);

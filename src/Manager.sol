@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "./interfaces/IERC20.sol";
-import {RewardPoolConfig} from "./lib/structs/Configs.sol";
+import {UndrippedRewardPoolConfig} from "./lib/structs/Configs.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
@@ -43,14 +43,14 @@ contract Manager is Governable, IManager {
   /// @param owner_ The owner of the safety module.
   /// @param pauser_ The pauser of the safety module.
   /// @param reserveAssets_ Array of reserve pool assets for the safety module.
-  /// @param rewardPoolConfig_ Array of reward pool configurations.
+  /// @param undrippedRewardPoolConfig_ Array of reward pool configurations.
   /// @param unstakeDelay_ Delay before a staker can unstake their assets for the two step unstake process.
   /// @param salt_ Used to compute the resulting address of the set.
   function createSafetyModule(
     address owner_,
     address pauser_,
     IERC20[] calldata reserveAssets_,
-    RewardPoolConfig[] calldata rewardPoolConfig_,
+    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfig_,
     uint128 unstakeDelay_,
     bytes32 salt_
   ) external returns (ISafetyModule safetyModule_) {
@@ -63,7 +63,8 @@ contract Manager is Governable, IManager {
     // }
 
     isSafetyModule[ISafetyModule(safetyModuleFactory.computeAddress(salt_))] = true;
-    safetyModule_ =
-      safetyModuleFactory.deploySafetyModule(owner_, pauser_, reserveAssets_, rewardPoolConfig_, unstakeDelay_, salt_);
+    safetyModule_ = safetyModuleFactory.deploySafetyModule(
+      owner_, pauser_, reserveAssets_, undrippedRewardPoolConfig_, unstakeDelay_, salt_
+    );
   }
 }

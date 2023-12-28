@@ -4,5 +4,5 @@ pragma solidity ^0.8.0;
 import {IERC20} from "./IERC20.sol";
 
 interface IRewardsDripModel {
-  function dripFactor(IERC20 asset_) external returns (uint256 dripFactor_);
+  function dripFactor(uint256 lastDripTime_, uint256 currentTime_) external view returns (uint256 dripFactor_);
 }
