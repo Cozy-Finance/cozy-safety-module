@@ -9,6 +9,7 @@ contract TestBase is Test, TestAssertions {
   uint256 internal constant PANIC_ASSERT = 0x01;
   uint256 internal constant PANIC_MATH_UNDEROVERFLOW = 0x11;
   uint256 internal constant PANIC_MATH_DIVIDE_BY_ZERO = 0x12;
+  uint256 internal constant PANIC_ARRAY_OUT_OF_BOUNDS = 0x32;
   uint256 internal constant INDEX_OUT_OF_BOUNDS = 0x32;
 
   bytes4 internal constant PANIC_SELECTOR = bytes4(keccak256("Panic(uint256)"));

@@ -6,6 +6,7 @@ import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
+import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IRedemptionErrors} from "../src/interfaces/IRedemptionErrors.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
@@ -16,18 +17,15 @@ import {RedemptionLib} from "../src/lib/RedemptionLib.sol";
 import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
-import {ReservePool} from "../src/lib/structs/Pools.sol";
-import {AssetPool} from "../src/lib/structs/Pools.sol";
+import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
+import {MockRewardsDripModel} from "./utils/MockRewardsDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
-abstract contract RedeemerUnitTest is TestBase {
-  using CozyMath for uint256;
-  using FixedPointMathLib for uint256;
-
+abstract contract ReedemerUnitTestBase is TestBase {
   IReceiptToken stkToken;
   IReceiptToken depositToken;
   MockManager public mockManager = new MockManager();
@@ -166,11 +164,24 @@ abstract contract RedeemerUnitTest is TestBase {
         rewardsPoolsWeight: 1e4
       })
     );
+    component.mockAddRewardPool(
+      UndrippedRewardPool({
+        asset: IERC20(address(mockAsset)),
+        amount: 0,
+        dripModel: IRewardsDripModel(address(0)),
+        depositToken: IReceiptToken(address(0))
+      })
+    );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
 
     if (isUnstakeTest) testReceiptToken = stkToken;
     else testReceiptToken = depositToken;
   }
+}
+
+abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
+  using CozyMath for uint256;
+  using FixedPointMathLib for uint256;
 
   function test_redeem_canRedeemAllInstantly_whenRedemptionDelayIsZero() external {
     _setRedemptionDelay(0);
@@ -516,6 +527,22 @@ abstract contract RedeemerUnitTest is TestBase {
     _completeRedeem(nextRedemptionId_);
   }
 
+  function test_redeem_cannotRedeemInvalidReservePoolId() external {
+    (address owner_, address receiver_,, uint256 receiptTokenAmount_,) = _setupDefaultSingleUserFixture(0);
+
+    _expectPanic(PANIC_ARRAY_OUT_OF_BOUNDS);
+    vm.prank(owner_);
+    _redeem(1, receiptTokenAmount_, receiver_, owner_);
+  }
+
+  function test_redeem_cannotRedeemnsufficientReceiptTokenBalance() external {
+    (address owner_, address receiver_,, uint256 receiptTokenAmount_,) = _setupDefaultSingleUserFixture(0);
+
+    _expectPanic(PANIC_MATH_UNDEROVERFLOW);
+    vm.prank(owner_);
+    _redeem(0, receiptTokenAmount_ + 1, receiver_, owner_);
+  }
+
   function test_redeem_cannotCompleteRedeemSameRedemptionIdTwice() external {
     (
       address owner_,
@@ -656,9 +683,62 @@ abstract contract RedeemerUnitTest is TestBase {
 }
 
 contract UnstakeUnitTest is RedeemerUnitTest {
+  using CozyMath for uint256;
+  using FixedPointMathLib for uint256;
+
+  // Emitted when rewards are claimed.
+  event ClaimedRewards(
+    uint16 indexed reservePoolId,
+    IERC20 indexed rewardAsset_,
+    uint256 amount_,
+    address indexed owner_,
+    address receiver_
+  );
+
   function setUp() public override {
     isUnstakeTest = true;
     super.setUp();
+  }
+
+  function test_redeem_withRewardsClaim() external {
+    (
+      address owner_,
+      address receiver_,
+      uint256 reserveAssetAmount_,
+      uint256 receiptTokenAmount_,
+      uint64 nextRedemptionId_
+    ) = _setupDefaultSingleUserFixture(0);
+
+    uint256 receiptTokenAmountToRedeem_ = receiptTokenAmount_ / 2 - 1;
+    uint256 reserveAssetsToReceive_ =
+      uint256(reserveAssetAmount_).mulDivDown(receiptTokenAmountToRedeem_, receiptTokenAmount_);
+
+    uint256 rewardsClaimAmountToReceive_ = 1e6;
+    component.mockSetNextRewardClaimAmount(rewardsClaimAmountToReceive_);
+
+    _expectEmit();
+    emit Transfer(owner_, address(0), receiptTokenAmountToRedeem_);
+    _expectEmit();
+    emit RedemptionPending(
+      owner_,
+      receiver_,
+      owner_,
+      testReceiptToken,
+      receiptTokenAmountToRedeem_,
+      reserveAssetsToReceive_,
+      nextRedemptionId_
+    );
+    _expectEmit();
+    emit TestableRedeemerEvents.MockClaimedRewards();
+    vm.prank(owner_);
+    (uint64 resultRedemptionId_, uint256 resultReserveAssetAmount_) =
+      _redeem(0, receiptTokenAmountToRedeem_, receiver_, owner_);
+
+    assertEq(resultRedemptionId_, nextRedemptionId_, "redemptionId");
+    assertEq(resultReserveAssetAmount_, reserveAssetsToReceive_, "reserve assets received");
+    assertEq(testReceiptToken.balanceOf(owner_), receiptTokenAmount_ - receiptTokenAmountToRedeem_, "shares balanceOf");
+    // Only rewards assets are received at the first step of redemption.
+    assertEq(mockAsset.balanceOf(receiver_), rewardsClaimAmountToReceive_, "reserve assets balanceOf");
   }
 }
 
@@ -669,8 +749,194 @@ contract WithdrawUnitTest is RedeemerUnitTest {
   }
 }
 
-contract TestableRedeemer is Redeemer {
+contract RedeemUndrippedRewards is TestBase {
+  IReceiptToken depositToken;
+  MockManager public mockManager = new MockManager();
+  TestableRedeemer component = new TestableRedeemer(IManager(address(mockManager)));
+  MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
+
+  /// @dev Emitted when a user redeems undripped rewards.
+  event RedeemedUndrippedRewards(
+    address caller_,
+    address indexed receiver_,
+    address indexed owner_,
+    IReceiptToken indexed receiptToken_,
+    uint256 receiptTokenAmount_,
+    uint256 rewardAssetAmount_
+  );
+
+  event Transfer(address indexed from, address indexed to, uint256 amount);
+
+  function _setupDefaultSingleUserFixture(uint16 rewardPoolId_)
+    internal
+    returns (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_)
+  {
+    owner_ = _randomAddress();
+    receiver_ = _randomAddress();
+    rewardAssetAmount_ = 1e6;
+    depositTokenAmount_ = 1e18;
+    _deposit(rewardPoolId_, owner_, rewardAssetAmount_, depositTokenAmount_);
+  }
+
+  function _deposit(uint16 rewardPoolId_, address owner_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_)
+    private
+  {
+    component.mockRewardsDeposit(rewardPoolId_, owner_, rewardAssetAmount_, depositTokenAmount_);
+  }
+
+  function _redeem(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+    internal
+    returns (uint256 rewardAssetAmount_)
+  {
+    return component.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, owner_);
+  }
+
+  function setUp() public {
+    ReceiptToken receiptTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
+    receiptTokenLogic_.initialize(ISafetyModule(address(0)), 0);
+    ReceiptTokenFactory receiptTokenFactory =
+      new ReceiptTokenFactory(IReceiptToken(address(receiptTokenLogic_)), IReceiptToken(address(receiptTokenLogic_)));
+
+    vm.startPrank(address(component));
+    depositToken =
+      IReceiptToken(address(receiptTokenFactory.deployReceiptToken(0, IReceiptTokenFactory.PoolType.REWARD, 18)));
+    vm.stopPrank();
+
+    component.mockAddRewardPool(
+      UndrippedRewardPool({
+        asset: IERC20(address(mockAsset)),
+        amount: 0,
+        dripModel: IRewardsDripModel(address(0)),
+        depositToken: IReceiptToken(address(depositToken))
+      })
+    );
+    component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
+  }
+
+  function test_redeemUndrippedRewards_redeemAll() public {
+    (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
+      _setupDefaultSingleUserFixture(0);
+
+    _expectEmit();
+    emit Transfer(owner_, address(0), depositTokenAmount_);
+    _expectEmit();
+    emit RedeemedUndrippedRewards(owner_, receiver_, owner_, depositToken, depositTokenAmount_, rewardAssetAmount_);
+
+    vm.prank(owner_);
+    (uint256 resultRewardAssetAmount_) = _redeem(0, depositTokenAmount_, receiver_, owner_);
+
+    assertEq(resultRewardAssetAmount_, rewardAssetAmount_, "reward assets received");
+    assertEq(depositToken.balanceOf(owner_), 0, "deposit tokens balanceOf");
+    assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
+  }
+
+  function test_redeemUndrippedRewards_redeemPartial() public {
+    (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
+      _setupDefaultSingleUserFixture(0);
+
+    _expectEmit();
+    emit Transfer(owner_, address(0), depositTokenAmount_ / 2);
+    _expectEmit();
+    emit RedeemedUndrippedRewards(
+      owner_, receiver_, owner_, depositToken, depositTokenAmount_ / 2, rewardAssetAmount_ / 2
+    );
+
+    vm.prank(owner_);
+    (uint256 resultRewardAssetAmount_) = _redeem(0, depositTokenAmount_ / 2, receiver_, owner_);
+
+    assertEq(resultRewardAssetAmount_, rewardAssetAmount_ / 2, "reward assets received");
+    assertEq(depositToken.balanceOf(owner_), depositTokenAmount_ / 2, "deposit tokens balanceOf");
+    assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
+  }
+
+  function test_redeemUndrippedRewards_withDrip() public {
+    (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
+      _setupDefaultSingleUserFixture(0);
+
+    // Drip half of the assets in the undripped reward pool.
+    component.mockSetNextDripAmount(rewardAssetAmount_ / 2);
+
+    _expectEmit();
+    emit Transfer(owner_, address(0), depositTokenAmount_ / 2);
+    _expectEmit();
+    emit RedeemedUndrippedRewards(
+      owner_, receiver_, owner_, depositToken, depositTokenAmount_ / 2, rewardAssetAmount_ / 4
+    );
+
+    vm.prank(owner_);
+    (uint256 resultRewardAssetAmount_) = _redeem(0, depositTokenAmount_ / 2, receiver_, owner_);
+
+    assertEq(resultRewardAssetAmount_, rewardAssetAmount_ / 4, "reward assets received");
+    assertEq(depositToken.balanceOf(owner_), depositTokenAmount_ / 2, "deposit tokens balanceOf");
+    assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
+  }
+
+  function test_redeemUndrippedRewards_cannotRedeemIfRoundsDownToZeroAssets() external {
+    address owner_ = _randomAddress();
+    address receiver_ = _randomAddress();
+    uint256 rewardAssetAmount_ = 1;
+    uint256 depositTokenAmount_ = 3;
+    _deposit(0, owner_, rewardAssetAmount_, depositTokenAmount_);
+
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
+    vm.prank(owner_);
+    _redeem(0, 2, receiver_, owner_);
+  }
+
+  function test_redeemUndrippedRewards_canRedeemAllInstantly_ThroughAllowance() external {
+    (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
+      _setupDefaultSingleUserFixture(0);
+    address spender_ = _randomAddress();
+    vm.prank(owner_);
+    depositToken.approve(spender_, depositTokenAmount_ + 1); // Allowance is 1 extra.
+
+    _expectEmit();
+    emit RedeemedUndrippedRewards(spender_, receiver_, owner_, depositToken, depositTokenAmount_, rewardAssetAmount_);
+
+    vm.prank(spender_);
+    _redeem(0, depositTokenAmount_, receiver_, owner_);
+    assertEq(depositToken.allowance(owner_, spender_), 1, "depositToken allowance"); // Only 1 allowance left
+      // because
+      // of subtraction.
+  }
+
+  function test_redeemUndrippedRewards_cannotRedeem_ThroughAllowance_WithInsufficientAllowance() external {
+    (address owner_, address receiver_,, uint256 depositTokenAmount_) = _setupDefaultSingleUserFixture(0);
+    address spender_ = _randomAddress();
+    vm.prank(owner_);
+    depositToken.approve(spender_, depositTokenAmount_ - 1); // Allowance is 1 less.
+
+    _expectPanic(PANIC_MATH_UNDEROVERFLOW);
+    vm.prank(spender_);
+    _redeem(0, depositTokenAmount_, receiver_, owner_);
+  }
+
+  function test_redeemUndrippedRewards_cannotRedeem_InsufficientDepositTokenBalance() external {
+    (address owner_, address receiver_,, uint256 depositTokenAmount_) = _setupDefaultSingleUserFixture(0);
+
+    _expectPanic(PANIC_MATH_UNDEROVERFLOW);
+    vm.prank(owner_);
+    _redeem(0, depositTokenAmount_ + 1, receiver_, owner_);
+  }
+
+  function test_redeemUndrippedRewards_cannotRedeem_InvalidRewardPoolId() external {
+    (address owner_, address receiver_,, uint256 depositTokenAmount_) = _setupDefaultSingleUserFixture(0);
+
+    _expectPanic(PANIC_ARRAY_OUT_OF_BOUNDS);
+    vm.prank(owner_);
+    _redeem(1, depositTokenAmount_, receiver_, owner_);
+  }
+}
+
+interface TestableRedeemerEvents {
+  event MockClaimedRewards();
+}
+
+contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
   MockManager public immutable mockManager;
+
+  uint256 internal mockNextDripAmount;
+  uint256 internal mockNextRewardClaimAmount;
 
   constructor(IManager manager_) {
     mockManager = MockManager(address(manager_));
@@ -702,12 +968,31 @@ contract TestableRedeemer is Redeemer {
     }
   }
 
+  function mockRewardsDeposit(
+    uint16 rewardPoolId_,
+    address depositor_,
+    uint256 rewardAssetAmountDeposited_,
+    uint256 depositTokenAmount_
+  ) external {
+    mockDepositRewardAssets(rewardPoolId_, rewardAssetAmountDeposited_);
+    mockMintRewardDepositTokens(rewardPoolId_, depositor_, depositTokenAmount_);
+  }
+
   function mockDepositAssets(uint16 reservePoolId_, uint256 reserveAssetAmountDeposited_) public {
     if (reserveAssetAmountDeposited_ > 0) {
       ReservePool storage reservePool_ = reservePools[reservePoolId_];
       MockERC20(address(reservePool_.asset)).mint(address(this), reserveAssetAmountDeposited_);
       reservePool_.depositAmount += reserveAssetAmountDeposited_;
       assetPools[reservePool_.asset].amount += reserveAssetAmountDeposited_;
+    }
+  }
+
+  function mockDepositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmountDeposited_) public {
+    if (rewardAssetAmountDeposited_ > 0) {
+      UndrippedRewardPool storage rewardPool_ = undrippedRewardPools[rewardPoolId_];
+      MockERC20(address(rewardPool_.asset)).mint(address(this), rewardAssetAmountDeposited_);
+      rewardPool_.amount += rewardAssetAmountDeposited_;
+      assetPools[rewardPool_.asset].amount += rewardAssetAmountDeposited_;
     }
   }
 
@@ -721,7 +1006,21 @@ contract TestableRedeemer is Redeemer {
     }
   }
 
+  function mockMintRewardDepositTokens(uint16 rewardPoolId_, address depositor_, uint256 depositTokenAmount_) public {
+    if (depositTokenAmount_ > 0) {
+      MockERC20(address(undrippedRewardPools[rewardPoolId_].depositToken)).mint(depositor_, depositTokenAmount_);
+    }
+  }
+
   // -------- Mock setters --------
+
+  function mockSetNextDripAmount(uint256 nextDripAmount_) external {
+    mockNextDripAmount = nextDripAmount_;
+  }
+
+  function mockSetNextRewardClaimAmount(uint256 nextRewardClaimAmount_) external {
+    mockNextRewardClaimAmount = nextRewardClaimAmount_;
+  }
 
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;
@@ -729,6 +1028,10 @@ contract TestableRedeemer is Redeemer {
 
   function mockAddReservePool(ReservePool memory reservePool_) public {
     reservePools.push(reservePool_);
+  }
+
+  function mockAddRewardPool(UndrippedRewardPool memory rewardPool_) external {
+    undrippedRewardPools.push(rewardPool_);
   }
 
   function mockAddAssetPool(IERC20 asset_, AssetPool memory assetPool_) external {
@@ -787,6 +1090,22 @@ contract TestableRedeemer is Redeemer {
     _updateUnstakesAfterTrigger(reservePoolId_, uint128(oldStakeAmount_), uint128(slashAmount_));
   }
 
+  // -------- Overridden common abstract functions --------
+
+  function claimRewards(uint16, /* reservePoolId_ */ address receiver_) public override {
+    MockERC20 rewardAsset_ = MockERC20(address(undrippedRewardPools[0].asset));
+    rewardAsset_.mint(receiver_, mockNextRewardClaimAmount);
+    emit MockClaimedRewards();
+  }
+
+  // Mock drip of rewards based on mocked next amount.
+  function dripRewards() public override {
+    UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[0];
+    uint256 totalDrippedRewards_ = mockNextDripAmount;
+
+    if (totalDrippedRewards_ > 0) undrippedRewardPool_.amount -= totalDrippedRewards_;
+  }
+
   function _assertValidDepositBalance(
     IERC20, /* token_ */
     uint256, /* tokenPoolBalance_ */
@@ -796,10 +1115,10 @@ contract TestableRedeemer is Redeemer {
   }
 
   function _updateUserRewards(
-    uint256 userStkTokenBalance_,
-    mapping(uint16 => uint256) storage claimableRewardsIndices_,
-    UserRewardsData[] storage userRewards_
-  ) internal override {
+    uint256, /* userStkTokenBalance */
+    mapping(uint16 => uint256) storage, /* claimableRewardsIndices_ */
+    UserRewardsData[] storage /* userRewards_ */
+  ) internal view override {
     __readStub__();
   }
 }

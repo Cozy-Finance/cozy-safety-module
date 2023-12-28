@@ -70,12 +70,11 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
       _executeRewardDeposit(underlyingToken_, rewardAssetAmount_, receiver_, assetPool_, rewardsPool_);
   }
 
-  function depositRewardAssetsWithoutTransfer(
-    uint16 claimableRewardPoolId_,
-    uint256 rewardAssetAmount_,
-    address receiver_
-  ) external returns (uint256 depositTokenAmount_) {
-    UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[claimableRewardPoolId_];
+  function depositRewardAssetsWithoutTransfer(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_)
+    external
+    returns (uint256 depositTokenAmount_)
+  {
+    UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[rewardPoolId_];
     IERC20 underlyingToken_ = rewardsPool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
 

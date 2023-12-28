@@ -30,14 +30,14 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
 
   // TODO: Add a preview function which takes into account fees still to be dripped.
 
-  function dripRewards() public {
+  function dripRewards() public override {
     uint256 deltaT_ = block.timestamp - lastDripTime;
     if (deltaT_ == 0 || safetyModuleState == SafetyModuleState.PAUSED) return;
 
     _dripRewards(deltaT_);
   }
 
-  function claimRewards(uint16 reservePoolId_, address receiver_) external {
+  function claimRewards(uint16 reservePoolId_, address receiver_) public override {
     dripRewards();
 
     UserRewardsData[] storage userRewards_ = userRewards[reservePoolId_][msg.sender];
