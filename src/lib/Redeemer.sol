@@ -67,8 +67,8 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     address caller_,
     address indexed receiver_,
     address indexed owner_,
-    IReceiptToken indexed receiptToken_,
-    uint256 receiptTokenAmount_,
+    IReceiptToken indexed depositToken_,
+    uint256 depositTokenAmount_,
     uint256 rewardAssetAmount_
   );
 
@@ -92,18 +92,17 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, true, stkTokenAmount_, receiver_, owner_);
   }
 
-  /// @notice Redeem by burning `depositTokenAmount_` of `undrippedRewardPoolId_` reward pool deposit tokens and sending
-  /// `rewardAssetAmount_` of `undrippedRewardPoolId_` reward pool assets to `receiver_`.
+  /// @notice Redeem by burning `depositTokenAmount_` of `rewardPoolId_` reward pool deposit tokens and sending
+  /// `rewardAssetAmount_` of `rewardPoolId_` reward pool assets to `receiver_`. Reward pool assets can only be redeemed
+  /// if they have not been dripped yet.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeemUndrippedRewards(
-    uint16 undrippedRewardPoolId_,
-    uint256 depositTokenAmount_,
-    address receiver_,
-    address owner_
-  ) external returns (uint256 rewardAssetAmount_) {
+  function redeemUndrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+    external
+    returns (uint256 rewardAssetAmount_)
+  {
     dripRewards();
 
-    UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[undrippedRewardPoolId_];
+    UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
     IReceiptToken depositToken_ = undrippedRewardPool_.depositToken;
     IERC20 asset_ = undrippedRewardPool_.asset;
     rewardAssetAmount_ = SafetyModuleCalculationsLib.convertToReserveAssetAmount(
