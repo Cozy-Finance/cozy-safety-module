@@ -926,6 +926,50 @@ contract RedeemUndrippedRewards is TestBase {
     vm.prank(owner_);
     _redeem(1, depositTokenAmount_, receiver_, owner_);
   }
+
+  function test_redeemUndrippedRewards_previewUndrippedRewardsRedemption_withDrip() external {
+    (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
+      _setupDefaultSingleUserFixture(0);
+
+    // Next drip (which occurs on redeem), drip half of the assets in the undripped reward pool.
+    vm.warp(100);
+    component.mockSetNextDripAmount(rewardAssetAmount_ / 2);
+
+    uint256 previewRewardAssetAmount_ = component.previewUndrippedRewardsRedemption(0, depositTokenAmount_);
+
+    vm.prank(owner_);
+    uint256 resultRewardAssetAmount_ = _redeem(0, depositTokenAmount_, receiver_, owner_);
+
+    assertEq(previewRewardAssetAmount_, resultRewardAssetAmount_, "preview reward assets received");
+    assertEq(resultRewardAssetAmount_, rewardAssetAmount_ / 2, "reward assets received");
+    assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
+  }
+
+  function test_redeemUndrippedRewards_previewUndrippedRewardsRedemption_fullyDripped() external {
+    (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
+      _setupDefaultSingleUserFixture(0);
+
+    // Next drip (which occurs on redeem), drip half of the assets in the undripped reward pool.
+    vm.warp(100);
+    component.mockSetNextDripAmount(rewardAssetAmount_);
+
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
+    component.previewUndrippedRewardsRedemption(0, depositTokenAmount_);
+
+    vm.prank(owner_);
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
+    _redeem(0, depositTokenAmount_, receiver_, owner_);
+  }
+
+  function test_redeemUnrippedRewards_previewUndrippedRewardsRedemption_roundsDownToZero() external {
+    address owner_ = _randomAddress();
+    uint256 reserveAssetAmount_ = 1;
+    uint256 receiptTokenAmount_ = 3;
+    _deposit(0, owner_, reserveAssetAmount_, receiptTokenAmount_);
+
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
+    component.previewUndrippedRewardsRedemption(0, 2);
+  }
 }
 
 interface TestableRedeemerEvents {
@@ -1104,6 +1148,18 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     uint256 totalDrippedRewards_ = mockNextDripAmount;
 
     if (totalDrippedRewards_ > 0) undrippedRewardPool_.amount -= totalDrippedRewards_;
+
+    lastDripTime = block.timestamp;
+  }
+
+  function _getNextRewardsDripAmount(
+    uint256, /* totalUndrippedRewardPoolAmount_ */
+    IRewardsDripModel, /* dripModel_ */
+    uint256, /* lastDripTime_ */
+    uint256 /* deltaT_ */
+  ) internal view override returns (uint256) {
+    if (lastDripTime == block.timestamp) return 0;
+    else return mockNextDripAmount;
   }
 
   function _assertValidDepositBalance(

@@ -6,6 +6,7 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IRedemptionErrors} from "../interfaces/IRedemptionErrors.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
+import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
 import {MathConstants} from "./MathConstants.sol";
 import {PendingRedemptionAccISFs, Redemption, RedemptionPreview} from "./structs/Redemptions.sol";
@@ -106,15 +107,20 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
     IReceiptToken depositToken_ = undrippedRewardPool_.depositToken;
-    IERC20 asset_ = undrippedRewardPool_.asset;
-    rewardAssetAmount_ = SafetyModuleCalculationsLib.convertToReserveAssetAmount(
-      depositTokenAmount_, depositToken_.totalSupply(), undrippedRewardPool_.amount
+    uint256 lastDripTime_ = lastDripTime;
+
+    rewardAssetAmount_ = _previewUndrippedRewardsRedemption(
+      depositToken_,
+      depositTokenAmount_,
+      undrippedRewardPool_.dripModel,
+      undrippedRewardPool_.amount,
+      lastDripTime_,
+      block.timestamp - lastDripTime_
     );
-    if (rewardAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
 
     depositToken_.burn(msg.sender, owner_, depositTokenAmount_);
     undrippedRewardPool_.amount -= rewardAssetAmount_;
-    asset_.safeTransfer(receiver_, rewardAssetAmount_);
+    undrippedRewardPool_.asset.safeTransfer(receiver_, rewardAssetAmount_);
 
     emit RedeemedUndrippedRewards(msg.sender, receiver_, owner_, depositToken_, depositTokenAmount_, rewardAssetAmount_);
   }
@@ -149,6 +155,40 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       owner: redemption_.owner,
       receiver: redemption_.receiver
     });
+  }
+
+  function previewUndrippedRewardsRedemption(uint16 rewardPoolId_, uint256 depositTokenAmount_)
+    external
+    view
+    returns (uint256 rewardAssetAmount_)
+  {
+    UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
+    uint256 lastDripTime_ = lastDripTime;
+    rewardAssetAmount_ = _previewUndrippedRewardsRedemption(
+      undrippedRewardPool_.depositToken,
+      depositTokenAmount_,
+      undrippedRewardPool_.dripModel,
+      undrippedRewardPool_.amount,
+      lastDripTime_,
+      block.timestamp - lastDripTime_
+    );
+  }
+
+  function _previewUndrippedRewardsRedemption(
+    IReceiptToken depositToken_,
+    uint256 depositTokenAmount_,
+    IRewardsDripModel dripModel_,
+    uint256 totalUndrippedRewardPoolAmount_,
+    uint256 lastDripTime_,
+    uint256 deltaT_
+  ) internal view returns (uint256 rewardAssetAmount_) {
+    rewardAssetAmount_ = SafetyModuleCalculationsLib.convertToRewardAssetAmount(
+      depositTokenAmount_,
+      depositToken_.totalSupply(),
+      totalUndrippedRewardPoolAmount_
+        - _getNextRewardsDripAmount(totalUndrippedRewardPoolAmount_, dripModel_, lastDripTime_, deltaT_)
+    );
+    if (rewardAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
   }
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their unstake (i.e. view the number

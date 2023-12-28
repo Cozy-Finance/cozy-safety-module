@@ -36,9 +36,22 @@ library SafetyModuleCalculationsLib {
       : receiptTokenAmount_.mulDivDown(_reservePoolAmountWithFloor(reservePoolAmount_), receiptTokenSupply_);
   }
 
+  /// @notice The `rewardAssetAmount_` that the safety module would exchange for `depositTokenAmount_` of the reward
+  /// pool deposit token.
+  /// @dev See the ERC-4626 spec for more info.
+  function convertToRewardAssetAmount(
+    uint256 depositTokenAmount_,
+    uint256 depositTokenSupply_,
+    uint256 rewardPoolAmount_
+  ) internal pure returns (uint256 rewardAssetAmount_) {
+    rewardAssetAmount_ = depositTokenSupply_ == 0
+      ? rewardPoolAmount_
+      : depositTokenAmount_.mulDivDown(rewardPoolAmount_, depositTokenSupply_);
+  }
+
   /// @notice The reserve pool amount for the purposes of performing conversions. We set a floor once
-  /// stkTokens have been initialized to avoid divide-by-zero errors that would occur when the supply
-  /// of stkTokens > 0, but the `reservePoolAmount` = 0.
+  /// deposit/stkTokens have been initialized to avoid divide-by-zero errors that would occur when the supply
+  /// of deposit/stkTokens > 0, but the `reservePoolAmount` = 0.
   function _reservePoolAmountWithFloor(uint256 reservePoolAmount_) private pure returns (uint256) {
     return reservePoolAmount_ > RESERVE_POOL_AMOUNT_FLOOR ? reservePoolAmount_ : RESERVE_POOL_AMOUNT_FLOOR;
   }

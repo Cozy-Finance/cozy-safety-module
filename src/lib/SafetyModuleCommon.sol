@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import {IERC20} from "../interfaces/IERC20.sol";
 import {SafetyModuleBaseStorage} from "./SafetyModuleBaseStorage.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
+import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
 
 abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
@@ -21,6 +22,14 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     internal
     view
     virtual;
+
+  // @dev Returns the next amount of rewards to be dripped from an undripped reward pool.
+  function _getNextRewardsDripAmount(
+    uint256 totalUndrippedRewardPoolAmount_,
+    IRewardsDripModel dripModel_,
+    uint256 lastDripTime_,
+    uint256 deltaT_
+  ) internal view virtual returns (uint256);
 
   /// @dev Prepares pending unstakes to have their exchange rates adjusted after a trigger. Defined in `Redeemer`.
   function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint128 stakeAmount_, uint128 slashAmount_)

@@ -442,6 +442,15 @@ contract TestableDepositor is Depositor {
     __readStub__();
   }
 
+  function _getNextRewardsDripAmount(
+    uint256, /* totalUndrippedRewardPoolAmount_ */
+    IRewardsDripModel, /* dripModel_ */
+    uint256, /* lastDripTime_ */
+    uint256 /* deltaT_ */
+  ) internal view override returns (uint256) {
+    __readStub__();
+  }
+
   function _updateWithdrawalsAfterTrigger(
     uint16, /* reservePoolId_ */
     uint128, /* oldAmount_ */
