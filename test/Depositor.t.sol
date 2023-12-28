@@ -10,7 +10,10 @@ import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+<<<<<<< HEAD
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+=======
+>>>>>>> main
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -448,6 +451,7 @@ contract TestableDepositor is Depositor {
   ) internal view override {
     __readStub__();
   }
+<<<<<<< HEAD
 
   function _updateUserRewards(
     uint256 userStkTokenBalance_,
@@ -456,4 +460,6 @@ contract TestableDepositor is Depositor {
   ) internal override {
     __readStub__();
   }
+=======
+>>>>>>> main
 }

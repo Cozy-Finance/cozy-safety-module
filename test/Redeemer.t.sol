@@ -18,7 +18,10 @@ import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {AssetPool} from "../src/lib/structs/Pools.sol";
+<<<<<<< HEAD
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+=======
+>>>>>>> main
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -144,10 +147,16 @@ abstract contract RedeemerUnitTest is TestBase {
     component.mockSetUnstakeDelay(UNSTAKE_DELAY);
     component.mockSetWithdrawDelay(WITHDRAW_DELAY);
 
+<<<<<<< HEAD
     ReceiptToken receiptTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
     receiptTokenLogic_.initialize(ISafetyModule(address(0)), 0);
     ReceiptTokenFactory receiptTokenFactory =
       new ReceiptTokenFactory(IReceiptToken(address(receiptTokenLogic_)), IReceiptToken(address(receiptTokenLogic_)));
+=======
+    ReceiptToken stkTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
+    stkTokenLogic_.initialize(ISafetyModule(address(0)), 0);
+    ReceiptTokenFactory receiptTokenFactory = new ReceiptTokenFactory(IReceiptToken(address(stkTokenLogic_)));
+>>>>>>> main
 
     vm.startPrank(address(component));
     stkToken =
@@ -162,8 +171,12 @@ abstract contract RedeemerUnitTest is TestBase {
         stkToken: IReceiptToken(address(stkToken)),
         depositToken: IReceiptToken(address(depositToken)),
         stakeAmount: 0,
+<<<<<<< HEAD
         depositAmount: 0,
         rewardsPoolsWeight: 1e4
+=======
+        depositAmount: 0
+>>>>>>> main
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
@@ -794,6 +807,7 @@ contract TestableRedeemer is Redeemer {
   ) internal view override {
     __readStub__();
   }
+<<<<<<< HEAD
 
   function _updateUserRewards(
     uint256 userStkTokenBalance_,
@@ -802,4 +816,6 @@ contract TestableRedeemer is Redeemer {
   ) internal override {
     __readStub__();
   }
+=======
+>>>>>>> main
 }
