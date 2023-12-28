@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import {IERC20} from "../interfaces/IERC20.sol";
 import {SafetyModuleBaseStorage} from "./SafetyModuleBaseStorage.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
+import {UserRewardsData} from "./structs/Rewards.sol";
 
 abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   /// @dev Helper to assert that the safety module has a balance of tokens that matches the required amount for a
@@ -22,4 +23,10 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint128 stakeAmount_, uint128 slashAmount_)
     internal
     virtual;
+
+  function _updateUserRewards(
+    uint256 userStkTokenBalance_,
+    mapping(uint16 => uint256) storage claimableRewardsIndices_,
+    UserRewardsData[] storage userRewards_
+  ) internal virtual;
 }

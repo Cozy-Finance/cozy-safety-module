@@ -7,32 +7,30 @@ import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
-import {RewardPool, ClaimedRewards} from "./structs/Rewards.sol";
+import {UserRewardsData} from "./structs/Rewards.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 abstract contract SafetyModuleBaseStorage {
   /// @dev Reserve pool index in this array is its ID
   ReservePool[] public reservePools;
 
-  /// @dev Claimable reward pool index in this array is its ID
-  RewardPool[] public claimableRewardPools;
-
   /// @dev Undripped reward pool index in this array is its ID
   UndrippedRewardPool[] public undrippedRewardPools;
 
-  /// @dev Claimable and undripped reward pools are mapped 1:1 to underlying assets
-  mapping(IERC20 asset_ => uint16[] ids_) public rewardPoolIds;
+  /// @notice Maps a reserve pool id to an undripped reward pool id to claimable reward index
+  mapping(uint16 => mapping(uint16 => uint256)) public claimableRewardsIndices;
+
+  /// @notice Maps a reserve pool id to a user address to a user reward pool accounting struct.
+  mapping(uint16 => mapping(address => UserRewardsData[])) public userRewards;
 
   /// @dev Used when claiming rewards
   mapping(IReceiptToken stkToken_ => IdLookup reservePoolId_) public stkTokenToReservePoolIds;
 
+  /// @dev Used when dripping rewards
+  mapping(IERC20 asset_ => IdLookup undrippedRewardPoolId_) public assetToUndrippedRewardPoolIds;
+
   /// @dev Used for doing aggregate accounting of reserve assets.
   mapping(IERC20 reserveAsset_ => AssetPool assetPool_) public assetPools;
-
-  /// @dev The weighting of each stkToken's claim to all reward pools. Must sum to 1.
-  /// e.g. stkTokenA = 10%, means they're eligible for up to 10% of each pool, scaled to their balance of stkTokenA
-  /// wrt totalSupply.
-  uint16[] public stkTokenRewardPoolWeights;
 
   /// @dev Delay for two-step unstake process (for staked assets).
   uint128 public unstakeDelay;
@@ -48,4 +46,7 @@ abstract contract SafetyModuleBaseStorage {
 
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;
+
+  /// @notice Last drip time. Drips from all undripped reward pools occur simultaneously.
+  uint256 public lastDripTime;
 }

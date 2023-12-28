@@ -6,12 +6,16 @@ import {IManager} from "../src/interfaces/IManager.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IDepositorErrors} from "../src/interfaces/IDepositorErrors.sol";
+import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {Staker} from "../src/lib/Staker.sol";
+import {RewardsHandler} from "../src/lib/RewardsHandler.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
+import {UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
+import {MockRewardsDripModel} from "./utils/MockRewardsDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
@@ -29,11 +33,13 @@ contract StakerUnitTest is TestBase {
       stkToken: IReceiptToken(address(mockStkToken)),
       depositToken: IReceiptToken(address(mockDepositToken)),
       stakeAmount: 100e18,
-      depositAmount: 99e18
+      depositAmount: 99e18,
+      rewardsPoolsWeight: 1e4
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: 150e18});
     component.mockAddReservePool(initialReservePool_);
     component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
+    component.mockAddUndrippedRewardPool(IERC20(address(mockAsset)));
   }
 
   function test_stake_StkTokensAndStorageUpdates() external {
@@ -304,7 +310,7 @@ contract StakerUnitTest is TestBase {
   }
 }
 
-contract TestableStaker is Staker, Depositor {
+contract TestableStaker is Staker, Depositor, RewardsHandler {
   // -------- Mock setters --------
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;
@@ -316,6 +322,17 @@ contract TestableStaker is Staker, Depositor {
 
   function mockAddAssetPool(IERC20 asset_, AssetPool memory assetPool_) external {
     assetPools[asset_] = assetPool_;
+  }
+
+  function mockAddUndrippedRewardPool(IERC20 rewardAsset_) external {
+    undrippedRewardPools.push(
+      UndrippedRewardPool({
+        asset: rewardAsset_,
+        dripModel: IRewardsDripModel(address(new MockRewardsDripModel(1e18))),
+        amount: 0,
+        depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6)))
+      })
+    );
   }
 
   // -------- Mock getters --------

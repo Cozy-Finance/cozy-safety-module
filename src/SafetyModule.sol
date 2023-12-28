@@ -6,19 +6,18 @@ import {IManager} from "./interfaces/IManager.sol";
 import {IRewardsDripModel} from "./interfaces/IRewardsDripModel.sol";
 import {IReceiptToken} from "./interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "./interfaces/IReceiptTokenFactory.sol";
-import {RewardPoolConfig} from "./lib/structs/Configs.sol";
+import {UndrippedRewardPoolConfig, ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Depositor} from "./lib/Depositor.sol";
 import {Governable} from "./lib/Governable.sol";
 import {Redeemer} from "./lib/Redeemer.sol";
 import {Staker} from "./lib/Staker.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./lib/structs/Pools.sol";
-import {ClaimedRewards} from "./lib/structs/Rewards.sol";
-import {RewardPool, ClaimedRewards} from "./lib/structs/Rewards.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
+import {RewardsHandler} from "./lib/RewardsHandler.sol";
 
 /// @dev Multiple asset SafetyModule.
-contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeemer, Staker {
+contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeemer, Staker, RewardsHandler {
   constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(manager_));
     _assertAddressNotZero(address(receiptTokenFactory_));
@@ -29,8 +28,8 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeeme
   function initialize(
     address owner_,
     address pauser_,
-    IERC20[] calldata reserveAssets_,
-    RewardPoolConfig[] calldata rewardPoolConfig_,
+    ReservePoolConfig[] calldata reservePoolConfig_,
+    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfig_,
     uint128 unstakeDelay_,
     uint128 withdrawDelay_
   ) external {
@@ -40,36 +39,39 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeeme
 
     // TODO: Move to configurator lib
     // TODO: Emit event, either like cozy v2 where we use the configuration update event, or maybe specific to init
-    for (uint8 i; i < reserveAssets_.length; i++) {
-      IReceiptToken stkToken_ =
-        receiptTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.STAKE, reserveAssets_[i].decimals());
-      IReceiptToken depositToken_ =
-        receiptTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.RESERVE, reserveAssets_[i].decimals());
+    for (uint8 i; i < reservePoolConfig_.length; i++) {
+      IReceiptToken stkToken_ = receiptTokenFactory.deployReceiptToken(
+        i, IReceiptTokenFactory.PoolType.STAKE, reservePoolConfig_[i].asset.decimals()
+      );
+      IReceiptToken reserveDepositToken_ = receiptTokenFactory.deployReceiptToken(
+        i, IReceiptTokenFactory.PoolType.RESERVE, reservePoolConfig_[i].asset.decimals()
+      );
       reservePools[i] = ReservePool({
-        asset: reserveAssets_[i],
+        asset: reservePoolConfig_[i].asset,
         stkToken: stkToken_,
-        depositToken: depositToken_,
+        depositToken: reserveDepositToken_,
         stakeAmount: 0,
-        depositAmount: 0
+        depositAmount: 0,
+        rewardsPoolsWeight: reservePoolConfig_[i].rewardsPoolsWeight
       });
       stkTokenToReservePoolIds[stkToken_] = IdLookup({index: i, exists: true});
     }
-    for (uint8 i; i < rewardPoolConfig_.length; i++) {
-      claimableRewardPools[i] = RewardPool({asset: rewardPoolConfig_[i].asset, amount: 0});
-
-      IReceiptToken depositToken_ =
-        receiptTokenFactory.deployReceiptToken(i, IReceiptTokenFactory.PoolType.REWARD, reserveAssets_[i].decimals());
+    for (uint8 i; i < undrippedRewardPoolConfig_.length; i++) {
+      IReceiptToken rewardDepositToken_ = receiptTokenFactory.deployReceiptToken(
+        i, IReceiptTokenFactory.PoolType.REWARD, undrippedRewardPoolConfig_[i].asset.decimals()
+      );
       undrippedRewardPools[i] = UndrippedRewardPool({
-        asset: rewardPoolConfig_[i].asset,
+        asset: undrippedRewardPoolConfig_[i].asset,
         amount: 0,
-        dripModel: rewardPoolConfig_[i].dripModel,
-        lastDripTime: 0,
-        depositToken: depositToken_
+        dripModel: undrippedRewardPoolConfig_[i].dripModel,
+        depositToken: rewardDepositToken_
       });
-      stkTokenRewardPoolWeights[i] = rewardPoolConfig_[i].weight;
+      assetToUndrippedRewardPoolIds[undrippedRewardPoolConfig_[i].asset] = IdLookup({index: i, exists: true});
     }
     unstakeDelay = unstakeDelay_;
     withdrawDelay = withdrawDelay_;
+    // TODO: Check if this should be 0, instead?
+    lastDripTime = block.timestamp;
   }
 
   // -------------------------------------------------------------------
@@ -95,6 +97,4 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeeme
     uint256 rewardsPercentage_,
     uint256 reservePercentage_
   ) external {}
-
-  function claimRewards(address owner_) external returns (ClaimedRewards[] memory claimedRewards_) {}
 }

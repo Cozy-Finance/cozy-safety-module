@@ -10,6 +10,7 @@ import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -41,13 +42,13 @@ abstract contract DepositorUnitTest is TestBase {
       stkToken: IReceiptToken(address(0)),
       depositToken: IReceiptToken(address(mockReserveDepositToken)),
       stakeAmount: 100e18,
-      depositAmount: 50e18
+      depositAmount: 50e18,
+      rewardsPoolsWeight: 1e4
     });
     UndrippedRewardPool memory initialUndrippedRewardPool_ = UndrippedRewardPool({
       asset: IERC20(address(mockAsset)),
       depositToken: IReceiptToken(address(mockRewardPoolDepositToken)),
       dripModel: IRewardsDripModel(address(0)),
-      lastDripTime: 0,
       amount: 50e18
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: initialSafetyModuleBal});
@@ -445,6 +446,14 @@ contract TestableDepositor is Depositor {
     uint128, /* oldStakeAmount_ */
     uint128 /* slashAmount_ */
   ) internal view override {
+    __readStub__();
+  }
+
+  function _updateUserRewards(
+    uint256 userStkTokenBalance_,
+    mapping(uint16 => uint256) storage claimableRewardsIndices_,
+    UserRewardsData[] storage userRewards_
+  ) internal override {
     __readStub__();
   }
 }

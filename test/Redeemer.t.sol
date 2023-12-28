@@ -18,6 +18,7 @@ import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {AssetPool} from "../src/lib/structs/Pools.sol";
+import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -143,9 +144,10 @@ abstract contract RedeemerUnitTest is TestBase {
     component.mockSetUnstakeDelay(UNSTAKE_DELAY);
     component.mockSetWithdrawDelay(WITHDRAW_DELAY);
 
-    ReceiptToken stkTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
-    stkTokenLogic_.initialize(ISafetyModule(address(0)), 0);
-    ReceiptTokenFactory receiptTokenFactory = new ReceiptTokenFactory(IReceiptToken(address(stkTokenLogic_)));
+    ReceiptToken receiptTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
+    receiptTokenLogic_.initialize(ISafetyModule(address(0)), 0);
+    ReceiptTokenFactory receiptTokenFactory =
+      new ReceiptTokenFactory(IReceiptToken(address(receiptTokenLogic_)), IReceiptToken(address(receiptTokenLogic_)));
 
     vm.startPrank(address(component));
     stkToken =
@@ -160,7 +162,8 @@ abstract contract RedeemerUnitTest is TestBase {
         stkToken: IReceiptToken(address(stkToken)),
         depositToken: IReceiptToken(address(depositToken)),
         stakeAmount: 0,
-        depositAmount: 0
+        depositAmount: 0,
+        rewardsPoolsWeight: 1e4
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
@@ -789,6 +792,14 @@ contract TestableRedeemer is Redeemer {
     uint256, /* tokenPoolBalance_ */
     uint256 /* depositAmount_ */
   ) internal view override {
+    __readStub__();
+  }
+
+  function _updateUserRewards(
+    uint256 userStkTokenBalance_,
+    mapping(uint16 => uint256) storage claimableRewardsIndices_,
+    UserRewardsData[] storage userRewards_
+  ) internal override {
     __readStub__();
   }
 }
