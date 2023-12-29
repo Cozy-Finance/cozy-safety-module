@@ -16,6 +16,10 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   /// @dev Defined in RewardsHandler.
   function dripRewards() public virtual;
 
+  /// @notice Updates the fee amounts for each reserve pool by applying a drip factor on the stake and deposit amounts.
+  /// @dev Defined in FeesHandler.
+  function dripFees() public virtual;
+
   /// @dev Helper to assert that the safety module has a balance of tokens that matches the required amount for a
   /// deposit.
   function _assertValidDepositBalance(IERC20 token_, uint256 tokenPoolBalance_, uint256 depositAmount_)

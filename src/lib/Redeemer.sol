@@ -80,6 +80,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
+    dripFees();
     (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, false, depositTokenAmount_, receiver_, owner_);
   }
 
@@ -91,6 +92,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
+    dripFees();
     (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, true, stkTokenAmount_, receiver_, owner_);
     claimRewards(reservePoolId_, receiver_);
   }
@@ -107,7 +109,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
     IReceiptToken depositToken_ = undrippedRewardPool_.depositToken;
-    uint256 lastDripTime_ = lastDripTime;
+    uint256 lastDripTime_ = lastRewardsDripTime;
 
     rewardAssetAmount_ = _previewUndrippedRewardsRedemption(
       depositToken_,
@@ -163,7 +165,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     returns (uint256 rewardAssetAmount_)
   {
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
-    uint256 lastDripTime_ = lastDripTime;
+    uint256 lastDripTime_ = lastRewardsDripTime;
     rewardAssetAmount_ = _previewUndrippedRewardsRedemption(
       undrippedRewardPool_.depositToken,
       depositTokenAmount_,

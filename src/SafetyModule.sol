@@ -16,9 +16,10 @@ import {Staker} from "./lib/Staker.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 import {RewardsHandler} from "./lib/RewardsHandler.sol";
+import {FeesHandler} from "./lib/FeesHandler.sol";
 
 /// @dev Multiple asset SafetyModule.
-contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeemer, Staker, RewardsHandler {
+contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeemer, Staker, RewardsHandler, FeesHandler {
   constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(manager_));
     _assertAddressNotZero(address(receiptTokenFactory_));
@@ -48,7 +49,8 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeeme
       delaysConfig_
     );
 
-    lastDripTime = block.timestamp;
+    lastRewardsDripTime = block.timestamp;
+    lastFeesDripTime = block.timestamp;
   }
 
   // -------------------------------------------------------------------

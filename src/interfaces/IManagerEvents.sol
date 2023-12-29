@@ -8,9 +8,8 @@ import {ISafetyModule} from "./ISafetyModule.sol";
  * @dev Data types and events for the Manager.
  */
 interface IManagerEvents {
-  /// @dev Emitted when accrued Cozy reserve fees and backstop fees are swept from a Set to the Cozy owner (for
-  /// reserves) and backstop.
-  event CozyFeesClaimed(address indexed set_, uint128 reserveAmount_, uint128 backstopAmount_);
+  /// @dev Emitted when accrued Cozy fees are swept from a safety module to the Cozy owner.
+  event ClaimedSafetyModuleFees(ISafetyModule indexed safetyModule_);
 
   /// @dev Emitted when the default fee drip model is updated by the Cozy owner.
   event FeeDripModelUpdated(IDripModel indexed feeDripModel_);

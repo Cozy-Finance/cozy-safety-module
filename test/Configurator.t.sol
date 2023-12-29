@@ -673,6 +673,10 @@ contract TestableConfigurator is Configurator {
     __readStub__();
   }
 
+  function dripFees() public view override {
+    __readStub__();
+  }
+
   function _getNextDripAmount(
     uint256, /* totalBaseAmount_ */
     IDripModel, /* dripModel_ */

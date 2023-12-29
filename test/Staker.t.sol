@@ -347,6 +347,10 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
   }
 
   // -------- Overridden abstract function placeholders --------
+  function dripFees() public view override {
+    __readStub__();
+  }
+
   function _updateWithdrawalsAfterTrigger(
     uint16, /* reservePoolId_ */
     uint128, /* oldAmount_ */

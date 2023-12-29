@@ -2,7 +2,6 @@
 pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {IRewardsHandlerErrors} from "../src/interfaces/IRewardsHandlerErrors.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
@@ -13,6 +12,7 @@ import {Staker} from "../src/lib/Staker.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
+import {Ownable} from "../src/lib/Ownable.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {IdLookup} from "../src/lib/structs/Pools.sol";
@@ -831,7 +831,7 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
 
   function test_revertsOnUnauthorizedUserRewardsUpdate() public {
     vm.startPrank(_randomAddress());
-    vm.expectRevert(IRewardsHandlerErrors.UnauthorizedUserRewardsUpdate.selector);
+    vm.expectRevert(Ownable.Unauthorized.selector);
     component.updateUserRewardsForStkTokenTransfer(_randomAddress(), _randomAddress());
     vm.stopPrank();
   }
@@ -840,7 +840,7 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
 contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   // -------- Mock setters --------
   function mockSetLastDripTime(uint256 lastDripTime_) external {
-    lastDripTime = lastDripTime_;
+    lastRewardsDripTime = lastDripTime_;
   }
 
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
@@ -881,7 +881,7 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   }
 
   function getLastDripTime() external view returns (uint256) {
-    return lastDripTime;
+    return lastRewardsDripTime;
   }
 
   function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
@@ -945,6 +945,10 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   }
 
   // -------- Overridden abstract function placeholders --------
+  function dripFees() public view override {
+    __readStub__();
+  }
+
   function _updateUnstakesAfterTrigger(
     uint16, /* reservePoolId_ */
     uint128, /* oldStakeAmount_ */

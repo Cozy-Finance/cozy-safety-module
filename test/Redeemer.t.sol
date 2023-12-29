@@ -1153,8 +1153,10 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
     if (totalDrippedRewards_ > 0) undrippedRewardPool_.amount -= totalDrippedRewards_;
 
-    lastDripTime = block.timestamp;
+    lastRewardsDripTime = block.timestamp;
   }
+
+  function dripFees() public view override {}
 
   function _getNextDripAmount(
     uint256, /* totalBaseAmount_ */
@@ -1162,7 +1164,7 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {
-    if (lastDripTime == block.timestamp) return 0;
+    if (lastRewardsDripTime == block.timestamp) return 0;
     else return mockNextDripAmount;
   }
 

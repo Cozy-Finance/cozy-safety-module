@@ -42,6 +42,9 @@ abstract contract SafetyModuleBaseStorage {
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;
 
-  /// @notice Last drip time. Drips from all undripped reward pools occur simultaneously.
-  uint256 public lastDripTime;
+  /// @notice Last rewards drip time. Drips from all undripped reward pools occur simultaneously.
+  uint256 public lastRewardsDripTime;
+
+  /// @notice Last fees drip time.
+  uint256 public lastFeesDripTime;
 }
