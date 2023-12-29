@@ -6,6 +6,9 @@ import {UndrippedRewardPoolConfig} from "./lib/structs/Configs.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
+import {UndrippedRewardPoolConfig, ReservePoolConfig} from "./lib/structs/Configs.sol";
+import {Delays} from "./lib/structs/Delays.sol";
+import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
 import {Governable} from "./lib/Governable.sol";
 
 contract Manager is Governable, IManager {
@@ -14,6 +17,9 @@ contract Manager is Governable, IManager {
 
   /// @notice For the specified set, returns whether it's a valid Cozy Safety Module.
   mapping(ISafetyModule => bool) public isSafetyModule;
+
+  /// @dev Thrown when an safety module's configuration does not meet all requirements.
+  error InvalidConfiguration();
 
   /// @param owner_ The Cozy protocol owner.
   /// @param pauser_ The Cozy protocol pauser.
@@ -42,29 +48,26 @@ contract Manager is Governable, IManager {
   /// @notice Deploys a new Safety Module with the provided parameters.
   /// @param owner_ The owner of the safety module.
   /// @param pauser_ The pauser of the safety module.
-  /// @param reserveAssets_ Array of reserve pool assets for the safety module.
-  /// @param undrippedRewardPoolConfig_ Array of reward pool configurations.
-  /// @param unstakeDelay_ Delay before a staker can unstake their assets for the two step unstake process.
+  /// @param reservePoolConfigs_ The array of reserve pool configs for the safety module.
+  /// @param undrippedRewardPoolConfigs_ The array of undripped reward pool configs for the safety module.
+  /// @param delaysConfig_ The delays config for the safety module.
   /// @param salt_ Used to compute the resulting address of the set.
   function createSafetyModule(
     address owner_,
     address pauser_,
-    IERC20[] calldata reserveAssets_,
-    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfig_,
-    uint128 unstakeDelay_,
+    ReservePoolConfig[] calldata reservePoolConfigs_,
+    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
+    Delays calldata delaysConfig_,
     bytes32 salt_
   ) external returns (ISafetyModule safetyModule_) {
     _assertAddressNotZero(owner_);
     _assertAddressNotZero(pauser_);
 
-    // TODO: Validation of these configs in configurator library.
-    // if (!ConfiguratorLib.isValidConfiguration(setConfig_, marketConfigs_, 0, allowedMarketsPerSet)) {
-    //   revert InvalidConfiguration();
-    // }
+    if (!ConfiguratorLib.isValidConfiguration(reservePoolConfigs_, delaysConfig_)) revert InvalidConfiguration();
 
     isSafetyModule[ISafetyModule(safetyModuleFactory.computeAddress(salt_))] = true;
     safetyModule_ = safetyModuleFactory.deploySafetyModule(
-      owner_, pauser_, reserveAssets_, undrippedRewardPoolConfig_, unstakeDelay_, salt_
+      owner_, pauser_, reservePoolConfigs_, undrippedRewardPoolConfigs_, delaysConfig_, salt_
     );
   }
 }

@@ -19,6 +19,7 @@ import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {AssetPool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {Delays} from "../src/lib/structs/Delays.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -34,8 +35,8 @@ abstract contract RedeemerUnitTest is TestBase {
   TestableRedeemer component = new TestableRedeemer(IManager(address(mockManager)));
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
 
-  uint128 internal constant UNSTAKE_DELAY = 15 days;
-  uint128 internal constant WITHDRAW_DELAY = 20 days;
+  uint64 internal constant UNSTAKE_DELAY = 15 days;
+  uint64 internal constant WITHDRAW_DELAY = 20 days;
 
   bool isUnstakeTest;
   IReceiptToken testReceiptToken;
@@ -130,14 +131,15 @@ abstract contract RedeemerUnitTest is TestBase {
     else return component.getPendingWithdrawalsAccISFs(reservePoolId_);
   }
 
-  function _setRedemptionDelay(uint128 delay_) internal {
+  function _setRedemptionDelay(uint64 delay_) internal {
     if (isUnstakeTest) component.mockSetUnstakeDelay(delay_);
     else component.mockSetWithdrawDelay(delay_);
   }
 
-  function _getRedemptionDelay() internal view returns (uint128) {
-    if (isUnstakeTest) return component.unstakeDelay();
-    else return component.withdrawDelay();
+  function _getRedemptionDelay() internal view returns (uint64) {
+    (,, uint64 unstakeDelay_, uint64 withdrawDelay_) = component.delays();
+    if (isUnstakeTest) return unstakeDelay_;
+    else return withdrawDelay_;
   }
 
   function setUp() public virtual {
@@ -735,12 +737,12 @@ contract TestableRedeemer is Redeemer {
     assetPools[asset_] = assetPool_;
   }
 
-  function mockSetUnstakeDelay(uint128 unstakeDelay_) external {
-    unstakeDelay = unstakeDelay_;
+  function mockSetUnstakeDelay(uint64 unstakeDelay_) external {
+    delays.unstakeDelay = unstakeDelay_;
   }
 
-  function mockSetWithdrawDelay(uint128 withdrawDelay_) external {
-    withdrawDelay = withdrawDelay_;
+  function mockSetWithdrawDelay(uint64 withdrawDelay_) external {
+    delays.withdrawDelay = withdrawDelay_;
   }
 
   function mockSetLastUnstakesAccISF(uint16 reservePoolId_, uint256 acc_) external {

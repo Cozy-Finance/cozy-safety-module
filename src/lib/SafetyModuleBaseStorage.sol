@@ -8,6 +8,7 @@ import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
+import {Delays} from "./structs/Delays.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 abstract contract SafetyModuleBaseStorage {
@@ -26,17 +27,11 @@ abstract contract SafetyModuleBaseStorage {
   /// @dev Used when claiming rewards
   mapping(IReceiptToken stkToken_ => IdLookup reservePoolId_) public stkTokenToReservePoolIds;
 
-  /// @dev Used when dripping rewards
-  mapping(IERC20 asset_ => IdLookup undrippedRewardPoolId_) public assetToUndrippedRewardPoolIds;
-
   /// @dev Used for doing aggregate accounting of reserve assets.
   mapping(IERC20 reserveAsset_ => AssetPool assetPool_) public assetPools;
 
-  /// @dev Delay for two-step unstake process (for staked assets).
-  uint128 public unstakeDelay;
-
-  /// @dev Delay for two-step withdraw process (for deposited assets).
-  uint128 public withdrawDelay;
+  /// @dev Config, withdrawal and unstake delays.
+  Delays public delays;
 
   /// @dev Has config for deposit fee and where to send fees
   IManager public immutable cozyManager;

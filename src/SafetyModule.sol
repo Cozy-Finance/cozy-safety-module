@@ -7,12 +7,13 @@ import {IRewardsDripModel} from "./interfaces/IRewardsDripModel.sol";
 import {IReceiptToken} from "./interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "./interfaces/IReceiptTokenFactory.sol";
 import {UndrippedRewardPoolConfig, ReservePoolConfig} from "./lib/structs/Configs.sol";
+import {Delays} from "./lib/structs/Delays.sol";
+import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
 import {Depositor} from "./lib/Depositor.sol";
 import {Governable} from "./lib/Governable.sol";
 import {Redeemer} from "./lib/Redeemer.sol";
 import {Staker} from "./lib/Staker.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
-import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./lib/structs/Pools.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 import {RewardsHandler} from "./lib/RewardsHandler.sol";
 
@@ -28,49 +29,25 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeeme
   function initialize(
     address owner_,
     address pauser_,
-    ReservePoolConfig[] calldata reservePoolConfig_,
-    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfig_,
-    uint128 unstakeDelay_,
-    uint128 withdrawDelay_
+    ReservePoolConfig[] calldata reservePoolConfigs_,
+    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
+    Delays calldata delaysConfig_
   ) external {
     // Safety Modules are minimal proxies, so the owner and pauser is set to address(0) in the constructor for the logic
     // contract. When the set is initialized for the minimal proxy, we update the owner and pauser.
     __initGovernable(owner_, pauser_);
 
-    // TODO: Move to configurator lib
-    // TODO: Emit event, either like cozy v2 where we use the configuration update event, or maybe specific to init
-    for (uint8 i; i < reservePoolConfig_.length; i++) {
-      IReceiptToken stkToken_ = receiptTokenFactory.deployReceiptToken(
-        i, IReceiptTokenFactory.PoolType.STAKE, reservePoolConfig_[i].asset.decimals()
-      );
-      IReceiptToken reserveDepositToken_ = receiptTokenFactory.deployReceiptToken(
-        i, IReceiptTokenFactory.PoolType.RESERVE, reservePoolConfig_[i].asset.decimals()
-      );
-      reservePools[i] = ReservePool({
-        asset: reservePoolConfig_[i].asset,
-        stkToken: stkToken_,
-        depositToken: reserveDepositToken_,
-        stakeAmount: 0,
-        depositAmount: 0,
-        rewardsPoolsWeight: reservePoolConfig_[i].rewardsPoolsWeight
-      });
-      stkTokenToReservePoolIds[stkToken_] = IdLookup({index: i, exists: true});
-    }
-    for (uint8 i; i < undrippedRewardPoolConfig_.length; i++) {
-      IReceiptToken rewardDepositToken_ = receiptTokenFactory.deployReceiptToken(
-        i, IReceiptTokenFactory.PoolType.REWARD, undrippedRewardPoolConfig_[i].asset.decimals()
-      );
-      undrippedRewardPools[i] = UndrippedRewardPool({
-        asset: undrippedRewardPoolConfig_[i].asset,
-        amount: 0,
-        dripModel: undrippedRewardPoolConfig_[i].dripModel,
-        depositToken: rewardDepositToken_
-      });
-      assetToUndrippedRewardPoolIds[undrippedRewardPoolConfig_[i].asset] = IdLookup({index: i, exists: true});
-    }
-    unstakeDelay = unstakeDelay_;
-    withdrawDelay = withdrawDelay_;
-    // TODO: Check if this should be 0, instead?
+    ConfiguratorLib.applyConfigUpdates(
+      reservePools,
+      undrippedRewardPools,
+      delays,
+      stkTokenToReservePoolIds,
+      receiptTokenFactory,
+      reservePoolConfigs_,
+      undrippedRewardPoolConfigs_,
+      delaysConfig_
+    );
+
     lastDripTime = block.timestamp;
   }
 

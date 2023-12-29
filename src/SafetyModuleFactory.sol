@@ -2,7 +2,8 @@
 pragma solidity 0.8.22;
 
 import {Clones} from "openzeppelin-contracts/contracts/proxy/Clones.sol";
-import {UndrippedRewardPoolConfig} from "./lib/structs/Configs.sol";
+import {UndrippedRewardPoolConfig, ReservePoolConfig} from "./lib/structs/Configs.sol";
+import {Delays} from "./lib/structs/Delays.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
@@ -38,16 +39,16 @@ contract SafetyModuleFactory is ISafetyModuleFactory {
   /// @notice Creates a new Safety Module contract with the specified configuration.
   /// @param owner_ The owner of the safety module.
   /// @param pauser_ The pauser of the safety module.
-  /// @param reserveAssets_ Array of reserve pool assets for the safety module.
-  /// @param undrippedRewardPoolConfig_ Array of undripped reward pool configurations.
-  /// @param unstakeDelay_ Delay before a staker can unstake their assets for the two step unstake process.
-  /// @param baseSalt_ Used to compute the resulting address of the set.
+  /// @param reservePoolConfigs_ The array of reserve pool configs for the safety module.
+  /// @param undrippedRewardPoolConfigs_ The array of undripped reward pool configs for the safety module.
+  /// @param delaysConfig_ The delays config for the safety module.
+  /// @param baseSalt_ Used to compute the resulting address of the safety module.
   function deploySafetyModule(
     address owner_,
     address pauser_,
-    IERC20[] calldata reserveAssets_,
-    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfig_,
-    uint128 unstakeDelay_,
+    ReservePoolConfig[] calldata reservePoolConfigs_,
+    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
+    Delays calldata delaysConfig_,
     bytes32 baseSalt_
   ) public returns (ISafetyModule safetyModule_) {
     // It'd be harmless to let anyone deploy safety modules, but to make it more clear where the proper entry
@@ -55,8 +56,8 @@ contract SafetyModuleFactory is ISafetyModuleFactory {
     if (msg.sender != address(cozyManager)) revert Unauthorized();
 
     safetyModule_ = ISafetyModule(address(safetyModuleLogic).cloneDeterministic(salt(baseSalt_)));
-    safetyModule_.initialize(owner_, pauser_, reserveAssets_, undrippedRewardPoolConfig_, unstakeDelay_);
-    emit SafetyModuleDeployed(safetyModule_, reserveAssets_);
+    safetyModule_.initialize(owner_, pauser_, reservePoolConfigs_, undrippedRewardPoolConfigs_, delaysConfig_);
+    emit SafetyModuleDeployed(safetyModule_);
   }
 
   /// @notice Given the `baseSalt_` compute and return the address that Safety Module will be deployed to.
