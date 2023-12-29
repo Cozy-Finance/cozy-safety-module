@@ -15,7 +15,7 @@ interface IReceiptTokenFactory {
   event ReceiptTokenDeployed(
     IReceiptToken receiptToken,
     ISafetyModule indexed safetyModule,
-    uint8 indexed reservePoolId,
+    uint16 indexed reservePoolId,
     PoolType indexed poolType,
     uint8 decimals_
   );
@@ -23,7 +23,14 @@ interface IReceiptTokenFactory {
   /// @notice Creates a new ReceiptToken contract with the given number of `decimals_`. The ReceiptToken's safety module
   /// is identified by the caller address. The pool id of the ReceiptToken in the safety module and its `PoolType` is
   /// used to generate a unique salt for deploy.
-  function deployReceiptToken(uint8 poolId_, PoolType poolType_, uint8 decimals_)
+  function deployReceiptToken(uint16 poolId_, PoolType poolType_, uint8 decimals_)
     external
     returns (IReceiptToken receiptToken_);
+
+  /// @notice Given a `safetyModule_`, its `poolId_`, and `poolType_`, compute and return the address of its
+  /// ReceiptToken.
+  function computeAddress(ISafetyModule safetyModule_, uint16 poolId_, PoolType poolType_)
+    external
+    view
+    returns (address);
 }

@@ -4,20 +4,21 @@ pragma solidity ^0.8.0;
 import {IERC20} from "./IERC20.sol";
 import {IManager} from "./IManager.sol";
 import {ISafetyModule} from "./ISafetyModule.sol";
-import {UndrippedRewardPoolConfig} from "../lib/structs/Configs.sol";
+import {UndrippedRewardPoolConfig, ReservePoolConfig} from "../lib/structs/Configs.sol";
+import {Delays} from "../lib/structs/Delays.sol";
 
 interface ISafetyModuleFactory {
   /// @dev Emitted when a new Safety Module is deployed.
-  event SafetyModuleDeployed(ISafetyModule safetyModule, IERC20[] reserveAssets_);
+  event SafetyModuleDeployed(ISafetyModule safetyModule);
 
   function computeAddress(bytes32 baseSalt_) external view returns (address);
 
   function deploySafetyModule(
     address owner_,
     address pauser_,
-    IERC20[] calldata reserveAssets_,
-    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfig_,
-    uint128 unstakeDelay_,
+    ReservePoolConfig[] calldata reservePoolConfigs_,
+    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
+    Delays calldata delaysConfig_,
     bytes32 baseSalt_
   ) external returns (ISafetyModule safetyModule_);
 

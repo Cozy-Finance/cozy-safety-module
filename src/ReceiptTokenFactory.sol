@@ -35,7 +35,7 @@ contract ReceiptTokenFactory is IReceiptTokenFactory {
   /// @notice Creates a new ReceiptToken contract with the given number of `decimals_`. The ReceiptToken's safety module
   /// is identified by the caller address. The pool id of the ReceiptToken in the safety module and its `PoolType` is
   /// used to generate a unique salt for deploy.
-  function deployReceiptToken(uint8 poolId_, PoolType poolType_, uint8 decimals_)
+  function deployReceiptToken(uint16 poolId_, PoolType poolType_, uint8 decimals_)
     external
     returns (IReceiptToken receiptToken_)
   {
@@ -54,7 +54,7 @@ contract ReceiptTokenFactory is IReceiptTokenFactory {
 
   /// @notice Given a `safetyModule_`, its `poolId_`, and `poolType_`, compute and return the address of its
   /// ReceiptToken.
-  function computeAddress(ISafetyModule safetyModule_, uint8 poolId_, PoolType poolType_)
+  function computeAddress(ISafetyModule safetyModule_, uint16 poolId_, PoolType poolType_)
     external
     view
     returns (address)
@@ -66,7 +66,7 @@ contract ReceiptTokenFactory is IReceiptTokenFactory {
 
   /// @notice Given a `safetyModule_`, its `poolId_`, and `poolType_`, return the salt used to compute the ReceiptToken
   /// address.
-  function salt(ISafetyModule safetyModule_, uint8 poolId_, PoolType poolType_) public view returns (bytes32) {
+  function salt(ISafetyModule safetyModule_, uint16 poolId_, PoolType poolType_) public view returns (bytes32) {
     return keccak256(abi.encode(safetyModule_, poolId_, poolType_, block.chainid));
   }
 

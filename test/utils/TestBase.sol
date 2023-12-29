@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {UndrippedRewardPool} from "../../src/lib/structs/Pools.sol";
+import {UndrippedRewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
 import {Test} from "forge-std/Test.sol";
 import {TestAssertions} from "./TestAssertions.sol";
 
@@ -75,6 +75,15 @@ contract TestBase is Test, TestAssertions {
 
   function _expectPanic(uint256 code_) internal {
     vm.expectRevert(abi.encodeWithSelector(PANIC_SELECTOR, code_));
+  }
+
+  function copyReservePool(ReservePool memory original_) internal pure returns (ReservePool memory copied_) {
+    copied_.asset = original_.asset;
+    copied_.stkToken = original_.stkToken;
+    copied_.depositToken = original_.depositToken;
+    copied_.stakeAmount = original_.stakeAmount;
+    copied_.depositAmount = original_.depositAmount;
+    copied_.rewardsPoolsWeight = original_.rewardsPoolsWeight;
   }
 
   function copyUndrippedRewardPool(UndrippedRewardPool memory original_)

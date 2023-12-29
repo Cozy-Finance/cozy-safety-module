@@ -259,7 +259,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       queueTime: uint40(block.timestamp),
       delay: safetyModuleState_ == SafetyModuleState.PAUSED
         ? 0
-        : isUnstake_ ? uint40(unstakeDelay) : uint40(withdrawDelay),
+        : isUnstake_ ? uint40(delays.unstakeDelay) : uint40(delays.withdrawDelay),
       queuedAccISFsLength: uint32(numScalingFactors_),
       queuedAccISF: numScalingFactors_ == 0 ? MathConstants.WAD : reservePoolPendingAccISFs[numScalingFactors_ - 1],
       isUnstake: isUnstake_
