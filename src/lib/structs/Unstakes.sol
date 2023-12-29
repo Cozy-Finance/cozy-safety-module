@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "../../interfaces/IERC20.sol";
-import {IRewardsDripModel} from "../../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../../interfaces/IDripModel.sol";
 
 struct Unstake {
   uint16 reservePoolId; // ID of the reserve pool.

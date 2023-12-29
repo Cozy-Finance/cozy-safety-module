@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IConfiguratorErrors} from "../src/interfaces/IConfiguratorErrors.sol";
-import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IConfiguratorEvents} from "../src/interfaces/IConfiguratorEvents.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
@@ -76,13 +76,13 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     rewardPool1 = UndrippedRewardPool({
       asset: IERC20(_randomAddress()),
-      dripModel: IRewardsDripModel(_randomAddress()),
+      dripModel: IDripModel(_randomAddress()),
       depositToken: IReceiptToken(_randomAddress()),
       amount: _randomUint256()
     });
     rewardPool2 = UndrippedRewardPool({
       asset: IERC20(_randomAddress()),
-      dripModel: IRewardsDripModel(_randomAddress()),
+      dripModel: IDripModel(_randomAddress()),
       depositToken: IReceiptToken(_randomAddress()),
       amount: _randomUint256()
     });
@@ -98,7 +98,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
   function _generateValidUndrippedRewardPoolConfig() private returns (UndrippedRewardPoolConfig memory) {
     return UndrippedRewardPoolConfig({
       asset: IERC20(address(new MockERC20("Mock Asset", "cozyMock", 6))),
-      dripModel: IRewardsDripModel(_randomAddress())
+      dripModel: IDripModel(_randomAddress())
     });
   }
 
@@ -286,9 +286,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     // Two possible undripped reward pool configs.
     UndrippedRewardPoolConfig memory rewardPoolConfig1_ =
-      UndrippedRewardPoolConfig({asset: rewardPool1.asset, dripModel: IRewardsDripModel(_randomAddress())});
+      UndrippedRewardPoolConfig({asset: rewardPool1.asset, dripModel: IDripModel(_randomAddress())});
     UndrippedRewardPoolConfig memory rewardPoolConfig2_ =
-      UndrippedRewardPoolConfig({asset: rewardPool2.asset, dripModel: IRewardsDripModel(_randomAddress())});
+      UndrippedRewardPoolConfig({asset: rewardPool2.asset, dripModel: IDripModel(_randomAddress())});
 
     // Generate valid new configs for delays and reserve pools.
     Delays memory delayConfig_ = _generateValidDelays();
@@ -304,7 +304,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     invalidUndrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](2);
     invalidUndrippedRewardPoolConfigs_[0] = rewardPoolConfig1_;
     invalidUndrippedRewardPoolConfigs_[1] =
-      UndrippedRewardPoolConfig({asset: IERC20(_randomAddress()), dripModel: IRewardsDripModel(_randomAddress())});
+      UndrippedRewardPoolConfig({asset: IERC20(_randomAddress()), dripModel: IDripModel(_randomAddress())});
     assertFalse(component.isValidUpdate(reservePoolConfigs_, invalidUndrippedRewardPoolConfigs_, delayConfig_));
 
     // Valid update.
@@ -330,9 +330,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     Delays memory delayConfig_ = _generateValidDelays();
     UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](3);
     undrippedRewardPoolConfigs_[0] =
-      UndrippedRewardPoolConfig({asset: rewardPool1.asset, dripModel: IRewardsDripModel(_randomAddress())});
+      UndrippedRewardPoolConfig({asset: rewardPool1.asset, dripModel: IDripModel(_randomAddress())});
     undrippedRewardPoolConfigs_[1] =
-      UndrippedRewardPoolConfig({asset: rewardPool2.asset, dripModel: IRewardsDripModel(_randomAddress())});
+      UndrippedRewardPoolConfig({asset: rewardPool2.asset, dripModel: IDripModel(_randomAddress())});
     undrippedRewardPoolConfigs_[2] = _generateValidUndrippedRewardPoolConfig();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](3);
     reservePoolConfigs_[0] =
@@ -671,7 +671,7 @@ contract TestableConfigurator is Configurator {
 
   function _getNextRewardsDripAmount(
     uint256, /* totalUndrippedRewardPoolAmount_ */
-    IRewardsDripModel, /* dripModel_ */
+    IDripModel, /* dripModel_ */
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {

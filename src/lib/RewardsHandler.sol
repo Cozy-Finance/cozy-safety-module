@@ -13,7 +13,7 @@ import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
 import {UndrippedRewardPool, IdLookup} from "./structs/Pools.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
-import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
 import {IRewardsHandlerErrors} from "../interfaces/IRewardsHandlerErrors.sol";
 
 abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
@@ -57,6 +57,7 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
         rewardAsset_.safeTransfer(receiver_, accruedRewards_);
         userRewardsData_.accruedRewards = 0;
         userRewardsData_.indexSnapshot = claimableRewardsIndices_[i].safeCastTo128();
+        assetPools[rewardAsset_].amount -= accruedRewards_;
 
         emit ClaimedRewards(reservePoolId_, rewardAsset_, accruedRewards_, msg.sender, receiver_);
       }
@@ -107,7 +108,7 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
 
   function _getNextRewardsDripAmount(
     uint256 totalUndrippedRewardPoolAmount_,
-    IRewardsDripModel dripModel_,
+    IDripModel dripModel_,
     uint256 lastDripTime_,
     uint256 deltaT_
   ) internal view override returns (uint256) {

@@ -6,7 +6,7 @@ import {IManager} from "../src/interfaces/IManager.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IDepositorErrors} from "../src/interfaces/IDepositorErrors.sol";
-import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {Staker} from "../src/lib/Staker.sol";
@@ -328,7 +328,7 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     undrippedRewardPools.push(
       UndrippedRewardPool({
         asset: rewardAsset_,
-        dripModel: IRewardsDripModel(address(new MockRewardsDripModel(1e18))),
+        dripModel: IDripModel(address(new MockRewardsDripModel(1e18))),
         amount: 0,
         depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6)))
       })

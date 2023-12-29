@@ -6,7 +6,7 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IRedemptionErrors} from "../interfaces/IRedemptionErrors.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
-import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
 import {MathConstants} from "./MathConstants.sol";
 import {PendingRedemptionAccISFs, Redemption, RedemptionPreview} from "./structs/Redemptions.sol";
@@ -177,7 +177,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   function _previewUndrippedRewardsRedemption(
     IReceiptToken depositToken_,
     uint256 depositTokenAmount_,
-    IRewardsDripModel dripModel_,
+    IDripModel dripModel_,
     uint256 totalUndrippedRewardPoolAmount_,
     uint256 lastDripTime_,
     uint256 deltaT_

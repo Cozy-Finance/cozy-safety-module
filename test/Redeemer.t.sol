@@ -6,7 +6,7 @@ import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
-import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IRedemptionErrors} from "../src/interfaces/IRedemptionErrors.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
@@ -170,7 +170,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
       UndrippedRewardPool({
         asset: IERC20(address(mockAsset)),
         amount: 0,
-        dripModel: IRewardsDripModel(address(0)),
+        dripModel: IDripModel(address(0)),
         depositToken: IReceiptToken(address(0))
       })
     );
@@ -808,7 +808,7 @@ contract RedeemUndrippedRewards is TestBase {
       UndrippedRewardPool({
         asset: IERC20(address(mockAsset)),
         amount: 0,
-        dripModel: IRewardsDripModel(address(0)),
+        dripModel: IDripModel(address(0)),
         depositToken: IReceiptToken(address(depositToken))
       })
     );
@@ -1156,7 +1156,7 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
   function _getNextRewardsDripAmount(
     uint256, /* totalUndrippedRewardPoolAmount_ */
-    IRewardsDripModel, /* dripModel_ */
+    IDripModel, /* dripModel_ */
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {

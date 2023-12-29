@@ -6,7 +6,7 @@ import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IDepositorErrors} from "../src/interfaces/IDepositorErrors.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
-import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
@@ -48,7 +48,7 @@ abstract contract DepositorUnitTest is TestBase {
     UndrippedRewardPool memory initialUndrippedRewardPool_ = UndrippedRewardPool({
       asset: IERC20(address(mockAsset)),
       depositToken: IReceiptToken(address(mockRewardPoolDepositToken)),
-      dripModel: IRewardsDripModel(address(0)),
+      dripModel: IDripModel(address(0)),
       amount: 50e18
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: initialSafetyModuleBal});
@@ -444,7 +444,7 @@ contract TestableDepositor is Depositor {
 
   function _getNextRewardsDripAmount(
     uint256, /* totalUndrippedRewardPoolAmount_ */
-    IRewardsDripModel, /* dripModel_ */
+    IDripModel, /* dripModel_ */
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {

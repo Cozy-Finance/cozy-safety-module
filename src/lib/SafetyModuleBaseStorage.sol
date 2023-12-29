@@ -5,7 +5,7 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IManager} from "../interfaces/IManager.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
-import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
 import {Delays} from "./structs/Delays.sol";

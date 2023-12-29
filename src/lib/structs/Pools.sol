@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "../../interfaces/IERC20.sol";
-import {IRewardsDripModel} from "../../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../../interfaces/IDripModel.sol";
 import {IReceiptToken} from "../../interfaces/IReceiptToken.sol";
 
 struct AssetPool {
@@ -27,7 +27,7 @@ struct ReservePool {
 struct UndrippedRewardPool {
   IERC20 asset;
   uint256 amount;
-  IRewardsDripModel dripModel;
+  IDripModel dripModel;
   IReceiptToken depositToken;
 }
 
