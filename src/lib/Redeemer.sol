@@ -7,6 +7,7 @@ import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IRedemptionErrors} from "../interfaces/IRedemptionErrors.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
+import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
 import {MathConstants} from "./MathConstants.sol";
 import {PendingRedemptionAccISFs, Redemption, RedemptionPreview} from "./structs/Redemptions.sol";
@@ -111,7 +112,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     IReceiptToken depositToken_ = undrippedRewardPool_.depositToken;
     uint256 lastDripTime_ = lastRewardsDripTime;
 
-    rewardAssetAmount_ = _previewUndrippedRewardsRedemption(
+    rewardAssetAmount_ = _previewRedemption(
       depositToken_,
       depositTokenAmount_,
       undrippedRewardPool_.dripModel,
@@ -141,7 +142,11 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their redemption (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
-  function previewRedemption(uint64 redemptionId_) public view returns (RedemptionPreview memory redemptionPreview_) {
+  function previewQueuedRedemption(uint64 redemptionId_)
+    public
+    view
+    returns (RedemptionPreview memory redemptionPreview_)
+  {
     Redemption memory redemption_ = redemptions[redemptionId_];
     redemptionPreview_ = RedemptionPreview({
       delayRemaining: _getRedemptionDelayTimeRemaining(redemption_.queueTime, redemption_.delay).safeCastTo40(),
@@ -159,6 +164,25 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     });
   }
 
+  function previewReserveAssetsRedemption(uint16 rewardPoolId_, uint256 receiptTokenAmount_, bool isUnstake_)
+    external
+    view
+    returns (uint256 reserveAssetAmount_)
+  {
+    ReservePool storage reservePool_ = reservePools[rewardPoolId_];
+    IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
+    uint256 lastDripTime_ = lastFeesDripTime;
+
+    reserveAssetAmount_ = _previewRedemption(
+      isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken,
+      receiptTokenAmount_,
+      feeDripModel_,
+      isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount,
+      lastDripTime_,
+      block.timestamp - lastDripTime_
+    );
+  }
+
   function previewUndrippedRewardsRedemption(uint16 rewardPoolId_, uint256 depositTokenAmount_)
     external
     view
@@ -166,7 +190,8 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   {
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
     uint256 lastDripTime_ = lastRewardsDripTime;
-    rewardAssetAmount_ = _previewUndrippedRewardsRedemption(
+
+    rewardAssetAmount_ = _previewRedemption(
       undrippedRewardPool_.depositToken,
       depositTokenAmount_,
       undrippedRewardPool_.dripModel,
@@ -176,29 +201,29 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     );
   }
 
-  function _previewUndrippedRewardsRedemption(
-    IReceiptToken depositToken_,
-    uint256 depositTokenAmount_,
+  function _previewRedemption(
+    IReceiptToken receiptToken_,
+    uint256 receiptTokenAmount_,
     IDripModel dripModel_,
-    uint256 totalUndrippedRewardPoolAmount_,
+    uint256 totalPoolAmount_,
     uint256 lastDripTime_,
     uint256 deltaT_
-  ) internal view returns (uint256 rewardAssetAmount_) {
-    uint256 nextTotalUndrippedRewardPoolAmount_ = totalUndrippedRewardPoolAmount_
-      - _getNextDripAmount(totalUndrippedRewardPoolAmount_, dripModel_, lastDripTime_, deltaT_);
+  ) internal view returns (uint256 assetAmount_) {
+    uint256 nextTotalPoolAmount_ =
+      totalPoolAmount_ - _getNextDripAmount(totalPoolAmount_, dripModel_, lastDripTime_, deltaT_);
 
-    rewardAssetAmount_ = nextTotalUndrippedRewardPoolAmount_ == 0
+    assetAmount_ = nextTotalPoolAmount_ == 0
       ? 0
       : SafetyModuleCalculationsLib.convertToAssetAmount(
-        depositTokenAmount_, depositToken_.totalSupply(), nextTotalUndrippedRewardPoolAmount_
+        receiptTokenAmount_, receiptToken_.totalSupply(), nextTotalPoolAmount_
       );
-    if (rewardAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
+    if (assetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
   }
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their unstake (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
-  function previewUnstake(uint64 unstakeId_) external view returns (RedemptionPreview memory unstakePreview_) {
-    return previewRedemption(unstakeId_);
+  function previewQueuedUnstake(uint64 unstakeId_) external view returns (RedemptionPreview memory unstakePreview_) {
+    return previewQueuedRedemption(unstakeId_);
   }
 
   /// @notice Redeem by burning `receiptTokenAmount_` of `receiptToken_` and sending `reserveAssetAmount_` to
