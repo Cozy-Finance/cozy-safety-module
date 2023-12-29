@@ -183,7 +183,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 deltaT_
   ) internal view returns (uint256 rewardAssetAmount_) {
     uint256 nextTotalUndrippedRewardPoolAmount_ = totalUndrippedRewardPoolAmount_
-      - _getNextRewardsDripAmount(totalUndrippedRewardPoolAmount_, dripModel_, lastDripTime_, deltaT_);
+      - _getNextDripAmount(totalUndrippedRewardPoolAmount_, dripModel_, lastDripTime_, deltaT_);
 
     rewardAssetAmount_ = nextTotalUndrippedRewardPoolAmount_ == 0
       ? 0
@@ -220,7 +220,14 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     if (reserveAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
 
     redemptionId_ = _queueRedemption(
-      owner_, receiver_, receiptToken_, receiptTokenAmount_, reserveAssetAmount_, reservePoolId_, isUnstake_
+      owner_,
+      receiver_,
+      reservePool_,
+      receiptToken_,
+      receiptTokenAmount_,
+      reserveAssetAmount_,
+      reservePoolId_,
+      isUnstake_
     );
   }
 
@@ -228,6 +235,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   function _queueRedemption(
     address owner_,
     address receiver_,
+    ReservePool storage reservePool_,
     IReceiptToken receiptToken_,
     uint256 receiptTokenAmount_,
     uint256 reserveAssetAmount_,
@@ -243,6 +251,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       // Increments can never realistically overflow. Even with a uint64, you'd need to have 1000 redemptions per
       // second for 584,542,046 years.
       redemptionIdCounter = redemptionId_ + 1;
+      reservePool_.pendingRedemptionsAmount += reserveAssetAmount_;
     }
 
     uint256[] storage reservePoolPendingAccISFs = isUnstake_
@@ -302,6 +311,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     if (reserveAssetAmountRedeemed_ != 0) {
       if (redemption_.isUnstake) reservePool_.stakeAmount -= reserveAssetAmountRedeemed_;
       else reservePool_.depositAmount -= reserveAssetAmountRedeemed_;
+      reservePool_.pendingRedemptionsAmount -= reserveAssetAmountRedeemed_;
       assetPools[reserveAsset_].amount -= reserveAssetAmountRedeemed_;
       reserveAsset_.safeTransfer(redemption_.receiver, reserveAssetAmountRedeemed_);
     }

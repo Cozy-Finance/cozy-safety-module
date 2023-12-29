@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
 
 /**
  * @notice Read-only safety module calculations.

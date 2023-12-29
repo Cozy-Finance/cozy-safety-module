@@ -34,6 +34,8 @@ contract StakerUnitTest is TestBase {
       depositToken: IReceiptToken(address(mockDepositToken)),
       stakeAmount: 100e18,
       depositAmount: 99e18,
+      pendingRedemptionsAmount: 0,
+      feeAmount: 0,
       rewardsPoolsWeight: 1e4
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: 150e18});

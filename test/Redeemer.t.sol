@@ -163,6 +163,8 @@ abstract contract ReedemerUnitTestBase is TestBase {
         depositToken: IReceiptToken(address(depositToken)),
         stakeAmount: 0,
         depositAmount: 0,
+        feeAmount: 0,
+        pendingRedemptionsAmount: 0,
         rewardsPoolsWeight: 1e4
       })
     );
@@ -1154,8 +1156,8 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     lastDripTime = block.timestamp;
   }
 
-  function _getNextRewardsDripAmount(
-    uint256, /* totalUndrippedRewardPoolAmount_ */
+  function _getNextDripAmount(
+    uint256, /* totalBaseAmount_ */
     IDripModel, /* dripModel_ */
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */

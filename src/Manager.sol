@@ -9,7 +9,7 @@ import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
 import {UndrippedRewardPoolConfig, ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
-import {FeesConfig} from "./lib/structs/Manager.sol";
+import {FeesConfig, DripModelLookup} from "./lib/structs/Manager.sol";
 import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
 import {Governable} from "./lib/Governable.sol";
 
@@ -63,7 +63,7 @@ contract Manager is Governable, IManager {
   /// @param safetyModule_ The safety module to update the fee drip model for.
   /// @param feeDripModel_ The new fee drip model for the safety module.
   function updateOverrideFeeDripModel(ISafetyModule safetyModule_, IDripModel feeDripModel_) external onlyOwner {
-    feesConfig.overrideFeeDripModels[safetyModule_] = feeDripModel_;
+    feesConfig.overrideFeeDripModels[safetyModule_] = DripModelLookup({exists: true, dripModel: feeDripModel_});
     emit OverrideFeeDripModelUpdated(safetyModule_, feeDripModel_);
   }
 
@@ -95,5 +95,11 @@ contract Manager is Governable, IManager {
     safetyModule_ = safetyModuleFactory.deploySafetyModule(
       owner_, pauser_, reservePoolConfigs_, undrippedRewardPoolConfigs_, delaysConfig_, salt_
     );
+  }
+
+  function getFeeDripModel(ISafetyModule safetyModule_) external view returns (IDripModel) {
+    DripModelLookup memory overrideFeeDripModel_ = feesConfig.overrideFeeDripModels[safetyModule_];
+    if (overrideFeeDripModel_.exists) return overrideFeeDripModel_.dripModel;
+    else return feesConfig.feeDripModel;
   }
 }

@@ -43,6 +43,8 @@ abstract contract DepositorUnitTest is TestBase {
       depositToken: IReceiptToken(address(mockReserveDepositToken)),
       stakeAmount: 100e18,
       depositAmount: 50e18,
+      pendingRedemptionsAmount: 0,
+      feeAmount: 0,
       rewardsPoolsWeight: 1e4
     });
     UndrippedRewardPool memory initialUndrippedRewardPool_ = UndrippedRewardPool({
@@ -442,8 +444,8 @@ contract TestableDepositor is Depositor {
     __readStub__();
   }
 
-  function _getNextRewardsDripAmount(
-    uint256, /* totalUndrippedRewardPoolAmount_ */
+  function _getNextDripAmount(
+    uint256, /* totalBaseAmount_ */
     IDripModel, /* dripModel_ */
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */

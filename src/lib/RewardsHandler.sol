@@ -92,7 +92,7 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
       uint256 totalDrippedRewards_ =
-        _getNextRewardsDripAmount(undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, lastDripTime_, deltaT_);
+        _getNextDripAmount(undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, lastDripTime_, deltaT_);
 
       if (totalDrippedRewards_ > 0) {
         for (uint16 j = 0; j < numReservePools_; j++) {
@@ -106,14 +106,14 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
     lastDripTime = block.timestamp;
   }
 
-  function _getNextRewardsDripAmount(
-    uint256 totalUndrippedRewardPoolAmount_,
-    IDripModel dripModel_,
-    uint256 lastDripTime_,
-    uint256 deltaT_
-  ) internal view override returns (uint256) {
+  function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_, uint256 deltaT_)
+    internal
+    view
+    override
+    returns (uint256)
+  {
     if (deltaT_ == 0) return 0;
-    return totalUndrippedRewardPoolAmount_.mulWadDown(dripModel_.dripFactor(lastDripTime_, deltaT_));
+    return totalBaseAmount_.mulWadDown(dripModel_.dripFactor(lastDripTime_, deltaT_));
   }
 
   function _getUpdateToClaimableRewardIndex(uint256 totalDrippedRewards_, ReservePool storage reservePool_)

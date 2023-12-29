@@ -6,5 +6,10 @@ import {ISafetyModule} from "../../interfaces/ISafetyModule.sol";
 
 struct FeesConfig {
   IDripModel feeDripModel; // The default drip model for all fees.
-  mapping(ISafetyModule => IDripModel) overrideFeeDripModels; // Override drip models for specific SafetyModules.
+  mapping(ISafetyModule => DripModelLookup) overrideFeeDripModels; // Override drip models for specific SafetyModules.
+}
+
+struct DripModelLookup {
+  IDripModel dripModel;
+  bool exists;
 }

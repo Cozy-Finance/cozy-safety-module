@@ -23,13 +23,12 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     view
     virtual;
 
-  // @dev Returns the next amount of rewards to be dripped from an undripped reward pool.
-  function _getNextRewardsDripAmount(
-    uint256 totalUndrippedRewardPoolAmount_,
-    IDripModel dripModel_,
-    uint256 lastDripTime_,
-    uint256 deltaT_
-  ) internal view virtual returns (uint256);
+  // @dev Returns the next amount of rewards/fees to be dripped given a base amount.
+  function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_, uint256 deltaT_)
+    internal
+    view
+    virtual
+    returns (uint256);
 
   /// @dev Prepares pending unstakes to have their exchange rates adjusted after a trigger. Defined in `Redeemer`.
   function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint128 stakeAmount_, uint128 slashAmount_)

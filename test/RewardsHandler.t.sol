@@ -78,6 +78,8 @@ contract RewardsHandlerUnitTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
+        pendingRedemptionsAmount: 0,
+        feeAmount: 0,
         rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16()
       });
       component.mockRegisterStkToken(i, stkToken_);
@@ -120,6 +122,8 @@ contract RewardsHandlerUnitTest is TestBase {
       depositToken: IReceiptToken(address(0)),
       stakeAmount: 100e6,
       depositAmount: 50e6,
+      pendingRedemptionsAmount: 0,
+      feeAmount: 0,
       rewardsPoolsWeight: 0.1e4 // 10% weight
     });
     stkToken1_.mint(address(0), 0.1e18);
@@ -138,6 +142,8 @@ contract RewardsHandlerUnitTest is TestBase {
       depositToken: IReceiptToken(address(0)),
       stakeAmount: 200e6,
       depositAmount: 20e6,
+      pendingRedemptionsAmount: 0,
+      feeAmount: 0,
       rewardsPoolsWeight: 0.9e4 // 90% weight
     });
     stkToken2_.mint(address(0), 10);

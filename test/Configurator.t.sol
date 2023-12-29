@@ -63,6 +63,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       depositToken: IReceiptToken(_randomAddress()),
       stakeAmount: _randomUint256(),
       depositAmount: _randomUint256(),
+      pendingRedemptionsAmount: _randomUint256(),
+      feeAmount: _randomUint256(),
       rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2
     });
     reservePool2 = ReservePool({
@@ -71,6 +73,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       depositToken: IReceiptToken(_randomAddress()),
       stakeAmount: _randomUint256(),
       depositAmount: _randomUint256(),
+      pendingRedemptionsAmount: _randomUint256(),
+      feeAmount: _randomUint256(),
       rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2
     });
 
@@ -669,8 +673,8 @@ contract TestableConfigurator is Configurator {
     __readStub__();
   }
 
-  function _getNextRewardsDripAmount(
-    uint256, /* totalUndrippedRewardPoolAmount_ */
+  function _getNextDripAmount(
+    uint256, /* totalBaseAmount_ */
     IDripModel, /* dripModel_ */
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
