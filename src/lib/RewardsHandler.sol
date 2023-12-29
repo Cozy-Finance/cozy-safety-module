@@ -13,6 +13,7 @@ import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
 import {UndrippedRewardPool, IdLookup} from "./structs/Pools.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
+import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
 import {IRewardsHandlerErrors} from "../interfaces/IRewardsHandlerErrors.sol";
 
 abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
@@ -30,14 +31,14 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
 
   // TODO: Add a preview function which takes into account fees still to be dripped.
 
-  function dripRewards() public {
+  function dripRewards() public override {
     uint256 deltaT_ = block.timestamp - lastDripTime;
     if (deltaT_ == 0 || safetyModuleState == SafetyModuleState.PAUSED) return;
 
     _dripRewards(deltaT_);
   }
 
-  function claimRewards(uint16 reservePoolId_, address receiver_) external {
+  function claimRewards(uint16 reservePoolId_, address receiver_) public override {
     dripRewards();
 
     UserRewardsData[] storage userRewards_ = userRewards[reservePoolId_][msg.sender];
@@ -89,7 +90,8 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
 
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
-      uint256 totalDrippedRewards_ = _getTotalDrippedRewards(undrippedRewardPool_, lastDripTime_, deltaT_);
+      uint256 totalDrippedRewards_ =
+        _getNextRewardsDripAmount(undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, lastDripTime_, deltaT_);
 
       if (totalDrippedRewards_ > 0) {
         for (uint16 j = 0; j < numReservePools_; j++) {
@@ -103,12 +105,14 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
     lastDripTime = block.timestamp;
   }
 
-  function _getTotalDrippedRewards(
-    UndrippedRewardPool storage undrippedRewardPool_,
+  function _getNextRewardsDripAmount(
+    uint256 totalUndrippedRewardPoolAmount_,
+    IRewardsDripModel dripModel_,
     uint256 lastDripTime_,
     uint256 deltaT_
-  ) internal view returns (uint256) {
-    return undrippedRewardPool_.amount.mulWadDown(undrippedRewardPool_.dripModel.dripFactor(lastDripTime_, deltaT_));
+  ) internal view override returns (uint256) {
+    if (deltaT_ == 0) return 0;
+    return totalUndrippedRewardPoolAmount_.mulWadDown(dripModel_.dripFactor(lastDripTime_, deltaT_));
   }
 
   function _getUpdateToClaimableRewardIndex(uint256 totalDrippedRewards_, ReservePool storage reservePool_)

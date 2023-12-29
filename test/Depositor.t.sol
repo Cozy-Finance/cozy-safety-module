@@ -433,6 +433,24 @@ contract TestableDepositor is Depositor {
   }
 
   // -------- Overridden abstract function placeholders --------
+
+  function claimRewards(uint16, /* reservePoolId_ */ address /* receiver_ */ ) public view override {
+    __readStub__();
+  }
+
+  function dripRewards() public view override {
+    __readStub__();
+  }
+
+  function _getNextRewardsDripAmount(
+    uint256, /* totalUndrippedRewardPoolAmount_ */
+    IRewardsDripModel, /* dripModel_ */
+    uint256, /* lastDripTime_ */
+    uint256 /* deltaT_ */
+  ) internal view override returns (uint256) {
+    __readStub__();
+  }
+
   function _updateWithdrawalsAfterTrigger(
     uint16, /* reservePoolId_ */
     uint128, /* oldAmount_ */

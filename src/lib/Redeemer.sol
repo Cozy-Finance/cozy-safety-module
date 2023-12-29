@@ -6,7 +6,8 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IRedemptionErrors} from "../interfaces/IRedemptionErrors.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
-import {ReservePool, AssetPool} from "./structs/Pools.sol";
+import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {AssetPool, ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
 import {MathConstants} from "./MathConstants.sol";
 import {PendingRedemptionAccISFs, Redemption, RedemptionPreview} from "./structs/Redemptions.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
@@ -62,6 +63,16 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint64 redemptionId_
   );
 
+  /// @dev Emitted when a user redeems undripped rewards.
+  event RedeemedUndrippedRewards(
+    address caller_,
+    address indexed receiver_,
+    address indexed owner_,
+    IReceiptToken indexed depositToken_,
+    uint256 depositTokenAmount_,
+    uint256 rewardAssetAmount_
+  );
+
   /// @notice Redeem by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
@@ -73,13 +84,45 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   }
 
   /// @notice Redeem by burning `stkTokenAmount_` of `reservePoolId_` reserve pool stake tokens and sending
-  /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
+  /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`. Also claims any outstanding rewards
+  /// and sends them to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its stake tokens.
   function unstake(uint16 reservePoolId_, uint256 stkTokenAmount_, address receiver_, address owner_)
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
     (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, true, stkTokenAmount_, receiver_, owner_);
+    claimRewards(reservePoolId_, receiver_);
+  }
+
+  /// @notice Redeem by burning `depositTokenAmount_` of `rewardPoolId_` reward pool deposit tokens and sending
+  /// `rewardAssetAmount_` of `rewardPoolId_` reward pool assets to `receiver_`. Reward pool assets can only be redeemed
+  /// if they have not been dripped yet.
+  /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
+  function redeemUndrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+    external
+    returns (uint256 rewardAssetAmount_)
+  {
+    dripRewards();
+
+    UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
+    IReceiptToken depositToken_ = undrippedRewardPool_.depositToken;
+    uint256 lastDripTime_ = lastDripTime;
+
+    rewardAssetAmount_ = _previewUndrippedRewardsRedemption(
+      depositToken_,
+      depositTokenAmount_,
+      undrippedRewardPool_.dripModel,
+      undrippedRewardPool_.amount,
+      lastDripTime_,
+      block.timestamp - lastDripTime_
+    );
+
+    depositToken_.burn(msg.sender, owner_, depositTokenAmount_);
+    undrippedRewardPool_.amount -= rewardAssetAmount_;
+    undrippedRewardPool_.asset.safeTransfer(receiver_, rewardAssetAmount_);
+
+    emit RedeemedUndrippedRewards(msg.sender, receiver_, owner_, depositToken_, depositTokenAmount_, rewardAssetAmount_);
   }
 
   /// @notice Completes the redemption request for the specified redemption ID.
@@ -114,6 +157,42 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     });
   }
 
+  function previewUndrippedRewardsRedemption(uint16 rewardPoolId_, uint256 depositTokenAmount_)
+    external
+    view
+    returns (uint256 rewardAssetAmount_)
+  {
+    UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
+    uint256 lastDripTime_ = lastDripTime;
+    rewardAssetAmount_ = _previewUndrippedRewardsRedemption(
+      undrippedRewardPool_.depositToken,
+      depositTokenAmount_,
+      undrippedRewardPool_.dripModel,
+      undrippedRewardPool_.amount,
+      lastDripTime_,
+      block.timestamp - lastDripTime_
+    );
+  }
+
+  function _previewUndrippedRewardsRedemption(
+    IReceiptToken depositToken_,
+    uint256 depositTokenAmount_,
+    IRewardsDripModel dripModel_,
+    uint256 totalUndrippedRewardPoolAmount_,
+    uint256 lastDripTime_,
+    uint256 deltaT_
+  ) internal view returns (uint256 rewardAssetAmount_) {
+    uint256 nextTotalUndrippedRewardPoolAmount_ = totalUndrippedRewardPoolAmount_
+      - _getNextRewardsDripAmount(totalUndrippedRewardPoolAmount_, dripModel_, lastDripTime_, deltaT_);
+
+    rewardAssetAmount_ = nextTotalUndrippedRewardPoolAmount_ == 0
+      ? 0
+      : SafetyModuleCalculationsLib.convertToAssetAmount(
+        depositTokenAmount_, depositToken_.totalSupply(), nextTotalUndrippedRewardPoolAmount_
+      );
+    if (rewardAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
+  }
+
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their unstake (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
   function previewUnstake(uint64 unstakeId_) external view returns (RedemptionPreview memory unstakePreview_) {
@@ -133,7 +212,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     IReceiptToken receiptToken_ = isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken;
 
-    reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToReserveAssetAmount(
+    reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
       receiptTokenAmount_,
       receiptToken_.totalSupply(),
       isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount
@@ -143,8 +222,6 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     redemptionId_ = _queueRedemption(
       owner_, receiver_, receiptToken_, receiptTokenAmount_, reserveAssetAmount_, reservePoolId_, isUnstake_
     );
-
-    // TODO: If isUnstake is true, claim rewards as well
   }
 
   /// @dev Logic to queue a redemption.

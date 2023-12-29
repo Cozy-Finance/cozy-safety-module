@@ -9,37 +9,36 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 library SafetyModuleCalculationsLib {
   using FixedPointMathLib for uint256;
 
-  uint256 internal constant RESERVE_POOL_AMOUNT_FLOOR = 1;
+  uint256 internal constant POOL_AMOUNT_FLOOR = 1;
 
   /// @notice The `tokenAmount_` that the safety module would exchange for `assetAmount_` of receipt token provided.
   /// @dev See the ERC-4626 spec for more info.
-  function convertToReceiptTokenAmount(uint256 assetAmount_, uint256 tokenSupply_, uint256 reservePoolAmount_)
+  function convertToReceiptTokenAmount(uint256 assetAmount_, uint256 tokenSupply_, uint256 poolAmount_)
     internal
     pure
-    returns (uint256 stkTokenAmount_)
+    returns (uint256 receiptTokenAmount_)
   {
-    stkTokenAmount_ = tokenSupply_ == 0
-      ? assetAmount_
-      : assetAmount_.mulDivDown(tokenSupply_, _reservePoolAmountWithFloor(reservePoolAmount_));
+    receiptTokenAmount_ =
+      tokenSupply_ == 0 ? assetAmount_ : assetAmount_.mulDivDown(tokenSupply_, _poolAmountWithFloor(poolAmount_));
   }
 
-  /// @notice The `reserveAssetAmount_` that the safety module would exchange for `receiptTokenAmount_` of the receipt
+  /// @notice The `assetAmount_` that the safety module would exchange for `receiptTokenAmount_` of the receipt
   /// token.
   /// @dev See the ERC-4626 spec for more info.
-  function convertToReserveAssetAmount(
-    uint256 receiptTokenAmount_,
-    uint256 receiptTokenSupply_,
-    uint256 reservePoolAmount_
-  ) internal pure returns (uint256 reserveAssetAmount_) {
-    reserveAssetAmount_ = receiptTokenSupply_ == 0
-      ? reservePoolAmount_
-      : receiptTokenAmount_.mulDivDown(_reservePoolAmountWithFloor(reservePoolAmount_), receiptTokenSupply_);
+  function convertToAssetAmount(uint256 receiptTokenAmount_, uint256 receiptTokenSupply_, uint256 poolAmount_)
+    internal
+    pure
+    returns (uint256 assetAmount_)
+  {
+    assetAmount_ = receiptTokenSupply_ == 0
+      ? poolAmount_
+      : receiptTokenAmount_.mulDivDown(_poolAmountWithFloor(poolAmount_), receiptTokenSupply_);
   }
 
-  /// @notice The reserve pool amount for the purposes of performing conversions. We set a floor once
-  /// stkTokens have been initialized to avoid divide-by-zero errors that would occur when the supply
-  /// of stkTokens > 0, but the `reservePoolAmount` = 0.
-  function _reservePoolAmountWithFloor(uint256 reservePoolAmount_) private pure returns (uint256) {
-    return reservePoolAmount_ > RESERVE_POOL_AMOUNT_FLOOR ? reservePoolAmount_ : RESERVE_POOL_AMOUNT_FLOOR;
+  /// @notice The pool amount for the purposes of performing conversions. We set a floor once
+  /// deposit/stkTokens have been initialized to avoid divide-by-zero errors that would occur when the supply
+  /// of deposit/stkTokens > 0, but the `poolAmount` = 0.
+  function _poolAmountWithFloor(uint256 poolAmount_) private pure returns (uint256) {
+    return poolAmount_ > POOL_AMOUNT_FLOOR ? poolAmount_ : POOL_AMOUNT_FLOOR;
   }
 }
