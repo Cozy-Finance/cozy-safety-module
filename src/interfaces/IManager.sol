@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-interface IManager {}
+import {IManagerEvents} from "./IManagerEvents.sol";
+
+interface IManager is IManagerEvents {}

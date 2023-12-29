@@ -3,11 +3,13 @@ pragma solidity 0.8.22;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {UndrippedRewardPoolConfig} from "./lib/structs/Configs.sol";
+import {IDripModel} from "./interfaces/IDripModel.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
 import {UndrippedRewardPoolConfig, ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
+import {FeesConfig} from "./lib/structs/Manager.sol";
 import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
 import {Governable} from "./lib/Governable.sol";
 
@@ -18,15 +20,20 @@ contract Manager is Governable, IManager {
   /// @notice For the specified set, returns whether it's a valid Cozy Safety Module.
   mapping(ISafetyModule => bool) public isSafetyModule;
 
+  /// @notice The fees configuration for the Cozy protocol.
+  FeesConfig public feesConfig;
+
   /// @dev Thrown when an safety module's configuration does not meet all requirements.
   error InvalidConfiguration();
 
   /// @param owner_ The Cozy protocol owner.
   /// @param pauser_ The Cozy protocol pauser.
   /// @param safetyModuleFactory_ The Cozy protocol SafetyModuleFactory.
-  constructor(address owner_, address pauser_, ISafetyModuleFactory safetyModuleFactory_) {
+  /// @param feeDripModel_ The default fee drip model for all fees.
+  constructor(address owner_, address pauser_, ISafetyModuleFactory safetyModuleFactory_, IDripModel feeDripModel_) {
     _assertAddressNotZero(owner_);
     _assertAddressNotZero(address(safetyModuleFactory_));
+    _assertAddressNotZero(address(feeDripModel_));
     __initGovernable(owner_, pauser_);
 
     safetyModuleFactory = safetyModuleFactory_;
@@ -40,6 +47,25 @@ contract Manager is Governable, IManager {
   }
 
   function claimCozyFees(IERC20[] memory asset_, address receiver_) external returns (uint256 amount_) {}
+
+  // ------------------------------------
+  // -------- Cozy Owner Actions --------
+  // ------------------------------------
+
+  /// @notice Update the default fee drip model.
+  /// @param feeDripModel_ The new default fee drip model.
+  function updateFeeDripModel(IDripModel feeDripModel_) external onlyOwner {
+    feesConfig.feeDripModel = feeDripModel_;
+    emit FeeDripModelUpdated(feeDripModel_);
+  }
+
+  /// @notice Update the fee drip model for the specified safety module.
+  /// @param safetyModule_ The safety module to update the fee drip model for.
+  /// @param feeDripModel_ The new fee drip model for the safety module.
+  function updateOverrideFeeDripModel(ISafetyModule safetyModule_, IDripModel feeDripModel_) external onlyOwner {
+    feesConfig.overrideFeeDripModels[safetyModule_] = feeDripModel_;
+    emit OverrideFeeDripModelUpdated(safetyModule_, feeDripModel_);
+  }
 
   // ----------------------------------------
   // -------- Permissionless Actions --------
