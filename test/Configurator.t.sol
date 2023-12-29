@@ -201,9 +201,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     Delays memory delayConfig_ = _generateValidDelays();
 
     uint16 weightA_ = _randomUint16();
-    uint16 weightB_ = _randomUint16();
-    // Ensure the sum is not equal to ZOC.
-    if (weightA_ + weightB_ == 1e4) weightB_ = _randomUint16();
+    uint16 weightB_ = uint16(bound(_randomUint16(), 0, type(uint16).max - weightA_));
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
     reservePoolConfigs_[0] = _generateValidReservePoolConfig(weightA_);
@@ -662,6 +660,24 @@ contract TestableConfigurator is Configurator {
   }
 
   // -------- Overridden abstract function placeholders --------
+  function claimRewards(uint16, /* reservePoolId_ */ address receiver_) public view override {
+    __readStub__();
+  }
+
+  // Mock drip of rewards based on mocked next amount.
+  function dripRewards() public view override {
+    __readStub__();
+  }
+
+  function _getNextRewardsDripAmount(
+    uint256, /* totalUndrippedRewardPoolAmount_ */
+    IRewardsDripModel, /* dripModel_ */
+    uint256, /* lastDripTime_ */
+    uint256 /* deltaT_ */
+  ) internal view override returns (uint256) {
+    __readStub__();
+  }
+
   function _updateUnstakesAfterTrigger(
     uint16, /* reservePoolId_ */
     uint128, /* oldStakeAmount_ */
