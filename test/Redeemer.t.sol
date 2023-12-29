@@ -1129,11 +1129,11 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
   // -------- Exposed internals --------
 
   function updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint256 oldAmount_, uint256 slashAmount_) external {
-    _updateWithdrawalsAfterTrigger(reservePoolId_, uint128(oldAmount_), uint128(slashAmount_));
+    _updateWithdrawalsAfterTrigger(reservePoolId_, oldAmount_, slashAmount_);
   }
 
   function updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 oldStakeAmount_, uint256 slashAmount_) external {
-    _updateUnstakesAfterTrigger(reservePoolId_, uint128(oldStakeAmount_), uint128(slashAmount_));
+    _updateUnstakesAfterTrigger(reservePoolId_, oldStakeAmount_, slashAmount_);
   }
 
   // -------- Overridden common abstract functions --------
