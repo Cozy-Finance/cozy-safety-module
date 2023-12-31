@@ -22,8 +22,6 @@ abstract contract FeesHandler is SafetyModuleCommon {
 
   event ClaimedFees(IERC20 indexed reserveAsset_, uint256 feeAmount_, address indexed owner_);
 
-  // TODO: Add a preview function which takes into account fees still to be dripped.
-
   function dripFees() public override {
     uint256 deltaT_ = block.timestamp - lastFeesDripTime;
     if (deltaT_ == 0 || safetyModuleState == SafetyModuleState.PAUSED) return;
@@ -47,9 +45,9 @@ abstract contract FeesHandler is SafetyModuleCommon {
 
       if (feeAmount_ > 0) {
         IERC20 asset_ = reservePool_.asset;
-        asset_.safeTransfer(owner_, feeAmount_);
         reservePool_.feeAmount = 0;
         assetPools[asset_].amount -= feeAmount_;
+        asset_.safeTransfer(owner_, feeAmount_);
 
         emit ClaimedFees(asset_, feeAmount_, owner_);
       }

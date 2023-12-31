@@ -65,8 +65,7 @@ contract Manager is Governable, IManager {
   // -------- Batched Safety Module Actions --------
   // -----------------------------------------------
 
-  /// @notice For all specified `sets_`, transfers accrued reserve and backstop fees to the owner address and
-  /// backstop address, respectively.
+  /// @notice For all specified `safetyModules_`, transfers accrued fees to the owner address.
   function claimFees(ISafetyModule[] calldata safetyModules_) external {
     for (uint256 i = 0; i < safetyModules_.length; i++) {
       safetyModules_[i].claimFees(owner);
