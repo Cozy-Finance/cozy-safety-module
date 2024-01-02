@@ -34,7 +34,8 @@ contract StakerUnitTest is TestBase {
       depositToken: IReceiptToken(address(mockDepositToken)),
       stakeAmount: 100e18,
       depositAmount: 99e18,
-      pendingRedemptionsAmount: 0,
+      pendingUnstakesAmount: 0,
+      pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 1e4
     });

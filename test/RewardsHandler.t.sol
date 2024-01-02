@@ -78,7 +78,8 @@ contract RewardsHandlerUnitTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
-        pendingRedemptionsAmount: 0,
+        pendingUnstakesAmount: 0,
+        pendingWithdrawalsAmount: 0,
         feeAmount: 0,
         rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16()
       });
@@ -122,7 +123,8 @@ contract RewardsHandlerUnitTest is TestBase {
       depositToken: IReceiptToken(address(0)),
       stakeAmount: 100e6,
       depositAmount: 50e6,
-      pendingRedemptionsAmount: 0,
+      pendingUnstakesAmount: 0,
+      pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 0.1e4 // 10% weight
     });
@@ -142,7 +144,8 @@ contract RewardsHandlerUnitTest is TestBase {
       depositToken: IReceiptToken(address(0)),
       stakeAmount: 200e6,
       depositAmount: 20e6,
-      pendingRedemptionsAmount: 0,
+      pendingUnstakesAmount: 0,
+      pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 0.9e4 // 90% weight
     });

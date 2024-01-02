@@ -26,8 +26,9 @@ abstract contract TestAssertions is Test {
     assertEq(address(actual_.depositToken), address(expected_.depositToken), "ReservePool.depositToken");
     assertEq(actual_.stakeAmount, expected_.stakeAmount, "ReservePool.stakeAmount");
     assertEq(actual_.depositAmount, expected_.depositAmount, "ReservePool.depositAmount");
+    assertEq(actual_.pendingUnstakesAmount, expected_.pendingUnstakesAmount, "ReservePool.pendingUnstakesAmount");
     assertEq(
-      actual_.pendingRedemptionsAmount, expected_.pendingRedemptionsAmount, "ReservePool.pendingRedemptionsAmount"
+      actual_.pendingWithdrawalsAmount, expected_.pendingWithdrawalsAmount, "ReservePool.pendingWithdrawalsAmount"
     );
     assertEq(actual_.feeAmount, expected_.feeAmount, "ReservePool.feeAmount");
     assertEq(actual_.rewardsPoolsWeight, expected_.rewardsPoolsWeight, "ReservePool.rewardsPoolsWeight");

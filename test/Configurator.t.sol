@@ -63,7 +63,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       depositToken: IReceiptToken(_randomAddress()),
       stakeAmount: _randomUint256(),
       depositAmount: _randomUint256(),
-      pendingRedemptionsAmount: _randomUint256(),
+      pendingUnstakesAmount: _randomUint256(),
+      pendingWithdrawalsAmount: _randomUint256(),
       feeAmount: _randomUint256(),
       rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2
     });
@@ -73,7 +74,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       depositToken: IReceiptToken(_randomAddress()),
       stakeAmount: _randomUint256(),
       depositAmount: _randomUint256(),
-      pendingRedemptionsAmount: _randomUint256(),
+      pendingUnstakesAmount: _randomUint256(),
+      pendingWithdrawalsAmount: _randomUint256(),
       feeAmount: _randomUint256(),
       rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2
     });
@@ -683,6 +685,15 @@ contract TestableConfigurator is Configurator {
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {
+    __readStub__();
+  }
+
+  function _computeNextDripAmount(uint256, /* totalBaseAmount_ */ uint256 /* dripFactor_ */ )
+    internal
+    view
+    override
+    returns (uint256)
+  {
     __readStub__();
   }
 

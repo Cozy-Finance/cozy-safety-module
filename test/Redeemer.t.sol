@@ -164,7 +164,8 @@ abstract contract ReedemerUnitTestBase is TestBase {
         stakeAmount: 0,
         depositAmount: 0,
         feeAmount: 0,
-        pendingRedemptionsAmount: 0,
+        pendingUnstakesAmount: 0,
+        pendingWithdrawalsAmount: 0,
         rewardsPoolsWeight: 1e4
       })
     );
@@ -1166,6 +1167,15 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
   ) internal view override returns (uint256) {
     if (lastRewardsDripTime == block.timestamp) return 0;
     else return mockNextDripAmount;
+  }
+
+  function _computeNextDripAmount(uint256, /* totalBaseAmount_ */ uint256 /* dripFactor_ */ )
+    internal
+    view
+    override
+    returns (uint256)
+  {
+    __readStub__();
   }
 
   function _assertValidDepositBalance(

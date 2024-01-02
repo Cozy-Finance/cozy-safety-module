@@ -113,7 +113,16 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     returns (uint256)
   {
     if (deltaT_ == 0) return 0;
-    return totalBaseAmount_.mulWadDown(dripModel_.dripFactor(lastDripTime_, deltaT_));
+    return _computeNextDripAmount(totalBaseAmount_, dripModel_.dripFactor(lastDripTime_, deltaT_));
+  }
+
+  function _computeNextDripAmount(uint256 totalBaseAmount_, uint256 dripFactor_)
+    internal
+    view
+    override
+    returns (uint256)
+  {
+    return totalBaseAmount_.mulWadDown(dripFactor_);
   }
 
   function _getUpdateToClaimableRewardIndex(uint256 totalDrippedRewards_, ReservePool storage reservePool_)

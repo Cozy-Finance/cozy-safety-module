@@ -278,7 +278,8 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       // Increments can never realistically overflow. Even with a uint64, you'd need to have 1000 redemptions per
       // second for 584,542,046 years.
       redemptionIdCounter = redemptionId_ + 1;
-      reservePool_.pendingRedemptionsAmount += reserveAssetAmount_;
+      if (isUnstake_) reservePool_.pendingUnstakesAmount += reserveAssetAmount_;
+      else reservePool_.pendingWithdrawalsAmount += reserveAssetAmount_;
     }
 
     uint256[] storage reservePoolPendingAccISFs = isUnstake_
@@ -336,9 +337,13 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       redemption_.isUnstake
     );
     if (reserveAssetAmountRedeemed_ != 0) {
-      if (redemption_.isUnstake) reservePool_.stakeAmount -= reserveAssetAmountRedeemed_;
-      else reservePool_.depositAmount -= reserveAssetAmountRedeemed_;
-      reservePool_.pendingRedemptionsAmount -= reserveAssetAmountRedeemed_;
+      if (redemption_.isUnstake) {
+        reservePool_.stakeAmount -= reserveAssetAmountRedeemed_;
+        reservePool_.pendingUnstakesAmount -= reserveAssetAmountRedeemed_;
+      } else {
+        reservePool_.depositAmount -= reserveAssetAmountRedeemed_;
+        reservePool_.pendingWithdrawalsAmount -= reserveAssetAmountRedeemed_;
+      }
       assetPools[reserveAsset_].amount -= reserveAssetAmountRedeemed_;
       reserveAsset_.safeTransfer(redemption_.receiver, reserveAssetAmountRedeemed_);
     }

@@ -43,7 +43,8 @@ abstract contract DepositorUnitTest is TestBase {
       depositToken: IReceiptToken(address(mockReserveDepositToken)),
       stakeAmount: 100e18,
       depositAmount: 50e18,
-      pendingRedemptionsAmount: 0,
+      pendingUnstakesAmount: 0,
+      pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 1e4
     });
@@ -454,6 +455,15 @@ contract TestableDepositor is Depositor {
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {
+    __readStub__();
+  }
+
+  function _computeNextDripAmount(uint256, /* totalBaseAmount_ */ uint256 /* dripFactor_ */ )
+    internal
+    view
+    override
+    returns (uint256)
+  {
     __readStub__();
   }
 

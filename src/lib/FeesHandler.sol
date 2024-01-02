@@ -18,7 +18,6 @@ import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 abstract contract FeesHandler is SafetyModuleCommon {
   using FixedPointMathLib for uint256;
   using SafeERC20 for IERC20;
-  using SafeCastLib for uint256;
 
   event ClaimedFees(IERC20 indexed reserveAsset_, uint256 feeAmount_, address indexed owner_);
 
@@ -65,13 +64,13 @@ abstract contract FeesHandler is SafetyModuleCommon {
       uint256 stakeAmount_ = reservePool_.stakeAmount;
       uint256 depositAmount_ = reservePool_.depositAmount;
 
-      uint256 totalDrippedFees_ = _getNextDripAmount(
-        stakeAmount_ + depositAmount_ - reservePool_.pendingRedemptionsAmount, feeDripModel_, lastDripTime_, deltaT_
-      );
+      uint256 dripFactor_ = feeDripModel_.dripFactor(lastDripTime_, deltaT_);
+      uint256 drippedFromStakeAmount_ =
+        _computeNextDripAmount(stakeAmount_ - reservePool_.pendingUnstakesAmount, dripFactor_);
+      uint256 drippedFromDepositAmount_ =
+        _computeNextDripAmount(depositAmount_ - reservePool_.pendingWithdrawalsAmount, dripFactor_);
 
-      if (totalDrippedFees_ > 0) {
-        (uint256 drippedFromStakeAmount_, uint256 drippedFromDepositAmount_) =
-          _getFeeAllocation(totalDrippedFees_, stakeAmount_, depositAmount_);
+      if (drippedFromStakeAmount_ > 0 || drippedFromDepositAmount_ > 0) {
         reservePool_.feeAmount += drippedFromStakeAmount_ + drippedFromDepositAmount_;
         reservePool_.stakeAmount -= drippedFromStakeAmount_;
         reservePool_.depositAmount -= drippedFromDepositAmount_;
@@ -79,18 +78,5 @@ abstract contract FeesHandler is SafetyModuleCommon {
     }
 
     lastFeesDripTime = block.timestamp;
-  }
-
-  function _getFeeAllocation(uint256 totalDrippedFees_, uint256 stakeAmount_, uint256 depositAmount_)
-    internal
-    pure
-    returns (uint256 drippedFromStakeAmount_, uint256 drippedFromDepositAmount_)
-  {
-    uint256 totalReserveAmount_ = stakeAmount_ + depositAmount_;
-    if (totalReserveAmount_ == 0) return (0, 0);
-    // Round down in favor of stakers and against depositors.
-    drippedFromStakeAmount_ = totalDrippedFees_.mulWadDown(stakeAmount_.divWadDown(totalReserveAmount_));
-    drippedFromDepositAmount_ = totalDrippedFees_ - drippedFromStakeAmount_;
-    if (drippedFromDepositAmount_ > depositAmount_) drippedFromDepositAmount_ = depositAmount_;
   }
 }
