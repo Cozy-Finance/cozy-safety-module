@@ -49,7 +49,7 @@ contract Manager is Governable, IManager {
     }
   }
 
-  /// @notice Batch unpauses sets_. The manager's owner can perform this action.
+  /// @notice Batch unpauses safetyModules_. The manager's owner can perform this action.
   function unpause(ISafetyModule[] calldata safetyModules_) external onlyOwner {
     for (uint256 i = 0; i < safetyModules_.length; i++) {
       safetyModules_[i].unpause();
