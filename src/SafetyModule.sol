@@ -17,9 +17,18 @@ import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 import {RewardsHandler} from "./lib/RewardsHandler.sol";
 import {FeesHandler} from "./lib/FeesHandler.sol";
+import {StateChanger} from "./lib/StateChanger.sol";
 
 /// @dev Multiple asset SafetyModule.
-contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeemer, Staker, RewardsHandler, FeesHandler {
+contract SafetyModule is
+  SafetyModuleBaseStorage,
+  Depositor,
+  Redeemer,
+  Staker,
+  RewardsHandler,
+  FeesHandler,
+  StateChanger
+{
   constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(manager_));
     _assertAddressNotZero(address(receiptTokenFactory_));

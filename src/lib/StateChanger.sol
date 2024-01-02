@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-import {IStateChangeEvents} from "../interfaces/IStateChangeEvents.sol";
+import {IStateChangerEvents} from "../interfaces/IStateChangerEvents.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {Governable} from "./Governable.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {CallerRole, StateTransitionsLib} from "./StateTransitionsLib.sol";
 
-abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangeEvents {
+abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerEvents {
   /// @dev Pauses the safety module if it's a valid state transition.
   function pause() external {
     SafetyModuleState currState_ = safetyModuleState;
