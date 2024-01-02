@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "../../interfaces/IERC20.sol";
-import {IRewardsDripModel} from "../../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../../interfaces/IDripModel.sol";
 import {IReceiptToken} from "../../interfaces/IReceiptToken.sol";
 
 struct AssetPool {
@@ -13,11 +13,14 @@ struct AssetPool {
 }
 
 struct ReservePool {
+  uint256 stakeAmount;
+  uint256 depositAmount;
+  uint256 pendingUnstakesAmount;
+  uint256 pendingWithdrawalsAmount;
+  uint256 feeAmount;
   IERC20 asset;
   IReceiptToken stkToken;
   IReceiptToken depositToken;
-  uint256 stakeAmount;
-  uint256 depositAmount;
   /// @dev The weighting of each stkToken's claim to all reward pools in terms of a ZOC. Must sum to 1.
   /// e.g. stkTokenA = 10%, means they're eligible for up to 10% of each pool, scaled to their balance of stkTokenA
   /// wrt totalSupply.
@@ -25,9 +28,9 @@ struct ReservePool {
 }
 
 struct UndrippedRewardPool {
-  IERC20 asset;
   uint256 amount;
-  IRewardsDripModel dripModel;
+  IERC20 asset;
+  IDripModel dripModel;
   IReceiptToken depositToken;
 }
 

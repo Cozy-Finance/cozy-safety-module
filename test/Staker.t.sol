@@ -6,7 +6,7 @@ import {IManager} from "../src/interfaces/IManager.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IDepositorErrors} from "../src/interfaces/IDepositorErrors.sol";
-import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {Staker} from "../src/lib/Staker.sol";
@@ -15,7 +15,7 @@ import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
-import {MockRewardsDripModel} from "./utils/MockRewardsDripModel.sol";
+import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
@@ -34,6 +34,9 @@ contract StakerUnitTest is TestBase {
       depositToken: IReceiptToken(address(mockDepositToken)),
       stakeAmount: 100e18,
       depositAmount: 99e18,
+      pendingUnstakesAmount: 0,
+      pendingWithdrawalsAmount: 0,
+      feeAmount: 0,
       rewardsPoolsWeight: 1e4
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: 150e18});
@@ -328,7 +331,7 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     undrippedRewardPools.push(
       UndrippedRewardPool({
         asset: rewardAsset_,
-        dripModel: IRewardsDripModel(address(new MockRewardsDripModel(1e18))),
+        dripModel: IDripModel(address(new MockDripModel(1e18))),
         amount: 0,
         depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6)))
       })
@@ -345,6 +348,10 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
   }
 
   // -------- Overridden abstract function placeholders --------
+  function dripFees() public view override {
+    __readStub__();
+  }
+
   function _updateWithdrawalsAfterTrigger(
     uint16, /* reservePoolId_ */
     uint128, /* oldAmount_ */

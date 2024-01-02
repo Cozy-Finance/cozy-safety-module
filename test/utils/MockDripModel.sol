@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import "../../src/interfaces/IRewardsDripModel.sol";
+import "../../src/interfaces/IDripModel.sol";
 
-contract MockRewardsDripModel is IRewardsDripModel {
+contract MockDripModel is IDripModel {
   uint256 public dripFactorConstant;
 
   constructor(uint256 dripFactorConstant_) {
     dripFactorConstant = dripFactorConstant_;
   }
 
-  function dripFactor(uint256, /* lastDripTime_ */ uint256 /* currentTime_ */ )
+  function dripFactor(uint256, /* lastDripTime_ */ uint256 /* timeSinceLastDrip_ */ )
     external
     view
     override

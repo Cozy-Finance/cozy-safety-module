@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {ReservePool, AssetPool} from "./structs/Pools.sol";
+import {Ownable} from "./Ownable.sol";
 import {MathConstants} from "./MathConstants.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {SafeCastLib} from "./SafeCastLib.sol";
@@ -13,10 +14,9 @@ import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
 import {UndrippedRewardPool, IdLookup} from "./structs/Pools.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
-import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
-import {IRewardsHandlerErrors} from "../interfaces/IRewardsHandlerErrors.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
 
-abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
+abstract contract RewardsHandler is SafetyModuleCommon {
   using FixedPointMathLib for uint256;
   using SafeERC20 for IERC20;
   using SafeCastLib for uint256;
@@ -32,7 +32,7 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
   // TODO: Add a preview function which takes into account fees still to be dripped.
 
   function dripRewards() public override {
-    uint256 deltaT_ = block.timestamp - lastDripTime;
+    uint256 deltaT_ = block.timestamp - dripTimes.lastRewardsDripTime;
     if (deltaT_ == 0 || safetyModuleState == SafetyModuleState.PAUSED) return;
 
     _dripRewards(deltaT_);
@@ -57,6 +57,7 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
         rewardAsset_.safeTransfer(receiver_, accruedRewards_);
         userRewardsData_.accruedRewards = 0;
         userRewardsData_.indexSnapshot = claimableRewardsIndices_[i].safeCastTo128();
+        assetPools[rewardAsset_].amount -= accruedRewards_;
 
         emit ClaimedRewards(reservePoolId_, rewardAsset_, accruedRewards_, msg.sender, receiver_);
       }
@@ -70,7 +71,7 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
   function updateUserRewardsForStkTokenTransfer(address from_, address to_) external {
     // Check that only a registered stkToken can call this function.
     IdLookup memory idLookup_ = stkTokenToReservePoolIds[IReceiptToken(msg.sender)];
-    if (!idLookup_.exists) revert UnauthorizedUserRewardsUpdate();
+    if (!idLookup_.exists) revert Ownable.Unauthorized();
 
     uint16 reservePoolId_ = idLookup_.index;
     IReceiptToken stkToken_ = reservePools[reservePoolId_].stkToken;
@@ -84,14 +85,14 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
   }
 
   function _dripRewards(uint256 deltaT_) internal {
-    uint256 lastDripTime_ = lastDripTime;
     uint256 numRewardAssets_ = undrippedRewardPools.length;
     uint256 numReservePools_ = reservePools.length;
 
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
-      uint256 totalDrippedRewards_ =
-        _getNextRewardsDripAmount(undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, lastDripTime_, deltaT_);
+      uint256 totalDrippedRewards_ = _getNextDripAmount(
+        undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, dripTimes.lastRewardsDripTime, deltaT_
+      );
 
       if (totalDrippedRewards_ > 0) {
         for (uint16 j = 0; j < numReservePools_; j++) {
@@ -102,17 +103,26 @@ abstract contract RewardsHandler is SafetyModuleCommon, IRewardsHandlerErrors {
       }
     }
 
-    lastDripTime = block.timestamp;
+    dripTimes.lastRewardsDripTime = uint128(block.timestamp);
   }
 
-  function _getNextRewardsDripAmount(
-    uint256 totalUndrippedRewardPoolAmount_,
-    IRewardsDripModel dripModel_,
-    uint256 lastDripTime_,
-    uint256 deltaT_
-  ) internal view override returns (uint256) {
+  function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_, uint256 deltaT_)
+    internal
+    view
+    override
+    returns (uint256)
+  {
     if (deltaT_ == 0) return 0;
-    return totalUndrippedRewardPoolAmount_.mulWadDown(dripModel_.dripFactor(lastDripTime_, deltaT_));
+    return _computeNextDripAmount(totalBaseAmount_, dripModel_.dripFactor(lastDripTime_, deltaT_));
+  }
+
+  function _computeNextDripAmount(uint256 totalBaseAmount_, uint256 dripFactor_)
+    internal
+    view
+    override
+    returns (uint256)
+  {
+    return totalBaseAmount_.mulWadDown(dripFactor_);
   }
 
   function _getUpdateToClaimableRewardIndex(uint256 totalDrippedRewards_, ReservePool storage reservePool_)

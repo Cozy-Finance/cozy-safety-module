@@ -2,10 +2,9 @@
 pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {IRewardsHandlerErrors} from "../src/interfaces/IRewardsHandlerErrors.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
-import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {RewardsHandler} from "../src/lib/RewardsHandler.sol";
@@ -13,13 +12,14 @@ import {Staker} from "../src/lib/Staker.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
+import {Ownable} from "../src/lib/Ownable.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {IdLookup} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockStkToken} from "./utils/MockStkToken.sol";
 import {MockManager} from "./utils/MockManager.sol";
-import {MockRewardsDripModel} from "./utils/MockRewardsDripModel.sol";
+import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
@@ -27,7 +27,7 @@ contract RewardsHandlerUnitTest is TestBase {
   using FixedPointMathLib for uint256;
   using SafeCastLib for uint256;
 
-  MockRewardsDripModel mockRewardsDripModel;
+  MockDripModel mockRewardsDripModel;
   TestableRewardsHandler component = new TestableRewardsHandler();
 
   uint256 constant DEFAULT_REWARDS_DRIP_RATE = 0.01e18;
@@ -43,7 +43,7 @@ contract RewardsHandlerUnitTest is TestBase {
   );
 
   function setUp() public {
-    mockRewardsDripModel = new MockRewardsDripModel(DEFAULT_REWARDS_DRIP_RATE);
+    mockRewardsDripModel = new MockDripModel(DEFAULT_REWARDS_DRIP_RATE);
     component.mockSetLastDripTime(block.timestamp);
   }
 
@@ -54,13 +54,14 @@ contract RewardsHandlerUnitTest is TestBase {
       UndrippedRewardPool memory rewardPool_ = UndrippedRewardPool({
         asset: IERC20(address(mockAsset_)),
         depositToken: IReceiptToken(address(0)),
-        dripModel: IRewardsDripModel(mockRewardsDripModel),
+        dripModel: IDripModel(mockRewardsDripModel),
         amount: amount_
       });
       component.mockAddUndrippedRewardPool(rewardPool_);
 
       // Mint safety module undripped rewards.
       mockAsset_.mint(address(component), amount_);
+      component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: amount_}));
     }
   }
 
@@ -68,16 +69,25 @@ contract RewardsHandlerUnitTest is TestBase {
     for (uint16 i = 0; i < numReservePools_; i++) {
       IReceiptToken stkToken_ =
         IReceiptToken(address(new MockStkToken("Mock Cozy  stkToken", "cozyStk", 6, ISafetyModule(address(component)))));
+      MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
+      uint256 stakeAmount_ = _randomUint256() % 500_000_000;
+      uint256 depositAmount_ = _randomUint256() % 500_000_000;
       ReservePool memory reservePool_ = ReservePool({
-        asset: IERC20(address(new MockERC20("Mock Asset", "MOCK", 6))),
+        asset: IERC20(address(mockAsset_)),
         stkToken: stkToken_,
         depositToken: IReceiptToken(address(0)),
-        stakeAmount: _randomUint256() % 500_000_000,
-        depositAmount: _randomUint256() % 500_000_000,
+        stakeAmount: stakeAmount_,
+        depositAmount: depositAmount_,
+        pendingUnstakesAmount: 0,
+        pendingWithdrawalsAmount: 0,
+        feeAmount: 0,
         rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16()
       });
       component.mockRegisterStkToken(i, stkToken_);
       component.mockAddReservePool(reservePool_);
+
+      mockAsset_.mint(address(component), stakeAmount_ + depositAmount_);
+      component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: stakeAmount_ + depositAmount_}));
 
       // Mint stkTokens and send to zero address to floor supply.
       stkToken_.mint(address(0), _randomUint256() % 500_000_000);
@@ -106,64 +116,79 @@ contract RewardsHandlerUnitTest is TestBase {
       IReceiptToken(address(new MockStkToken("Mock Cozy  stkToken", "cozyStk", 6, ISafetyModule(address(component)))));
     component.mockRegisterStkToken(0, stkToken1_);
 
+    MockERC20 mockAsset1_ = new MockERC20("Mock Asset", "MOCK", 6);
     ReservePool memory reservePool1_ = ReservePool({
-      asset: IERC20(address(new MockERC20("Mock Asset", "MOCK", 6))),
+      asset: IERC20(address(mockAsset1_)),
       stkToken: stkToken1_,
       depositToken: IReceiptToken(address(0)),
       stakeAmount: 100e6,
       depositAmount: 50e6,
+      pendingUnstakesAmount: 0,
+      pendingWithdrawalsAmount: 0,
+      feeAmount: 0,
       rewardsPoolsWeight: 0.1e4 // 10% weight
     });
     stkToken1_.mint(address(0), 0.1e18);
     component.mockAddReservePool(reservePool1_);
+    mockAsset1_.mint(address(component), 150e6);
+    component.mockAddAssetPool(IERC20(address(mockAsset1_)), AssetPool({amount: 150e6}));
 
     IReceiptToken stkToken2_ =
       IReceiptToken(address(new MockStkToken("Mock Cozy  stkToken", "cozyStk", 6, ISafetyModule(address(component)))));
     component.mockRegisterStkToken(1, stkToken2_);
 
+    MockERC20 mockAsset2_ = new MockERC20("Mock Asset", "MOCK", 6);
     ReservePool memory reservePool2_ = ReservePool({
-      asset: IERC20(address(new MockERC20("Mock Asset", "MOCK", 6))),
+      asset: IERC20(address(mockAsset2_)),
       stkToken: stkToken2_,
       depositToken: IReceiptToken(address(0)),
       stakeAmount: 200e6,
       depositAmount: 20e6,
+      pendingUnstakesAmount: 0,
+      pendingWithdrawalsAmount: 0,
+      feeAmount: 0,
       rewardsPoolsWeight: 0.9e4 // 90% weight
     });
     stkToken2_.mint(address(0), 10);
     component.mockAddReservePool(reservePool2_);
+    mockAsset2_.mint(address(component), 220e6);
+    component.mockAddAssetPool(IERC20(address(mockAsset2_)), AssetPool({amount: 220e6}));
 
     // Set-up three undripped reward pools.
     {
       UndrippedRewardPool memory testPool1_;
       MockERC20 asset1_ = new MockERC20("Mock Cozy Reward Token", "rewardToken1", 18);
-      IRewardsDripModel dripModel1_ = IRewardsDripModel(new MockRewardsDripModel(0.01e18)); // 1% drip rate
+      IDripModel dripModel1_ = IDripModel(new MockDripModel(0.01e18)); // 1% drip rate
 
       testPool1_.asset = IERC20(address(asset1_));
       testPool1_.dripModel = dripModel1_;
       testPool1_.amount = 100_000;
       component.mockAddUndrippedRewardPool(testPool1_);
+      component.mockAddAssetPool(IERC20(address(asset1_)), AssetPool({amount: testPool1_.amount}));
       asset1_.mint(address(component), testPool1_.amount);
     }
     {
       UndrippedRewardPool memory testPool2_;
       MockERC20 asset2_ = new MockERC20("Mock Cozy Reward Token", "rewardToken1", 18);
-      IRewardsDripModel dripModel2_ = IRewardsDripModel(new MockRewardsDripModel(0.25e18)); // 25% drip rate
+      IDripModel dripModel2_ = IDripModel(new MockDripModel(0.25e18)); // 25% drip rate
 
       testPool2_.asset = IERC20(address(asset2_));
       testPool2_.dripModel = dripModel2_;
       testPool2_.amount = 1_000_000_000;
       component.mockAddUndrippedRewardPool(testPool2_);
+      component.mockAddAssetPool(IERC20(address(asset2_)), AssetPool({amount: testPool2_.amount}));
       asset2_.mint(address(component), testPool2_.amount);
     }
     {
       UndrippedRewardPool memory testPool3_;
       MockERC20 asset3_ = new MockERC20("Mock Cozy Reward Token", "rewardToken1", 18);
-      IRewardsDripModel dripModel3_ = IRewardsDripModel(new MockRewardsDripModel(1e18)); // 100% drip rate
+      IDripModel dripModel3_ = IDripModel(new MockDripModel(1e18)); // 100% drip rate
 
       testPool3_.asset = IERC20(address(asset3_));
       testPool3_.dripModel = dripModel3_;
       testPool3_.amount = 9999;
       component.mockAddUndrippedRewardPool(testPool3_);
+      component.mockAddAssetPool(IERC20(address(asset3_)), AssetPool({amount: testPool3_.amount}));
       asset3_.mint(address(component), testPool3_.amount);
     }
   }
@@ -289,7 +314,7 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool memory setUpUndrippedRewardPool_ = copyUndrippedRewardPool(expectedUndrippedRewardPools_[i]);
       uint256 expectedDripRate_ = _randomUint256() % MathConstants.WAD;
-      MockRewardsDripModel model_ = new MockRewardsDripModel(expectedDripRate_);
+      MockDripModel model_ = new MockDripModel(expectedDripRate_);
       setUpUndrippedRewardPool_.dripModel = model_;
 
       // Update market with model that has a new drip rate.
@@ -535,11 +560,12 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     UndrippedRewardPool memory rewardPool_ = UndrippedRewardPool({
       asset: IERC20(address(mockAsset_)),
       depositToken: IReceiptToken(address(0)),
-      dripModel: IRewardsDripModel(mockRewardsDripModel),
+      dripModel: IDripModel(mockRewardsDripModel),
       amount: amount_
     });
     component.mockAddUndrippedRewardPool(rewardPool_);
     mockAsset_.mint(address(component), amount_);
+    component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: amount_}));
 
     ReservePool memory reservePool_ = component.getReservePool(reservePoolId_);
     uint256 userStkTokenBalance_ = reservePool_.stkToken.balanceOf(user_);
@@ -562,7 +588,7 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     assertEq(userRewardsData_[3].indexSnapshot, component.getClaimableRewardIndex(reservePoolId_, 3));
   }
 
-  function test_ClaimRewardsTwice() public {
+  function test_claimRewardsTwice() public {
     _setUpDefault();
     (address user_, uint16 reservePoolId_, address receiver_) = _getUserClaimRewardsFixture();
 
@@ -590,7 +616,7 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     }
   }
 
-  function test_ClaimRewardsAfterTwoIndependentStakes() public {
+  function test_claimRewardsAfterTwoIndependentStakes() public {
     _setUpConcrete();
 
     address user_ = _randomAddress();
@@ -808,7 +834,7 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
 
   function test_revertsOnUnauthorizedUserRewardsUpdate() public {
     vm.startPrank(_randomAddress());
-    vm.expectRevert(IRewardsHandlerErrors.UnauthorizedUserRewardsUpdate.selector);
+    vm.expectRevert(Ownable.Unauthorized.selector);
     component.updateUserRewardsForStkTokenTransfer(_randomAddress(), _randomAddress());
     vm.stopPrank();
   }
@@ -817,7 +843,7 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
 contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   // -------- Mock setters --------
   function mockSetLastDripTime(uint256 lastDripTime_) external {
-    lastDripTime = lastDripTime_;
+    dripTimes.lastRewardsDripTime = uint128(lastDripTime_);
   }
 
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
@@ -858,7 +884,7 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   }
 
   function getLastDripTime() external view returns (uint256) {
-    return lastDripTime;
+    return dripTimes.lastRewardsDripTime;
   }
 
   function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
@@ -922,6 +948,10 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   }
 
   // -------- Overridden abstract function placeholders --------
+  function dripFees() public view override {
+    __readStub__();
+  }
+
   function _updateUnstakesAfterTrigger(
     uint16, /* reservePoolId_ */
     uint128, /* oldStakeAmount_ */

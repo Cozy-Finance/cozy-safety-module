@@ -16,4 +16,6 @@ interface ISafetyModule {
   ) external;
 
   function updateUserRewardsForStkTokenTransfer(address from_, address to_) external;
+
+  function claimFees(address owner_) external;
 }

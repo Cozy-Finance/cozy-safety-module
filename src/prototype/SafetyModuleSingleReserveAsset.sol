@@ -2,13 +2,13 @@
 pragma solidity ^0.8.22;
 
 import {IERC20} from "../interfaces/IERC20.sol";
-import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
 
 /// @dev Single asset safety module. Is an LFT.
 contract SafetyModule {
   struct UndrippedRewardPool {
     uint128 amount;
-    IRewardsDripModel dripModel;
+    IDripModel dripModel;
     uint128 lastDripTime;
   }
 

@@ -5,10 +5,11 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IManager} from "../interfaces/IManager.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
-import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
 import {Delays} from "./structs/Delays.sol";
+import {DripTimes} from "./structs/DripTimes.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 abstract contract SafetyModuleBaseStorage {
@@ -42,6 +43,6 @@ abstract contract SafetyModuleBaseStorage {
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;
 
-  /// @notice Last drip time. Drips from all undripped reward pools occur simultaneously.
-  uint256 public lastDripTime;
+  /// @notice Fees and rewards drip times.
+  DripTimes public dripTimes;
 }
