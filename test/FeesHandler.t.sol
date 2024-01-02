@@ -213,6 +213,24 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     assertEq(component.getReservePools(), expectedReservePools_);
     assertEq(component.getLastDripTime(), block.timestamp);
   }
+
+  function testFuzz_ZeroFeesDrip(uint64 timeElapsed_) public {
+    _setUpDefault();
+
+    component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
+    timeElapsed_ = uint64(bound(timeElapsed_, 1, type(uint64).max - component.getLastDripTime()));
+    skip(timeElapsed_);
+
+    // Set drip rate to 0.
+    MockDripModel model_ = new MockDripModel(0);
+    mockManager.setFeeDripModel(IDripModel(address(model_)));
+
+    ReservePool[] memory expectedReservePools_ = component.getReservePools();
+    component.dripFees();
+    // No fees should be dripped, so all accounting should be the same.
+    assertEq(component.getReservePools(), expectedReservePools_);
+    assertEq(component.getLastDripTime(), block.timestamp);
+  }
 }
 
 contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
