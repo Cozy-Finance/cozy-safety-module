@@ -30,40 +30,19 @@ contract FeesHandlerUnitTest is TestBase {
   using SafeCastLib for uint256;
 
   MockDripModel mockFeesDripModel;
-  MockDripModel mockRewardsDripModel;
   MockManager public mockManager = new MockManager();
   TestableFeesHandler component = new TestableFeesHandler(IManager(address(mockManager)));
 
   uint256 constant DEFAULT_FEES_DRIP_RATE = 0.05e18;
   uint256 constant DEFAULT_REWARDS_DRIP_RATE = 0.01e18;
   uint256 constant DEFAULT_NUM_RESERVE_POOLS = 5;
-  uint256 constant DEFAULT_NUM_REWARD_ASSETS = 10;
 
   event ClaimedFees(IERC20 indexed reserveAsset_, uint256 feeAmount_, address indexed owner_);
 
   function setUp() public {
     mockFeesDripModel = new MockDripModel(DEFAULT_FEES_DRIP_RATE);
     mockManager.setFeeDripModel(IDripModel(address(mockFeesDripModel)));
-    mockRewardsDripModel = new MockDripModel(DEFAULT_REWARDS_DRIP_RATE);
     component.mockSetLastDripTime(block.timestamp);
-  }
-
-  function _setUpUndrippedRewardPools(uint256 numRewardAssets_) internal {
-    for (uint256 i = 0; i < numRewardAssets_; i++) {
-      MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
-      uint256 amount_ = _randomUint256() % 500_000_000;
-      UndrippedRewardPool memory rewardPool_ = UndrippedRewardPool({
-        asset: IERC20(address(mockAsset_)),
-        depositToken: IReceiptToken(address(0)),
-        dripModel: IDripModel(mockRewardsDripModel),
-        amount: amount_
-      });
-      component.mockAddUndrippedRewardPool(rewardPool_);
-
-      // Mint safety module undripped rewards.
-      mockAsset_.mint(address(component), amount_);
-      component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: amount_}));
-    }
   }
 
   function _setUpReservePools(uint256 numReservePools_) internal {
@@ -101,7 +80,6 @@ contract FeesHandlerUnitTest is TestBase {
 
   function _setUpDefault() internal {
     _setUpReservePools(DEFAULT_NUM_RESERVE_POOLS);
-    _setUpUndrippedRewardPools(DEFAULT_NUM_REWARD_ASSETS);
   }
 
   function _setUpConcrete() internal {
@@ -147,74 +125,10 @@ contract FeesHandlerUnitTest is TestBase {
     component.mockAddReservePool(reservePool2_);
     mockAsset2_.mint(address(component), 230e6);
     component.mockAddAssetPool(IERC20(address(mockAsset2_)), AssetPool({amount: 230e6}));
-
-    // Set-up three undripped reward pools.
-    {
-      UndrippedRewardPool memory testPool1_;
-      MockERC20 asset1_ = new MockERC20("Mock Cozy Reward Token", "rewardToken1", 18);
-      IDripModel dripModel1_ = IDripModel(new MockDripModel(0.01e18)); // 1% drip rate
-
-      testPool1_.asset = IERC20(address(asset1_));
-      testPool1_.dripModel = dripModel1_;
-      testPool1_.amount = 100_000;
-      component.mockAddUndrippedRewardPool(testPool1_);
-      component.mockAddAssetPool(IERC20(address(asset1_)), AssetPool({amount: testPool1_.amount}));
-      asset1_.mint(address(component), testPool1_.amount);
-    }
-    {
-      UndrippedRewardPool memory testPool2_;
-      MockERC20 asset2_ = new MockERC20("Mock Cozy Reward Token", "rewardToken1", 18);
-      IDripModel dripModel2_ = IDripModel(new MockDripModel(0.25e18)); // 25% drip rate
-
-      testPool2_.asset = IERC20(address(asset2_));
-      testPool2_.dripModel = dripModel2_;
-      testPool2_.amount = 1_000_000_000;
-      component.mockAddUndrippedRewardPool(testPool2_);
-      component.mockAddAssetPool(IERC20(address(asset2_)), AssetPool({amount: testPool2_.amount}));
-      asset2_.mint(address(component), testPool2_.amount);
-    }
-    {
-      UndrippedRewardPool memory testPool3_;
-      MockERC20 asset3_ = new MockERC20("Mock Cozy Reward Token", "rewardToken1", 18);
-      IDripModel dripModel3_ = IDripModel(new MockDripModel(1e18)); // 100% drip rate
-
-      testPool3_.asset = IERC20(address(asset3_));
-      testPool3_.dripModel = dripModel3_;
-      testPool3_.amount = 9999;
-      component.mockAddUndrippedRewardPool(testPool3_);
-      component.mockAddAssetPool(IERC20(address(asset3_)), AssetPool({amount: testPool3_.amount}));
-      asset3_.mint(address(component), testPool3_.amount);
-    }
-  }
-
-  function _getUserClaimRewardsFixture() internal returns (address user_, uint16 reservePoolId_, address receiver_) {
-    user_ = _randomAddress();
-    reservePoolId_ = _randomUint16() % uint16(component.getReservePools().length);
-    uint256 reserveAssetAmount_ = _randomUint256() % 500_000_000;
-    receiver_ = _randomAddress();
-
-    // Mint user reserve assets.
-    ReservePool memory reservePool_ = component.getReservePool(reservePoolId_);
-    MockERC20 mockAsset_ = MockERC20(address(reservePool_.asset));
-    mockAsset_.mint(user_, reserveAssetAmount_);
-
-    vm.prank(user_);
-    mockAsset_.approve(address(component), type(uint256).max);
-    component.stake(reservePoolId_, reserveAssetAmount_, user_, user_);
-    vm.stopPrank();
   }
 
   function _calculateExpectedDripQuantity(uint256 poolAmount_, uint256 dripFactor_) internal pure returns (uint256) {
     return poolAmount_.mulWadDown(dripFactor_);
-  }
-
-  function _calculateExpectedUpdateToClaimableRewardIndex(
-    uint256 totalDrippedRewards_,
-    uint256 rewardsPoolsWeight_,
-    uint256 stkTokenSupply_
-  ) internal pure returns (uint256) {
-    uint256 scaledDrippedRewards_ = totalDrippedRewards_.mulDivDown(rewardsPoolsWeight_, MathConstants.ZOC);
-    return scaledDrippedRewards_.divWadDown(stkTokenSupply_);
   }
 }
 
@@ -521,7 +435,7 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
   }
 }
 
-contract TestableFeesHandler is RewardsHandler, Staker, Depositor, FeesHandler {
+contract TestableFeesHandler is RewardsHandler, Depositor, FeesHandler {
   constructor(IManager manager_) {
     cozyManager = manager_;
   }
@@ -539,24 +453,8 @@ contract TestableFeesHandler is RewardsHandler, Staker, Depositor, FeesHandler {
     reservePools.push(reservePool_);
   }
 
-  function mockAddUndrippedRewardPool(UndrippedRewardPool memory rewardPool_) external {
-    undrippedRewardPools.push(rewardPool_);
-  }
-
-  function mockSetUndrippedRewardPool(uint16 i, UndrippedRewardPool memory rewardPool_) external {
-    undrippedRewardPools[i] = rewardPool_;
-  }
-
   function mockAddAssetPool(IERC20 asset_, AssetPool memory assetPool_) external {
     assetPools[asset_] = assetPool_;
-  }
-
-  function mockSetClaimableRewardIndex(
-    uint16 reservePoolId_,
-    uint16 undrippedRewardPoolId_,
-    uint256 claimableRewardIndex_
-  ) external {
-    claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_] = claimableRewardIndex_;
   }
 
   function mockRegisterStkToken(uint16 reservePoolId_, IReceiptToken stkToken_) external {
@@ -576,51 +474,8 @@ contract TestableFeesHandler is RewardsHandler, Staker, Depositor, FeesHandler {
     return reservePools[reservePoolId_];
   }
 
-  function getUndrippedRewardPools() external view returns (UndrippedRewardPool[] memory pools_) {
-    pools_ = new UndrippedRewardPool[](undrippedRewardPools.length);
-    for (uint256 i = 0; i < pools_.length; i++) {
-      pools_[i] = undrippedRewardPools[i];
-    }
-    return pools_;
-  }
-
-  function getUndrippedRewardPool(uint16 undrippedRewardPoolId_) external view returns (UndrippedRewardPool memory) {
-    return undrippedRewardPools[undrippedRewardPoolId_];
-  }
-
   function getAssetPool(IERC20 asset_) external view returns (AssetPool memory) {
     return assetPools[asset_];
-  }
-
-  function getClaimableRewardIndices() external view returns (uint256[][] memory) {
-    uint256[][] memory claimableRewardIndices_ = new uint256[][](reservePools.length);
-    for (uint16 i = 0; i < reservePools.length; i++) {
-      claimableRewardIndices_[i] = new uint256[](undrippedRewardPools.length);
-      for (uint16 j = 0; j < undrippedRewardPools.length; j++) {
-        claimableRewardIndices_[i][j] = claimableRewardsIndices[i][j];
-      }
-    }
-    return claimableRewardIndices_;
-  }
-
-  function getClaimableRewardIndices(uint16 reservePoolId_) external view returns (uint256[] memory) {
-    uint256[] memory claimableRewardIndices_ = new uint256[](undrippedRewardPools.length);
-    for (uint16 j = 0; j < undrippedRewardPools.length; j++) {
-      claimableRewardIndices_[j] = claimableRewardsIndices[reservePoolId_][j];
-    }
-    return claimableRewardIndices_;
-  }
-
-  function getClaimableRewardIndex(uint16 reservePoolId_, uint16 undrippedRewardPoolId_)
-    external
-    view
-    returns (uint256)
-  {
-    return claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_];
-  }
-
-  function getUserRewards(uint16 reservePoolId_, address user) external view returns (UserRewardsData[] memory) {
-    return userRewards[reservePoolId_][user];
   }
 
   // -------- Exposed internal functions --------
