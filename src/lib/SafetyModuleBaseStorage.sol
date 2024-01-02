@@ -44,4 +44,11 @@ abstract contract SafetyModuleBaseStorage {
 
   /// @notice Last drip time. Drips from all undripped reward pools occur simultaneously.
   uint256 public lastDripTime;
+
+  /// @notice The number of slashes that must occur before the safety module can be active.
+  /// @dev This value is incremented when a trigger occurs, and decremented when a slash a trigger assigned payout
+  /// handler occurs (triggers map 1:1 with payout handlers). When this value is non-zero, the safety module is
+  /// triggered.
+  /// TODO: Use this + helper function for determining safety module state instead of separate safetyModuleState?
+  uint16 public numPendingSlashes;
 }
