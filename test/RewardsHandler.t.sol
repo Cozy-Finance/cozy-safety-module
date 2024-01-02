@@ -19,7 +19,7 @@ import {IdLookup} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockStkToken} from "./utils/MockStkToken.sol";
 import {MockManager} from "./utils/MockManager.sol";
-import {MockRewardsDripModel} from "./utils/MockRewardsDripModel.sol";
+import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
@@ -27,7 +27,7 @@ contract RewardsHandlerUnitTest is TestBase {
   using FixedPointMathLib for uint256;
   using SafeCastLib for uint256;
 
-  MockRewardsDripModel mockRewardsDripModel;
+  MockDripModel mockRewardsDripModel;
   TestableRewardsHandler component = new TestableRewardsHandler();
 
   uint256 constant DEFAULT_REWARDS_DRIP_RATE = 0.01e18;
@@ -43,7 +43,7 @@ contract RewardsHandlerUnitTest is TestBase {
   );
 
   function setUp() public {
-    mockRewardsDripModel = new MockRewardsDripModel(DEFAULT_REWARDS_DRIP_RATE);
+    mockRewardsDripModel = new MockDripModel(DEFAULT_REWARDS_DRIP_RATE);
     component.mockSetLastDripTime(block.timestamp);
   }
 
@@ -155,7 +155,7 @@ contract RewardsHandlerUnitTest is TestBase {
     {
       UndrippedRewardPool memory testPool1_;
       MockERC20 asset1_ = new MockERC20("Mock Cozy Reward Token", "rewardToken1", 18);
-      IDripModel dripModel1_ = IDripModel(new MockRewardsDripModel(0.01e18)); // 1% drip rate
+      IDripModel dripModel1_ = IDripModel(new MockDripModel(0.01e18)); // 1% drip rate
 
       testPool1_.asset = IERC20(address(asset1_));
       testPool1_.dripModel = dripModel1_;
@@ -167,7 +167,7 @@ contract RewardsHandlerUnitTest is TestBase {
     {
       UndrippedRewardPool memory testPool2_;
       MockERC20 asset2_ = new MockERC20("Mock Cozy Reward Token", "rewardToken1", 18);
-      IDripModel dripModel2_ = IDripModel(new MockRewardsDripModel(0.25e18)); // 25% drip rate
+      IDripModel dripModel2_ = IDripModel(new MockDripModel(0.25e18)); // 25% drip rate
 
       testPool2_.asset = IERC20(address(asset2_));
       testPool2_.dripModel = dripModel2_;
@@ -179,7 +179,7 @@ contract RewardsHandlerUnitTest is TestBase {
     {
       UndrippedRewardPool memory testPool3_;
       MockERC20 asset3_ = new MockERC20("Mock Cozy Reward Token", "rewardToken1", 18);
-      IDripModel dripModel3_ = IDripModel(new MockRewardsDripModel(1e18)); // 100% drip rate
+      IDripModel dripModel3_ = IDripModel(new MockDripModel(1e18)); // 100% drip rate
 
       testPool3_.asset = IERC20(address(asset3_));
       testPool3_.dripModel = dripModel3_;
@@ -311,7 +311,7 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool memory setUpUndrippedRewardPool_ = copyUndrippedRewardPool(expectedUndrippedRewardPools_[i]);
       uint256 expectedDripRate_ = _randomUint256() % MathConstants.WAD;
-      MockRewardsDripModel model_ = new MockRewardsDripModel(expectedDripRate_);
+      MockDripModel model_ = new MockDripModel(expectedDripRate_);
       setUpUndrippedRewardPool_.dripModel = model_;
 
       // Update market with model that has a new drip rate.

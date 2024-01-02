@@ -70,9 +70,9 @@ abstract contract FeesHandler is SafetyModuleCommon {
       );
 
       if (totalDrippedFees_ > 0) {
-        reservePool_.feeAmount += totalDrippedFees_;
         (uint256 drippedFromStakeAmount_, uint256 drippedFromDepositAmount_) =
           _getFeeAllocation(totalDrippedFees_, stakeAmount_, depositAmount_);
+        reservePool_.feeAmount += drippedFromStakeAmount_ + drippedFromDepositAmount_;
         reservePool_.stakeAmount -= drippedFromStakeAmount_;
         reservePool_.depositAmount -= drippedFromDepositAmount_;
       }
@@ -89,7 +89,8 @@ abstract contract FeesHandler is SafetyModuleCommon {
     uint256 totalReserveAmount_ = stakeAmount_ + depositAmount_;
     if (totalReserveAmount_ == 0) return (0, 0);
     // Round down in favor of stakers and against depositors.
-    drippedFromStakeAmount_ = totalDrippedFees_.mulWadDown(stakeAmount_).divWadDown(totalReserveAmount_);
+    drippedFromStakeAmount_ = totalDrippedFees_.mulWadDown(stakeAmount_.divWadDown(totalReserveAmount_));
     drippedFromDepositAmount_ = totalDrippedFees_ - drippedFromStakeAmount_;
+    if (drippedFromDepositAmount_ > depositAmount_) drippedFromDepositAmount_ = depositAmount_;
   }
 }

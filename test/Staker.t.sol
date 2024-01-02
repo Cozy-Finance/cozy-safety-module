@@ -15,7 +15,7 @@ import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
-import {MockRewardsDripModel} from "./utils/MockRewardsDripModel.sol";
+import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
@@ -330,7 +330,7 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     undrippedRewardPools.push(
       UndrippedRewardPool({
         asset: rewardAsset_,
-        dripModel: IDripModel(address(new MockRewardsDripModel(1e18))),
+        dripModel: IDripModel(address(new MockDripModel(1e18))),
         amount: 0,
         depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6)))
       })

@@ -3,7 +3,7 @@ pragma solidity 0.8.22;
 
 import "../../src/interfaces/IDripModel.sol";
 
-contract MockRewardsDripModel is IDripModel {
+contract MockDripModel is IDripModel {
   uint256 public dripFactorConstant;
 
   constructor(uint256 dripFactorConstant_) {
