@@ -49,8 +49,8 @@ contract SafetyModule is Governable, SafetyModuleBaseStorage, Depositor, Redeeme
       delaysConfig_
     );
 
-    lastRewardsDripTime = block.timestamp;
-    lastFeesDripTime = block.timestamp;
+    dripTimes.lastFeesDripTime = uint128(block.timestamp);
+    dripTimes.lastRewardsDripTime = uint128(block.timestamp);
   }
 
   // -------------------------------------------------------------------

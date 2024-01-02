@@ -9,6 +9,7 @@ import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
 import {Delays} from "./structs/Delays.sol";
+import {DripTimes} from "./structs/DripTimes.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 abstract contract SafetyModuleBaseStorage {
@@ -42,9 +43,6 @@ abstract contract SafetyModuleBaseStorage {
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;
 
-  /// @notice Last rewards drip time. Drips from all undripped reward pools occur simultaneously.
-  uint256 public lastRewardsDripTime;
-
-  /// @notice Last fees drip time.
-  uint256 public lastFeesDripTime;
+  /// @notice Fees and rewards drip times.
+  DripTimes public dripTimes;
 }

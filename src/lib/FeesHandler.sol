@@ -22,7 +22,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
   event ClaimedFees(IERC20 indexed reserveAsset_, uint256 feeAmount_, address indexed owner_);
 
   function dripFees() public override {
-    uint256 deltaT_ = block.timestamp - lastFeesDripTime;
+    uint256 deltaT_ = block.timestamp - dripTimes.lastFeesDripTime;
     if (deltaT_ == 0 || safetyModuleState == SafetyModuleState.PAUSED) return;
 
     _dripFees(deltaT_);
@@ -54,17 +54,15 @@ abstract contract FeesHandler is SafetyModuleCommon {
   }
 
   function _dripFees(uint256 deltaT_) internal {
-    uint256 lastDripTime_ = lastFeesDripTime;
+    uint256 dripFactor_ =
+      cozyManager.getFeeDripModel(ISafetyModule(address(this))).dripFactor(dripTimes.lastFeesDripTime, deltaT_);
+
     uint256 numReservePools_ = reservePools.length;
-
-    IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
-
     for (uint16 i = 0; i < numReservePools_; i++) {
       ReservePool storage reservePool_ = reservePools[i];
       uint256 stakeAmount_ = reservePool_.stakeAmount;
       uint256 depositAmount_ = reservePool_.depositAmount;
 
-      uint256 dripFactor_ = feeDripModel_.dripFactor(lastDripTime_, deltaT_);
       uint256 drippedFromStakeAmount_ =
         _computeNextDripAmount(stakeAmount_ - reservePool_.pendingUnstakesAmount, dripFactor_);
       uint256 drippedFromDepositAmount_ =
@@ -77,6 +75,6 @@ abstract contract FeesHandler is SafetyModuleCommon {
       }
     }
 
-    lastFeesDripTime = block.timestamp;
+    dripTimes.lastFeesDripTime = uint128(block.timestamp);
   }
 }

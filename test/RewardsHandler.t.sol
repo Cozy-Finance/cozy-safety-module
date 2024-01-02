@@ -843,7 +843,7 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
 contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   // -------- Mock setters --------
   function mockSetLastDripTime(uint256 lastDripTime_) external {
-    lastRewardsDripTime = lastDripTime_;
+    dripTimes.lastRewardsDripTime = uint128(lastDripTime_);
   }
 
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
@@ -884,7 +884,7 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   }
 
   function getLastDripTime() external view returns (uint256) {
-    return lastRewardsDripTime;
+    return dripTimes.lastRewardsDripTime;
   }
 
   function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {

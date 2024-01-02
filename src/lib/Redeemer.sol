@@ -110,7 +110,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
     IReceiptToken depositToken_ = undrippedRewardPool_.depositToken;
-    uint256 lastDripTime_ = lastRewardsDripTime;
+    uint256 lastDripTime_ = dripTimes.lastRewardsDripTime;
 
     rewardAssetAmount_ = _previewRedemption(
       depositToken_,
@@ -171,7 +171,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   {
     ReservePool storage reservePool_ = reservePools[rewardPoolId_];
     IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
-    uint256 lastDripTime_ = lastFeesDripTime;
+    uint256 lastDripTime_ = dripTimes.lastFeesDripTime;
 
     reserveAssetAmount_ = _previewRedemption(
       isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken,
@@ -189,7 +189,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     returns (uint256 rewardAssetAmount_)
   {
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
-    uint256 lastDripTime_ = lastRewardsDripTime;
+    uint256 lastDripTime_ = dripTimes.lastRewardsDripTime;
 
     rewardAssetAmount_ = _previewRedemption(
       undrippedRewardPool_.depositToken,

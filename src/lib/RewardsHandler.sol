@@ -32,7 +32,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
   // TODO: Add a preview function which takes into account fees still to be dripped.
 
   function dripRewards() public override {
-    uint256 deltaT_ = block.timestamp - lastRewardsDripTime;
+    uint256 deltaT_ = block.timestamp - dripTimes.lastRewardsDripTime;
     if (deltaT_ == 0 || safetyModuleState == SafetyModuleState.PAUSED) return;
 
     _dripRewards(deltaT_);
@@ -85,14 +85,14 @@ abstract contract RewardsHandler is SafetyModuleCommon {
   }
 
   function _dripRewards(uint256 deltaT_) internal {
-    uint256 lastDripTime_ = lastRewardsDripTime;
     uint256 numRewardAssets_ = undrippedRewardPools.length;
     uint256 numReservePools_ = reservePools.length;
 
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
-      uint256 totalDrippedRewards_ =
-        _getNextDripAmount(undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, lastDripTime_, deltaT_);
+      uint256 totalDrippedRewards_ = _getNextDripAmount(
+        undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, dripTimes.lastRewardsDripTime, deltaT_
+      );
 
       if (totalDrippedRewards_ > 0) {
         for (uint16 j = 0; j < numReservePools_; j++) {
@@ -103,7 +103,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
       }
     }
 
-    lastRewardsDripTime = block.timestamp;
+    dripTimes.lastRewardsDripTime = uint128(block.timestamp);
   }
 
   function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_, uint256 deltaT_)
