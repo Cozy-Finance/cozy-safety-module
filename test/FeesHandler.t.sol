@@ -10,12 +10,11 @@ import {IManager} from "../src/interfaces/IManager.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {RewardsHandler} from "../src/lib/RewardsHandler.sol";
 import {FeesHandler} from "../src/lib/FeesHandler.sol";
-import {Staker} from "../src/lib/Staker.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {Ownable} from "../src/lib/Ownable.sol";
-import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {IdLookup} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
@@ -134,7 +133,6 @@ contract FeesHandlerUnitTest is TestBase {
 
 contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
   using FixedPointMathLib for uint256;
-  using SafeCastLib for uint256;
 
   function testFuzz_noDripIfSafetyModuleIsPaused(uint64 timeElapsed_) public {
     _setUpDefault();
@@ -261,7 +259,6 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
 
 contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
   using FixedPointMathLib for uint256;
-  using SafeCastLib for uint256;
 
   function test_claimFeesConcrete() public {
     _setUpConcrete();
