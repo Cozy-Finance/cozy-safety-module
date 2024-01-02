@@ -6,7 +6,7 @@ import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
-import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IRedemptionErrors} from "../src/interfaces/IRedemptionErrors.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
@@ -22,7 +22,7 @@ import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
-import {MockRewardsDripModel} from "./utils/MockRewardsDripModel.sol";
+import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
@@ -163,6 +163,9 @@ abstract contract ReedemerUnitTestBase is TestBase {
         depositToken: IReceiptToken(address(depositToken)),
         stakeAmount: 0,
         depositAmount: 0,
+        feeAmount: 0,
+        pendingUnstakesAmount: 0,
+        pendingWithdrawalsAmount: 0,
         rewardsPoolsWeight: 1e4
       })
     );
@@ -170,7 +173,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
       UndrippedRewardPool({
         asset: IERC20(address(mockAsset)),
         amount: 0,
-        dripModel: IRewardsDripModel(address(0)),
+        dripModel: IDripModel(address(0)),
         depositToken: IReceiptToken(address(0))
       })
     );
@@ -808,7 +811,7 @@ contract RedeemUndrippedRewards is TestBase {
       UndrippedRewardPool({
         asset: IERC20(address(mockAsset)),
         amount: 0,
-        dripModel: IRewardsDripModel(address(0)),
+        dripModel: IDripModel(address(0)),
         depositToken: IReceiptToken(address(depositToken))
       })
     );
@@ -1151,17 +1154,28 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
     if (totalDrippedRewards_ > 0) undrippedRewardPool_.amount -= totalDrippedRewards_;
 
-    lastDripTime = block.timestamp;
+    dripTimes.lastRewardsDripTime = uint128(block.timestamp);
   }
 
-  function _getNextRewardsDripAmount(
-    uint256, /* totalUndrippedRewardPoolAmount_ */
-    IRewardsDripModel, /* dripModel_ */
+  function dripFees() public view override {}
+
+  function _getNextDripAmount(
+    uint256, /* totalBaseAmount_ */
+    IDripModel, /* dripModel_ */
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {
-    if (lastDripTime == block.timestamp) return 0;
+    if (dripTimes.lastRewardsDripTime == block.timestamp) return 0;
     else return mockNextDripAmount;
+  }
+
+  function _computeNextDripAmount(uint256, /* totalBaseAmount_ */ uint256 /* dripFactor_ */ )
+    internal
+    view
+    override
+    returns (uint256)
+  {
+    __readStub__();
   }
 
   function _assertValidDepositBalance(

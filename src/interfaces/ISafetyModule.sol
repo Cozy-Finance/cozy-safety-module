@@ -23,4 +23,7 @@ interface ISafetyModule {
 
   /// @notice Unpauses the safety module.
   function unpause() external;
+
+  // @notice Claims the safety module's fees.
+  function claimFees(address owner_) external;
 }

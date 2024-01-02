@@ -5,10 +5,11 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IManager} from "../interfaces/IManager.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
-import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
 import {Delays} from "./structs/Delays.sol";
+import {DripTimes} from "./structs/DripTimes.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 abstract contract SafetyModuleBaseStorage {
@@ -42,13 +43,13 @@ abstract contract SafetyModuleBaseStorage {
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;
 
-  /// @notice Last drip time. Drips from all undripped reward pools occur simultaneously.
-  uint256 public lastDripTime;
-
   /// @notice The number of slashes that must occur before the safety module can be active.
   /// @dev This value is incremented when a trigger occurs, and decremented when a slash a trigger assigned payout
   /// handler occurs (triggers map 1:1 with payout handlers). When this value is non-zero, the safety module is
   /// triggered.
   /// TODO: Use this + helper function for determining safety module state instead of separate safetyModuleState?
   uint16 public numPendingSlashes;
+
+  /// @notice Fees and rewards drip times.
+  DripTimes public dripTimes;
 }

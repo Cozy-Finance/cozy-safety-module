@@ -245,6 +245,9 @@ library ConfiguratorLib {
         depositToken: reserveDepositToken_,
         stakeAmount: 0,
         depositAmount: 0,
+        pendingUnstakesAmount: 0,
+        pendingWithdrawalsAmount: 0,
+        feeAmount: 0,
         rewardsPoolsWeight: reservePoolConfig_.rewardsPoolsWeight
       })
     );
