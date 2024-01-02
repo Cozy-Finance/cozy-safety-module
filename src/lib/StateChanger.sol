@@ -17,10 +17,11 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
       )
     ) revert InvalidStateTransition();
 
+    // Drip rewards and fees before pausing.
     dripRewards();
     dripFees();
-
     safetyModuleState = SafetyModuleState.PAUSED;
+
     emit SafetyModuleStateUpdated(SafetyModuleState.PAUSED);
   }
 
@@ -37,6 +38,7 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
     ) revert InvalidStateTransition();
 
     safetyModuleState = newState_;
+    // Drip rewards and fees after unpausing.
     dripRewards();
     dripFees();
 
