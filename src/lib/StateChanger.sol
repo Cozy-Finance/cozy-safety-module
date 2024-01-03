@@ -54,7 +54,7 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
       revert InvalidTrigger();
     }
 
-    // Drip rewards and fees before triggering the safety module, as the safety module cannot drip while triggered.
+    // Drip rewards and fees before triggering the safety module.
     dripRewards();
     dripFees();
 

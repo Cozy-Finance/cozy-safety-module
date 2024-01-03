@@ -356,7 +356,6 @@ contract StateChangerTriggerTest is StateChangerUnitTest {
     ITrigger mockTriggerA_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
     ITrigger mockTriggerB_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
 
-    // Trigger the safety module using the trigger from setUp.
     _assertTriggerSuccess(mockTriggerA_);
     _assertTriggerSuccess(mockTriggerB_);
   }
@@ -368,7 +367,6 @@ contract StateChangerTriggerTest is StateChangerUnitTest {
     ITrigger mockTriggerA_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
     ITrigger mockTriggerB_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
 
-    // Trigger the safety module using the trigger from setUp.
     _assertTriggerSuccess(mockTriggerA_);
     _assertTriggerSuccess(mockTriggerB_);
   }
@@ -380,7 +378,6 @@ contract StateChangerTriggerTest is StateChangerUnitTest {
     ITrigger mockTriggerA_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
     ITrigger mockTriggerB_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
 
-    // Trigger the safety module using the trigger from setUp.
     _assertTriggerSuccess(mockTriggerA_);
     _assertTriggerSuccess(mockTriggerB_);
   }
