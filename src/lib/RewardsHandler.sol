@@ -64,25 +64,21 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     }
   }
 
-  function previewClaimRewards(uint16 reservePoolId_, address user_)
-    external
-    view
-    returns (uint256[] memory)
-  {
-    mapping(uint16 => uint256) storage claimableRewardsIndices_ = claimableRewardsIndices[reservePoolId_];
+  function previewClaimRewards(uint16 reservePoolId_, address user_) external view returns (uint256[] memory) {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
-    uint256 rewardsWeight_ = reservePool_.rewardsPoolsWeight;
     uint256 totalStkTokenSupply_ = reservePool_.stkToken.totalSupply();
     uint256 userStkTokenBalance_ = reservePool_.stkToken.balanceOf(user_);
+    uint256 rewardsWeight_ = reservePool_.rewardsPoolsWeight;
 
     uint256 lastRewardsDripTime_ = dripTimes.lastRewardsDripTime;
     uint256 deltaT_ = block.timestamp - lastRewardsDripTime_;
 
-    // Compute preview user accrued rewards accounting for any pending rewards drips.
-    UserRewardsData[] storage userRewards_ = userRewards[reservePoolId_][user_];
-    uint256 oldNumRewardAssets_ = userRewards_.length;
     uint256 numRewardAssets_ = undrippedRewardPools.length;
     uint256[] memory userAccruedRewards_ = new uint256[](numRewardAssets_);
+
+    // Compute preview user accrued rewards accounting for any pending rewards drips.
+    mapping(uint16 => uint256) storage claimableRewardsIndices_ = claimableRewardsIndices[reservePoolId_];
+    UserRewardsData[] storage userRewards_ = userRewards[reservePoolId_][user_];
 
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
@@ -92,11 +88,10 @@ abstract contract RewardsHandler is SafetyModuleCommon {
           rewardsWeight_,
           totalStkTokenSupply_
         );
-      if (i < oldNumRewardAssets_) {
-        UserRewardsData memory userRewardsData_ = userRewards_[i];
-        userAccruedRewards_[i] = 
-          userRewardsData_.accruedRewards
-            + _getUserAccruedRewards(userStkTokenBalance_, previewIndexSnapshot_, userRewardsData_.indexSnapshot);
+      if (i < userRewards_.length) {
+        UserRewardsData storage userRewardsData_ = userRewards_[i];
+        userAccruedRewards_[i] = userRewardsData_.accruedRewards
+          + _getUserAccruedRewards(userStkTokenBalance_, previewIndexSnapshot_, userRewardsData_.indexSnapshot);
       } else {
         userAccruedRewards_[i] = _getUserAccruedRewards(userStkTokenBalance_, previewIndexSnapshot_, 0);
       }
@@ -173,7 +168,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     uint256 totalDrippedRewards_,
     uint256 rewardsPoolsWeight_,
     uint256 totalStkTokenSupply_
-  ) internal view returns (uint256) {
+  ) internal pure returns (uint256) {
     // Round down, in favor of leaving assets in the undripped pool.
     uint256 scaledDrippedRewards_ = totalDrippedRewards_.mulDivDown(rewardsPoolsWeight_, MathConstants.ZOC);
     // Round down, in favor of leaving assets in the claimable reward pool.
