@@ -6,7 +6,7 @@ import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IDepositorErrors} from "../src/interfaces/IDepositorErrors.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
-import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
@@ -43,12 +43,15 @@ abstract contract DepositorUnitTest is TestBase {
       depositToken: IReceiptToken(address(mockReserveDepositToken)),
       stakeAmount: 100e18,
       depositAmount: 50e18,
+      pendingUnstakesAmount: 0,
+      pendingWithdrawalsAmount: 0,
+      feeAmount: 0,
       rewardsPoolsWeight: 1e4
     });
     UndrippedRewardPool memory initialUndrippedRewardPool_ = UndrippedRewardPool({
       asset: IERC20(address(mockAsset)),
       depositToken: IReceiptToken(address(mockRewardPoolDepositToken)),
-      dripModel: IRewardsDripModel(address(0)),
+      dripModel: IDripModel(address(0)),
       amount: 50e18
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: initialSafetyModuleBal});
@@ -442,12 +445,25 @@ contract TestableDepositor is Depositor {
     __readStub__();
   }
 
-  function _getNextRewardsDripAmount(
-    uint256, /* totalUndrippedRewardPoolAmount_ */
-    IRewardsDripModel, /* dripModel_ */
+  function dripFees() public view override {
+    __readStub__();
+  }
+
+  function _getNextDripAmount(
+    uint256, /* totalBaseAmount_ */
+    IDripModel, /* dripModel_ */
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {
+    __readStub__();
+  }
+
+  function _computeNextDripAmount(uint256, /* totalBaseAmount_ */ uint256 /* dripFactor_ */ )
+    internal
+    view
+    override
+    returns (uint256)
+  {
     __readStub__();
   }
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IManager} from "./interfaces/IManager.sol";
-import {IRewardsDripModel} from "./interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "./interfaces/IDripModel.sol";
 import {IReceiptToken} from "./interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "./interfaces/IReceiptTokenFactory.sol";
 import {UndrippedRewardPoolConfig, ReservePoolConfig} from "./lib/structs/Configs.sol";
@@ -18,6 +18,7 @@ import {Staker} from "./lib/Staker.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 import {RewardsHandler} from "./lib/RewardsHandler.sol";
+import {FeesHandler} from "./lib/FeesHandler.sol";
 
 contract SafetyModule is
   Governable,
@@ -27,7 +28,8 @@ contract SafetyModule is
   TriggerHandler,
   SlashHandler,
   Staker,
-  RewardsHandler
+  RewardsHandler,
+  FeesHandler
 {
   constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(manager_));
@@ -58,6 +60,7 @@ contract SafetyModule is
       delaysConfig_
     );
 
-    lastDripTime = block.timestamp;
+    dripTimes.lastFeesDripTime = uint128(block.timestamp);
+    dripTimes.lastRewardsDripTime = uint128(block.timestamp);
   }
 }

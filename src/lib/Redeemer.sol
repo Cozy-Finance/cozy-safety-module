@@ -6,7 +6,8 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IRedemptionErrors} from "../interfaces/IRedemptionErrors.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
-import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
+import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
 import {MathConstants} from "./MathConstants.sol";
 import {PendingRedemptionAccISFs, Redemption, RedemptionPreview} from "./structs/Redemptions.sol";
@@ -80,6 +81,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
+    dripFees();
     (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, false, depositTokenAmount_, receiver_, owner_);
   }
 
@@ -91,6 +93,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
+    dripFees();
     (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, true, stkTokenAmount_, receiver_, owner_);
     claimRewards(reservePoolId_, receiver_);
   }
@@ -107,9 +110,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
     IReceiptToken depositToken_ = undrippedRewardPool_.depositToken;
-    uint256 lastDripTime_ = lastDripTime;
+    uint256 lastDripTime_ = dripTimes.lastRewardsDripTime;
 
-    rewardAssetAmount_ = _previewUndrippedRewardsRedemption(
+    rewardAssetAmount_ = _previewRedemption(
       depositToken_,
       depositTokenAmount_,
       undrippedRewardPool_.dripModel,
@@ -139,7 +142,11 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their redemption (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
-  function previewRedemption(uint64 redemptionId_) public view returns (RedemptionPreview memory redemptionPreview_) {
+  function previewQueuedRedemption(uint64 redemptionId_)
+    public
+    view
+    returns (RedemptionPreview memory redemptionPreview_)
+  {
     Redemption memory redemption_ = redemptions[redemptionId_];
     redemptionPreview_ = RedemptionPreview({
       delayRemaining: _getRedemptionDelayTimeRemaining(redemption_.queueTime, redemption_.delay).safeCastTo40(),
@@ -157,14 +164,34 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     });
   }
 
+  function previewReserveAssetsRedemption(uint16 rewardPoolId_, uint256 receiptTokenAmount_, bool isUnstake_)
+    external
+    view
+    returns (uint256 reserveAssetAmount_)
+  {
+    ReservePool storage reservePool_ = reservePools[rewardPoolId_];
+    IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
+    uint256 lastDripTime_ = dripTimes.lastFeesDripTime;
+
+    reserveAssetAmount_ = _previewRedemption(
+      isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken,
+      receiptTokenAmount_,
+      feeDripModel_,
+      isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount,
+      lastDripTime_,
+      block.timestamp - lastDripTime_
+    );
+  }
+
   function previewUndrippedRewardsRedemption(uint16 rewardPoolId_, uint256 depositTokenAmount_)
     external
     view
     returns (uint256 rewardAssetAmount_)
   {
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
-    uint256 lastDripTime_ = lastDripTime;
-    rewardAssetAmount_ = _previewUndrippedRewardsRedemption(
+    uint256 lastDripTime_ = dripTimes.lastRewardsDripTime;
+
+    rewardAssetAmount_ = _previewRedemption(
       undrippedRewardPool_.depositToken,
       depositTokenAmount_,
       undrippedRewardPool_.dripModel,
@@ -174,29 +201,29 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     );
   }
 
-  function _previewUndrippedRewardsRedemption(
-    IReceiptToken depositToken_,
-    uint256 depositTokenAmount_,
-    IRewardsDripModel dripModel_,
-    uint256 totalUndrippedRewardPoolAmount_,
+  function _previewRedemption(
+    IReceiptToken receiptToken_,
+    uint256 receiptTokenAmount_,
+    IDripModel dripModel_,
+    uint256 totalPoolAmount_,
     uint256 lastDripTime_,
     uint256 deltaT_
-  ) internal view returns (uint256 rewardAssetAmount_) {
-    uint256 nextTotalUndrippedRewardPoolAmount_ = totalUndrippedRewardPoolAmount_
-      - _getNextRewardsDripAmount(totalUndrippedRewardPoolAmount_, dripModel_, lastDripTime_, deltaT_);
+  ) internal view returns (uint256 assetAmount_) {
+    uint256 nextTotalPoolAmount_ =
+      totalPoolAmount_ - _getNextDripAmount(totalPoolAmount_, dripModel_, lastDripTime_, deltaT_);
 
-    rewardAssetAmount_ = nextTotalUndrippedRewardPoolAmount_ == 0
+    assetAmount_ = nextTotalPoolAmount_ == 0
       ? 0
       : SafetyModuleCalculationsLib.convertToAssetAmount(
-        depositTokenAmount_, depositToken_.totalSupply(), nextTotalUndrippedRewardPoolAmount_
+        receiptTokenAmount_, receiptToken_.totalSupply(), nextTotalPoolAmount_
       );
-    if (rewardAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
+    if (assetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
   }
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their unstake (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
-  function previewUnstake(uint64 unstakeId_) external view returns (RedemptionPreview memory unstakePreview_) {
-    return previewRedemption(unstakeId_);
+  function previewQueuedUnstake(uint64 unstakeId_) external view returns (RedemptionPreview memory unstakePreview_) {
+    return previewQueuedRedemption(unstakeId_);
   }
 
   /// @notice Redeem by burning `receiptTokenAmount_` of `receiptToken_` and sending `reserveAssetAmount_` to
@@ -220,7 +247,14 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     if (reserveAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
 
     redemptionId_ = _queueRedemption(
-      owner_, receiver_, receiptToken_, receiptTokenAmount_, reserveAssetAmount_, reservePoolId_, isUnstake_
+      owner_,
+      receiver_,
+      reservePool_,
+      receiptToken_,
+      receiptTokenAmount_,
+      reserveAssetAmount_,
+      reservePoolId_,
+      isUnstake_
     );
   }
 
@@ -228,6 +262,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   function _queueRedemption(
     address owner_,
     address receiver_,
+    ReservePool storage reservePool_,
     IReceiptToken receiptToken_,
     uint256 receiptTokenAmount_,
     uint256 reserveAssetAmount_,
@@ -243,6 +278,8 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       // Increments can never realistically overflow. Even with a uint64, you'd need to have 1000 redemptions per
       // second for 584,542,046 years.
       redemptionIdCounter = redemptionId_ + 1;
+      if (isUnstake_) reservePool_.pendingUnstakesAmount += reserveAssetAmount_;
+      else reservePool_.pendingWithdrawalsAmount += reserveAssetAmount_;
     }
 
     uint256[] storage reservePoolPendingAccISFs = isUnstake_
@@ -300,8 +337,13 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       redemption_.isUnstake
     );
     if (reserveAssetAmountRedeemed_ != 0) {
-      if (redemption_.isUnstake) reservePool_.stakeAmount -= reserveAssetAmountRedeemed_;
-      else reservePool_.depositAmount -= reserveAssetAmountRedeemed_;
+      if (redemption_.isUnstake) {
+        reservePool_.stakeAmount -= reserveAssetAmountRedeemed_;
+        reservePool_.pendingUnstakesAmount -= reserveAssetAmountRedeemed_;
+      } else {
+        reservePool_.depositAmount -= reserveAssetAmountRedeemed_;
+        reservePool_.pendingWithdrawalsAmount -= reserveAssetAmountRedeemed_;
+      }
       assetPools[reserveAsset_].amount -= reserveAssetAmountRedeemed_;
       reserveAsset_.safeTransfer(redemption_.receiver, reserveAssetAmountRedeemed_);
     }

@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "../src/interfaces/IERC20.sol";
-import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {ITriggerHandlerErrors} from "../src/interfaces/ITriggerHandlerErrors.sol";
 import {TriggerHandler} from "../src/lib/TriggerHandler.sol";
@@ -30,7 +30,9 @@ contract TriggerHandlerTest is TestBase {
 
   function test_trigger() public {
     _expectEmit();
-    emit TestableTriggerHandler.TestDripped();
+    emit TestableTriggerHandler.TestRewardsDripped();
+    _expectEmit();
+    emit TestableTriggerHandler.TestFeesDripped();
     _expectEmit();
     emit TriggerHandler.Triggered(mockTrigger);
     component.trigger(mockTrigger);
@@ -91,7 +93,8 @@ contract TriggerHandlerTest is TestBase {
 }
 
 contract TestableTriggerHandler is TriggerHandler {
-  event TestDripped();
+  event TestRewardsDripped();
+  event TestFeesDripped();
 
   // -------- Getters --------
 
@@ -116,7 +119,11 @@ contract TestableTriggerHandler is TriggerHandler {
   // -------- Overridden common abstract functions --------
 
   function dripRewards() public virtual override {
-    emit TestDripped();
+    emit TestRewardsDripped();
+  }
+
+  function dripFees() public override {
+    emit TestFeesDripped();
   }
 
   function claimRewards(uint16, /* reservePoolId_ */ address /* receiver_ */ ) public view virtual override {
@@ -131,12 +138,21 @@ contract TestableTriggerHandler is TriggerHandler {
     __readStub__();
   }
 
-  function _getNextRewardsDripAmount(
-    uint256, /* totalUndrippedRewardPoolAmount_ */
-    IRewardsDripModel, /* dripModel_ */
+  function _computeNextDripAmount(uint256, /* totalBaseAmount_ */ uint256 /* dripFactor_ */ )
+    internal
+    view
+    override
+    returns (uint256)
+  {
+    __readStub__();
+  }
+
+  function _getNextDripAmount(
+    uint256, /* totalBaseAmount_ */
+    IDripModel, /* dripModel_ */
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
-  ) internal view virtual override returns (uint256) {
+  ) internal view override returns (uint256) {
     __readStub__();
   }
 

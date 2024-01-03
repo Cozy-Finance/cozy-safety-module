@@ -8,7 +8,7 @@ import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
-import {IRewardsDripModel} from "../src/interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ISlashHandlerErrors} from "../src/interfaces/ISlashHandlerErrors.sol";
 import {SlashHandler} from "../src/lib/SlashHandler.sol";
@@ -49,6 +49,9 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
+        pendingUnstakesAmount: _randomUint256(),
+        pendingWithdrawalsAmount: _randomUint256(),
+        feeAmount: _randomUint256(),
         rewardsPoolsWeight: 1e4
       })
     );
@@ -127,6 +130,9 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
+        pendingUnstakesAmount: _randomUint256(),
+        pendingWithdrawalsAmount: _randomUint256(),
+        feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.25e4
       })
     );
@@ -138,6 +144,9 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
+        pendingUnstakesAmount: _randomUint256(),
+        pendingWithdrawalsAmount: _randomUint256(),
+        feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.25e4
       })
     );
@@ -149,6 +158,9 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
+        pendingUnstakesAmount: _randomUint256(),
+        pendingWithdrawalsAmount: _randomUint256(),
+        feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4
       })
     );
@@ -242,6 +254,9 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
+        pendingUnstakesAmount: _randomUint256(),
+        pendingWithdrawalsAmount: _randomUint256(),
+        feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4
       })
     );
@@ -252,6 +267,9 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
+        pendingUnstakesAmount: _randomUint256(),
+        pendingWithdrawalsAmount: _randomUint256(),
+        feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4
       })
     );
@@ -323,6 +341,10 @@ contract TestableSlashHandler is SlashHandler {
     __readStub__();
   }
 
+  function dripFees() public view override {
+    __readStub__();
+  }
+
   function _assertValidDepositBalance(
     IERC20, /* token_ */
     uint256, /* tokenPoolBalance_ */
@@ -331,12 +353,21 @@ contract TestableSlashHandler is SlashHandler {
     __readStub__();
   }
 
-  function _getNextRewardsDripAmount(
-    uint256, /* totalUndrippedRewardPoolAmount_ */
-    IRewardsDripModel, /* dripModel_ */
+  function _computeNextDripAmount(uint256, /* totalBaseAmount_ */ uint256 /* dripFactor_ */ )
+    internal
+    view
+    override
+    returns (uint256)
+  {
+    __readStub__();
+  }
+
+  function _getNextDripAmount(
+    uint256, /* totalBaseAmount_ */
+    IDripModel, /* dripModel_ */
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
-  ) internal view virtual override returns (uint256) {
+  ) internal view override returns (uint256) {
     __readStub__();
   }
 

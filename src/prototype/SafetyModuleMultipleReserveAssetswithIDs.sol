@@ -2,14 +2,14 @@
 pragma solidity ^0.8.22;
 
 import {IERC20} from "../interfaces/IERC20.sol";
-import {IRewardsDripModel} from "../interfaces/IRewardsDripModel.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
 import {IReceiptToken as IStkAsset} from "../interfaces/IReceiptToken.sol";
 
 /// @dev Multiple asset SafetyModule.
 contract SafetyModule {
   struct UndrippedRewardPool {
     uint128 amount;
-    IRewardsDripModel dripModel;
+    IDripModel dripModel;
     uint128 lastDripTime;
   }
 

@@ -19,8 +19,9 @@ abstract contract TriggerHandler is SafetyModuleCommon, ITriggerHandlerErrors {
       revert InvalidTrigger();
     }
 
-    // Drip rewards before triggering the safety module, as the safety module cannot drip rewards while triggered.
+    // Drip rewards and fees before triggering the safety module, as the safety module cannot drip while triggered.
     dripRewards();
+    dripFees();
 
     // Each trigger has an assigned payout handler that is authorized to slash assets once when the trigger is
     // triggered. Payout handlers can be assigned to multiple triggers, but each trigger can only have one payout
