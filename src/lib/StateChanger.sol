@@ -30,7 +30,7 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
   /// @dev Unpauses the safety module if it's a valid state transition.
   function unpause() external {
     SafetyModuleState currState_ = safetyModuleState;
-    // If number of pending slashes is non-zero, when the set is unpaused it will transition to TRIGGERED.
+    // If number of pending slashes is non-zero, when the safety module is unpaused it will transition to TRIGGERED.
     SafetyModuleState newState_ = _nonZeroPendingSlashes() ? SafetyModuleState.TRIGGERED : SafetyModuleState.ACTIVE;
     if (
       currState_ != SafetyModuleState.PAUSED
