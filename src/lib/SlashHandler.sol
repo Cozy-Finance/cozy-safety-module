@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
+import {Ownable} from "./Ownable.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
@@ -21,7 +22,7 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
     PayoutHandler storage payoutHandler_ = payoutHandlerData[msg.sender];
 
     // If the payout handler is invalid, the default numPendingSlashes state is also 0.
-    if (payoutHandler_.numPendingSlashes == 0) revert UnauthorizedPayoutHandler();
+    if (payoutHandler_.numPendingSlashes == 0) revert Ownable.Unauthorized();
     if (safetyModuleState != SafetyModuleState.TRIGGERED) revert InvalidState();
 
     // Once all slashes are processed from each of the triggered trigger's assigned payout handlers, the safety module

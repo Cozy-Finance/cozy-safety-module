@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {Ownable} from "../src/lib/Ownable.sol";
 import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
@@ -224,7 +225,7 @@ contract TriggerHandlerTest is TestBase {
     Slash[] memory slashes_ = new Slash[](1);
     slashes_[0] = Slash({reservePoolId: 0, amount: 1});
 
-    vm.expectRevert(ISlashHandlerErrors.UnauthorizedPayoutHandler.selector);
+    vm.expectRevert(Ownable.Unauthorized.selector);
     vm.prank(mockPayoutHandler);
     component.slash(slashes_, _randomAddress());
   }
