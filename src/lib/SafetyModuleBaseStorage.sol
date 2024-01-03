@@ -45,7 +45,6 @@ abstract contract SafetyModuleBaseStorage {
   /// @notice The number of slashes that must occur before the safety module can be active.
   /// @dev This value is incremented when a trigger occurs, and decremented when a slash from a trigger assigned payout
   /// handler occurs. When this value is non-zero, the safety module is triggered.
-  /// TODO: Use this + helper function for determining safety module state instead of separate safetyModuleState?
   uint16 public numPendingSlashes;
 
   /// @dev Config, withdrawal and unstake delays.
