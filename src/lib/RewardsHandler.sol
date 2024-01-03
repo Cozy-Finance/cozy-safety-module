@@ -11,7 +11,7 @@ import {SafeCastLib} from "./SafeCastLib.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
-import {UserRewardsData} from "./structs/Rewards.sol";
+import {UserRewardsData, PreviewClaimableRewardsData, PreviewClaimableRewards} from "./structs/Rewards.sol";
 import {UndrippedRewardPool, IdLookup} from "./structs/Pools.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
@@ -54,32 +54,46 @@ abstract contract RewardsHandler is SafetyModuleCommon {
       uint256 accruedRewards_ = userRewardsData_.accruedRewards;
       if (accruedRewards_ > 0) {
         IERC20 rewardAsset_ = undrippedRewardPools[i].asset;
-        rewardAsset_.safeTransfer(receiver_, accruedRewards_);
         userRewardsData_.accruedRewards = 0;
         userRewardsData_.indexSnapshot = claimableRewardsIndices_[i].safeCastTo128();
         assetPools[rewardAsset_].amount -= accruedRewards_;
+        rewardAsset_.safeTransfer(receiver_, accruedRewards_);
 
         emit ClaimedRewards(reservePoolId_, rewardAsset_, accruedRewards_, msg.sender, receiver_);
       }
     }
   }
 
-  function previewClaimRewards(uint16 reservePoolId_, address user_) external view returns (uint256[] memory) {
+  function previewClaimableRewards(uint16[] calldata reservePoolIds_, address owner_)
+    external
+    view
+    returns (PreviewClaimableRewards[] memory previewClaimableRewards_)
+  {
+    previewClaimableRewards_ = new PreviewClaimableRewards[](reservePoolIds_.length);
+    for (uint256 i = 0; i < reservePoolIds_.length; i++) {
+      previewClaimableRewards_[i] = _previewClaimableRewards(reservePoolIds_[i], owner_);
+    }
+  }
+
+  function _previewClaimableRewards(uint16 reservePoolId_, address owner_)
+    internal
+    view
+    returns (PreviewClaimableRewards memory)
+  {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     uint256 totalStkTokenSupply_ = reservePool_.stkToken.totalSupply();
-    uint256 userStkTokenBalance_ = reservePool_.stkToken.balanceOf(user_);
+    uint256 userStkTokenBalance_ = reservePool_.stkToken.balanceOf(owner_);
     uint256 rewardsWeight_ = reservePool_.rewardsPoolsWeight;
 
     uint256 lastRewardsDripTime_ = dripTimes.lastRewardsDripTime;
     uint256 deltaT_ = block.timestamp - lastRewardsDripTime_;
 
     uint256 numRewardAssets_ = undrippedRewardPools.length;
-    uint256[] memory userAccruedRewards_ = new uint256[](numRewardAssets_);
+    PreviewClaimableRewardsData[] memory claimableRewardsData_ = new PreviewClaimableRewardsData[](numRewardAssets_);
 
     // Compute preview user accrued rewards accounting for any pending rewards drips.
     mapping(uint16 => uint256) storage claimableRewardsIndices_ = claimableRewardsIndices[reservePoolId_];
-    UserRewardsData[] storage userRewards_ = userRewards[reservePoolId_][user_];
-
+    UserRewardsData[] storage userRewards_ = userRewards[reservePoolId_][owner_];
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
       uint256 previewIndexSnapshot_ = claimableRewardsIndices_[i]
@@ -88,14 +102,20 @@ abstract contract RewardsHandler is SafetyModuleCommon {
           rewardsWeight_,
           totalStkTokenSupply_
         );
+
+      claimableRewardsData_[i].rewardPoolId = i;
+      claimableRewardsData_[i].asset = undrippedRewardPool_.asset;
+
       if (i < userRewards_.length) {
         UserRewardsData storage userRewardsData_ = userRewards_[i];
-        userAccruedRewards_[i] = userRewardsData_.accruedRewards
+        claimableRewardsData_[i].amount = userRewardsData_.accruedRewards
           + _getUserAccruedRewards(userStkTokenBalance_, previewIndexSnapshot_, userRewardsData_.indexSnapshot);
       } else {
-        userAccruedRewards_[i] = _getUserAccruedRewards(userStkTokenBalance_, previewIndexSnapshot_, 0);
+        claimableRewardsData_[i].amount = _getUserAccruedRewards(userStkTokenBalance_, previewIndexSnapshot_, 0);
       }
     }
+
+    return PreviewClaimableRewards({reservePoolId: reservePoolId_, claimableRewardsData: claimableRewardsData_});
   }
 
   /// @notice stkTokens are expected to call this before the actual underlying ERC-20 transfer (e.g.
