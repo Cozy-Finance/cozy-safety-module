@@ -64,6 +64,45 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     }
   }
 
+  function previewClaimRewards(uint16 reservePoolId_, address user_)
+    external
+    view
+    returns (uint256[] memory)
+  {
+    mapping(uint16 => uint256) storage claimableRewardsIndices_ = claimableRewardsIndices[reservePoolId_];
+    ReservePool storage reservePool_ = reservePools[reservePoolId_];
+    uint256 rewardsWeight_ = reservePool_.rewardsPoolsWeight;
+    uint256 totalStkTokenSupply_ = reservePool_.stkToken.totalSupply();
+    uint256 userStkTokenBalance_ = reservePool_.stkToken.balanceOf(user_);
+
+    uint256 lastRewardsDripTime_ = dripTimes.lastRewardsDripTime;
+    uint256 deltaT_ = block.timestamp - lastRewardsDripTime_;
+
+    // Compute preview user accrued rewards accounting for any pending rewards drips.
+    UserRewardsData[] storage userRewards_ = userRewards[reservePoolId_][user_];
+    uint256 oldNumRewardAssets_ = userRewards_.length;
+    uint256 numRewardAssets_ = undrippedRewardPools.length;
+    uint256[] memory userAccruedRewards_ = new uint256[](numRewardAssets_);
+
+    for (uint16 i = 0; i < numRewardAssets_; i++) {
+      UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
+      uint256 previewIndexSnapshot_ = claimableRewardsIndices_[i]
+        + _getUpdateToClaimableRewardIndex(
+          _getNextDripAmount(undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, lastRewardsDripTime_, deltaT_),
+          rewardsWeight_,
+          totalStkTokenSupply_
+        );
+      if (i < oldNumRewardAssets_) {
+        UserRewardsData memory userRewardsData_ = userRewards_[i];
+        userAccruedRewards_[i] = 
+          userRewardsData_.accruedRewards
+            + _getUserAccruedRewards(userStkTokenBalance_, previewIndexSnapshot_, userRewardsData_.indexSnapshot);
+      } else {
+        userAccruedRewards_[i] = _getUserAccruedRewards(userStkTokenBalance_, previewIndexSnapshot_, 0);
+      }
+    }
+  }
+
   /// @notice stkTokens are expected to call this before the actual underlying ERC-20 transfer (e.g.
   /// `super.transfer(address to, uint256 amount_)`). Otherwise, the `from_` user will not accrue less historical
   /// rewards they are entitled to as their new balance is smaller after the transfer. Also, the `to_` user will accure
@@ -85,18 +124,23 @@ abstract contract RewardsHandler is SafetyModuleCommon {
   }
 
   function _dripRewards(uint256 deltaT_) internal {
-    uint256 numRewardAssets_ = undrippedRewardPools.length;
-    uint256 numReservePools_ = reservePools.length;
+    // Pull full reservePools array into memory to save SLOADs.
+    ReservePool[] memory reservePools_ = reservePools;
 
+    uint256 lastRewardsDripTime_ = dripTimes.lastRewardsDripTime;
+
+    uint256 numRewardAssets_ = undrippedRewardPools.length;
+    uint256 numReservePools_ = reservePools_.length;
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
-      uint256 totalDrippedRewards_ = _getNextDripAmount(
-        undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, dripTimes.lastRewardsDripTime, deltaT_
-      );
+      uint256 totalDrippedRewards_ =
+        _getNextDripAmount(undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, lastRewardsDripTime_, deltaT_);
 
       if (totalDrippedRewards_ > 0) {
         for (uint16 j = 0; j < numReservePools_; j++) {
-          claimableRewardsIndices[j][i] += _getUpdateToClaimableRewardIndex(totalDrippedRewards_, reservePools[j]);
+          claimableRewardsIndices[j][i] += _getUpdateToClaimableRewardIndex(
+            totalDrippedRewards_, reservePools_[j].rewardsPoolsWeight, reservePools_[j].stkToken.totalSupply()
+          );
         }
 
         undrippedRewardPool_.amount -= totalDrippedRewards_;
@@ -125,15 +169,15 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     return totalBaseAmount_.mulWadDown(dripFactor_);
   }
 
-  function _getUpdateToClaimableRewardIndex(uint256 totalDrippedRewards_, ReservePool storage reservePool_)
-    internal
-    view
-    returns (uint256)
-  {
+  function _getUpdateToClaimableRewardIndex(
+    uint256 totalDrippedRewards_,
+    uint256 rewardsPoolsWeight_,
+    uint256 totalStkTokenSupply_
+  ) internal view returns (uint256) {
     // Round down, in favor of leaving assets in the undripped pool.
-    uint256 scaledDrippedRewards_ = totalDrippedRewards_.mulDivDown(reservePool_.rewardsPoolsWeight, MathConstants.ZOC);
+    uint256 scaledDrippedRewards_ = totalDrippedRewards_.mulDivDown(rewardsPoolsWeight_, MathConstants.ZOC);
     // Round down, in favor of leaving assets in the claimable reward pool.
-    return scaledDrippedRewards_.divWadDown(reservePool_.stkToken.totalSupply());
+    return scaledDrippedRewards_.divWadDown(totalStkTokenSupply_);
   }
 
   function _updateUserRewards(
