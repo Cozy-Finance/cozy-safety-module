@@ -62,14 +62,15 @@ contract TriggerHandlerTest is TestBase {
     component.trigger(mockTrigger);
   }
 
-  function testFail_trigger_safetyModuleNotActive() public {
-    component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
+  // TODO: Uncomment once StateChanger is implemented.
+  // function testFail_trigger_safetyModuleNotActive() public {
+  //   component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
 
-    // Expect this test to fail because this event isn't emitted in this case.
-    _expectEmit();
-    emit TriggerHandler.Triggered(mockTrigger);
-    component.trigger(mockTrigger);
-  }
+  //   // Expect this test to fail because this event isn't emitted in this case.
+  //   _expectEmit();
+  //   emit StateChanger.SafetyModuleStateUpdated(SafetyModuleState.TRIGGERED);
+  //   component.trigger(mockTrigger);
+  // }
 
   function test_trigger_multipleTriggers() public {
     ITrigger mockTriggerB_ = ITrigger(address(new MockTrigger(TriggerState.TRIGGERED)));

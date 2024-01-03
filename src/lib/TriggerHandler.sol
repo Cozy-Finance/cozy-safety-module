@@ -29,11 +29,9 @@ abstract contract TriggerHandler is SafetyModuleCommon, ITriggerHandlerErrors {
     numPendingSlashes += 1;
     payoutHandlerData[triggerData_.payoutHandler].numPendingSlashes += 1;
     triggerData[trigger_].triggered = true;
+    emit Triggered(trigger_);
 
-    // TODO: Use StateChanger validation check function.
-    if (safetyModuleState == SafetyModuleState.ACTIVE) {
-      safetyModuleState = SafetyModuleState.TRIGGERED;
-      emit Triggered(trigger_);
-    }
+    // TODO: Use StateChanger validation check function and emit state updated event.
+    if (safetyModuleState == SafetyModuleState.ACTIVE) safetyModuleState = SafetyModuleState.TRIGGERED;
   }
 }
