@@ -10,9 +10,7 @@ import {UndrippedRewardPoolConfig, ReservePoolConfig} from "./lib/structs/Config
 import {Delays} from "./lib/structs/Delays.sol";
 import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
 import {Depositor} from "./lib/Depositor.sol";
-import {Governable} from "./lib/Governable.sol";
 import {Redeemer} from "./lib/Redeemer.sol";
-import {TriggerHandler} from "./lib/TriggerHandler.sol";
 import {SlashHandler} from "./lib/SlashHandler.sol";
 import {Staker} from "./lib/Staker.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
@@ -22,15 +20,14 @@ import {FeesHandler} from "./lib/FeesHandler.sol";
 import {StateChanger} from "./lib/StateChanger.sol";
 
 contract SafetyModule is
-  Governable,
   SafetyModuleBaseStorage,
   Depositor,
   Redeemer,
-  TriggerHandler,
   SlashHandler,
   Staker,
   RewardsHandler,
-  FeesHandler
+  FeesHandler,
+  StateChanger
 {
   constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(manager_));

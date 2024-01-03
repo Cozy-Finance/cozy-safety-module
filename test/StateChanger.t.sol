@@ -6,10 +6,15 @@ import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {IStateChangerEvents} from "../src/interfaces/IStateChangerEvents.sol";
+import {IStateChangerErrors} from "../src/interfaces/IStateChangerErrors.sol";
+import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {StateChanger} from "../src/lib/StateChanger.sol";
-import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
+import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {PayoutHandler} from "../src/lib/structs/PayoutHandler.sol";
+import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
+import {MockTrigger} from "./utils/MockTrigger.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
@@ -23,8 +28,7 @@ contract StateChangerUnitTest is TestBase, StateChangerTestMockEvents, IStateCha
     NONE,
     OWNER,
     PAUSER,
-    MANAGER,
-    SAFETY_MODULE
+    MANAGER
   }
 
   struct ComponentParams {
@@ -58,7 +62,6 @@ contract StateChangerUnitTest is TestBase, StateChangerTestMockEvents, IStateCha
     if (testCaller_ == TestCaller.OWNER) testCallerAddress_ = testParams_.owner;
     else if (testCaller_ == TestCaller.PAUSER) testCallerAddress_ = testParams_.pauser;
     else if (testCaller_ == TestCaller.MANAGER) testCallerAddress_ = address(component_.manager());
-    else if (testCaller_ == TestCaller.SAFETY_MODULE) testCallerAddress_ = address(component_);
     else testCallerAddress_ = _randomAddress();
   }
 }
@@ -108,7 +111,7 @@ contract StateChangerPauseTest is StateChangerUnitTest {
 
   function test_pause_invalidStateTransition() public {
     SafetyModuleState[2] memory validStartStates_ = [SafetyModuleState.ACTIVE, SafetyModuleState.TRIGGERED];
-    TestCaller[2] memory invalidCaller_ = [TestCaller.NONE, TestCaller.SAFETY_MODULE];
+    TestCaller[1] memory invalidCaller_ = [TestCaller.NONE];
 
     for (uint256 i = 0; i < validStartStates_.length; i++) {
       for (uint256 j = 0; j < invalidCaller_.length; j++) {
@@ -125,8 +128,7 @@ contract StateChangerPauseTest is StateChangerUnitTest {
     }
 
     // Any call to pause when the Safety Module is already paused should revert.
-    TestCaller[5] memory callers_ =
-      [TestCaller.OWNER, TestCaller.PAUSER, TestCaller.MANAGER, TestCaller.NONE, TestCaller.SAFETY_MODULE];
+    TestCaller[4] memory callers_ = [TestCaller.OWNER, TestCaller.PAUSER, TestCaller.MANAGER, TestCaller.NONE];
     for (uint256 i = 0; i < callers_.length; i++) {
       _testPauseInvalidStateTransition(
         ComponentParams({
@@ -209,8 +211,7 @@ contract StateChangerUnpauseTest is StateChangerUnitTest {
   }
 
   function test_unpause_revertsWithInvalidStartState() public {
-    TestCaller[5] memory callers_ =
-      [TestCaller.OWNER, TestCaller.PAUSER, TestCaller.MANAGER, TestCaller.NONE, TestCaller.SAFETY_MODULE];
+    TestCaller[4] memory callers_ = [TestCaller.OWNER, TestCaller.PAUSER, TestCaller.MANAGER, TestCaller.NONE];
     SafetyModuleState[2] memory invalidStartStates_ = [SafetyModuleState.ACTIVE, SafetyModuleState.TRIGGERED];
 
     for (uint256 i = 0; i < callers_.length; i++) {
@@ -229,7 +230,7 @@ contract StateChangerUnpauseTest is StateChangerUnitTest {
   }
 
   function test_unpause_revertsWithInvalidCaller() public {
-    TestCaller[3] memory invalidCallers_ = [TestCaller.PAUSER, TestCaller.SAFETY_MODULE, TestCaller.NONE];
+    TestCaller[2] memory invalidCallers_ = [TestCaller.PAUSER, TestCaller.NONE];
 
     for (uint256 i = 0; i < invalidCallers_.length; i++) {
       _testUnpauseInvalidStateTransitionRevert(
@@ -242,6 +243,146 @@ contract StateChangerUnpauseTest is StateChangerUnitTest {
         invalidCallers_[i]
       );
     }
+  }
+}
+
+contract StateChangerTriggerTest is StateChangerUnitTest {
+  TestableStateChanger component;
+  address mockPayoutHandler;
+
+  function setUp() public {
+    component = _initializeComponent(
+      ComponentParams({
+        owner: address(0xBEEF),
+        pauser: address(0x1331),
+        initialState: SafetyModuleState.ACTIVE,
+        numPendingSlashes: 0
+      })
+    );
+
+    mockPayoutHandler = _randomAddress();
+  }
+
+  function _setUpMockTrigger(TriggerState triggerState_, bool triggered_) internal returns (ITrigger mockTrigger_) {
+    mockTrigger_ = ITrigger(address(new MockTrigger(triggerState_)));
+    Trigger memory triggerData_ = Trigger({exists: true, payoutHandler: mockPayoutHandler, triggered: triggered_});
+    component.mockSetTriggerData(mockTrigger_, triggerData_);
+  }
+
+  function _assertTriggerSuccess(ITrigger mockTrigger_) internal {
+    SafetyModuleState currState_ = component.safetyModuleState();
+    uint256 currNumPendingSlashes_ = component.numPendingSlashes();
+    uint256 payoutHandlerCurrNumPendingSlashes_ = component.getPayoutHandlerData(mockPayoutHandler).numPendingSlashes;
+
+    _expectEmit();
+    emit DripRewardsCalled();
+    _expectEmit();
+    emit DripFeesCalled();
+    _expectEmit();
+    emit Triggered(mockTrigger_);
+    if (currState_ == SafetyModuleState.ACTIVE) {
+      _expectEmit();
+      emit SafetyModuleStateUpdated(SafetyModuleState.TRIGGERED);
+    }
+
+    vm.prank(_randomAddress());
+    component.trigger(mockTrigger_);
+
+    // Safety module state only changes if it was ACTIVE before the trigger.
+    if (currState_ == SafetyModuleState.ACTIVE) assertEq(component.safetyModuleState(), SafetyModuleState.TRIGGERED);
+    else assertEq(component.safetyModuleState(), currState_);
+
+    // The number of pending slashes should always increase by 1.
+    assertEq(component.numPendingSlashes(), currNumPendingSlashes_ + 1);
+    assertEq(
+      component.getPayoutHandlerData(mockPayoutHandler).numPendingSlashes, payoutHandlerCurrNumPendingSlashes_ + 1
+    );
+
+    // The trigger should be marked as triggered.
+    assertEq(component.getTriggerData(mockTrigger_).triggered, true);
+  }
+
+  function test_triggerSuccess_activeToTriggered() public {
+    component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
+    // Create a mock trigger that is in TRIGGERED state, but has not triggered the safety module.
+    ITrigger mockTrigger_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
+    _assertTriggerSuccess(mockTrigger_);
+  }
+
+  function test_triggerSuccess_pausedToPaused() public {
+    component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
+    // Create a mock trigger that is in TRIGGERED state, but has not triggered the safety module.
+    ITrigger mockTrigger_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
+    _assertTriggerSuccess(mockTrigger_);
+  }
+
+  function test_triggerSuccess_triggeredToTriggered() public {
+    component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
+    // Create a mock trigger that is in TRIGGERED state, but has not triggered the safety module.
+    ITrigger mockTrigger_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
+    _assertTriggerSuccess(mockTrigger_);
+  }
+
+  function testFuzz_trigger_invalidTriggerDoesNotExist(ITrigger invalidTrigger_) public {
+    // Create a mock trigger that is in TRIGGERED state, but has not triggered the safety module.
+    ITrigger mockTrigger_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
+
+    // `invalidTrigger_` data does not exist, so cannot trigger the safety module.
+    vm.assume(address(invalidTrigger_) != address(mockTrigger_));
+    vm.expectRevert(IStateChangerErrors.InvalidTrigger.selector);
+    component.trigger(invalidTrigger_);
+  }
+
+  function test_trigger_invalidTriggerState() public {
+    // Create a mock trigger that is in ACTIVE state and has not triggered the safety module.
+    ITrigger mockTrigger_ = _setUpMockTrigger(TriggerState.ACTIVE, false);
+
+    vm.expectRevert(IStateChangerErrors.InvalidTrigger.selector);
+    component.trigger(mockTrigger_);
+  }
+
+  function test_trigger_triggerAlreadyTriggered() public {
+    // Create a mock trigger that is in TRIGGERED state and has already triggered the safety module.
+    ITrigger mockTrigger_ = _setUpMockTrigger(TriggerState.TRIGGERED, true);
+
+    vm.expectRevert(IStateChangerErrors.InvalidTrigger.selector);
+    component.trigger(mockTrigger_);
+  }
+
+  function test_multipleTriggerSuccess_activeToTriggered() public {
+    component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
+
+    // Create two mock triggers that are in TRIGGERED state and have not triggered the safety module.
+    ITrigger mockTriggerA_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
+    ITrigger mockTriggerB_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
+
+    // Trigger the safety module using the trigger from setUp.
+    _assertTriggerSuccess(mockTriggerA_);
+    _assertTriggerSuccess(mockTriggerB_);
+  }
+
+  function test_multipleTriggerSuccess_pausedToPaused() public {
+    component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
+
+    // Create two mock triggers that are in TRIGGERED state and have not triggered the safety module.
+    ITrigger mockTriggerA_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
+    ITrigger mockTriggerB_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
+
+    // Trigger the safety module using the trigger from setUp.
+    _assertTriggerSuccess(mockTriggerA_);
+    _assertTriggerSuccess(mockTriggerB_);
+  }
+
+  function test_multipleTriggerSuccess_triggeredToTriggered() public {
+    component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
+
+    // Create two mock triggers that are in TRIGGERED state and have not triggered the safety module.
+    ITrigger mockTriggerA_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
+    ITrigger mockTriggerB_ = _setUpMockTrigger(TriggerState.TRIGGERED, false);
+
+    // Trigger the safety module using the trigger from setUp.
+    _assertTriggerSuccess(mockTriggerA_);
+    _assertTriggerSuccess(mockTriggerB_);
   }
 }
 
@@ -260,9 +401,21 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     numPendingSlashes = numPendingSlashes_;
   }
 
+  function mockSetTriggerData(ITrigger trigger_, Trigger memory triggerData_) public {
+    triggerData[trigger_] = triggerData_;
+  }
+
   // -------- Mock getters --------
   function manager() public view returns (IManager) {
     return cozyManager;
+  }
+
+  function getPayoutHandlerData(address payoutHandler_) external view returns (PayoutHandler memory) {
+    return payoutHandlerData[payoutHandler_];
+  }
+
+  function getTriggerData(ITrigger trigger_) external view returns (Trigger memory) {
+    return triggerData[trigger_];
   }
 
   // -------- Overridden abstract function placeholders --------

@@ -8,13 +8,11 @@ import {SafetyModuleState} from "src/lib/SafetyModuleStates.sol";
 /// OWNER indicates that the caller is the owner of the SafetyModule.
 /// PAUSER indicates that the caller is the pauser of the SafetyModule.
 /// MANAGER indicates that the caller is the manager of the SafetyModule.
-/// SAFETY_MODULE indicates that the caller is the SafetyModule itself.
 enum CallerRole {
   NONE,
   OWNER,
   PAUSER,
-  MANAGER,
-  SAFETY_MODULE
+  MANAGER
 }
 
 library StateTransitionsLib {
@@ -40,15 +38,17 @@ library StateTransitionsLib {
     //
     // | From / To | ACTIVE      | TRIGGERED   | PAUSED   |
     // | --------- | ----------- | ----------- | -------- |
-    // | ACTIVE    | -           | true (1, T) | true (P) |
-    // | TRIGGERED | true (0, T) | -           | true (P) |
+    // | ACTIVE    | -           | true (1)    | true (P) |
+    // | TRIGGERED | true (0)    | -           | true (P) |
     // | PAUSED    | true (0, A) | true (1, A) | -        |
     //
     // (0) Only allowed if number of pending slashes == 0.
     // (1) Only allowed if number of pending slashes >= 1.
     // (A) Only allowed if msg.sender is the owner or the manager.
     // (P) Only allowed if msg.sender is the owner, pauser, or manager.
-    // (T) Only allowed if msg.sender == safety module.
+
+    // The TRIGGERED-ACTIVE cell logic is checked in SlashHandler.slash and does not need to be checked here.
+    // The ACTIVE-TRIGGERED cell logic is checked in StateChanger.trigger and does not need to be checked here.
     if (to_ == from_) return false;
     if (role_ == CallerRole.NONE) return false;
 
@@ -57,16 +57,6 @@ library StateTransitionsLib {
     (
       to_ == SafetyModuleState.PAUSED
         && (role_ == CallerRole.OWNER || role_ == CallerRole.PAUSER || role_ == CallerRole.MANAGER)
-    )
-    // The ACTIVE-TRIGGERED cell.
-    || (
-      from_ == SafetyModuleState.ACTIVE && to_ == SafetyModuleState.TRIGGERED && nonZeroPendingSlashes_
-        && role_ == CallerRole.SAFETY_MODULE
-    )
-    // The TRIGGERED-ACTIVE cell.
-    || (
-      from_ == SafetyModuleState.TRIGGERED && to_ == SafetyModuleState.ACTIVE && !nonZeroPendingSlashes_
-        && role_ == CallerRole.SAFETY_MODULE
     )
     // The PAUSED-ACTIVE cell.
     || (
