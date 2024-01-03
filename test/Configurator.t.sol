@@ -452,7 +452,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     vm.warp(lastConfigUpdate_.configUpdateTime); // Ensure delay has passed and is within the grace period.
 
-    // Set state to PAUSED.
+    // Set state to TRIGGERED.
     component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
     vm.expectRevert(ICommonErrors.InvalidState.selector);
     component.finalizeUpdateConfigs(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);

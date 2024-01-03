@@ -22,6 +22,7 @@ import {FeesHandler} from "./lib/FeesHandler.sol";
 import {StateChanger} from "./lib/StateChanger.sol";
 
 contract SafetyModule is
+  Governable,
   SafetyModuleBaseStorage,
   Depositor,
   Redeemer,
