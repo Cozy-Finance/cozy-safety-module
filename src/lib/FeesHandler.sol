@@ -23,7 +23,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
 
   function dripFees() public override {
     uint256 deltaT_ = block.timestamp - dripTimes.lastFeesDripTime;
-    if (deltaT_ == 0 || safetyModuleState == SafetyModuleState.PAUSED) return;
+    if (deltaT_ == 0 || safetyModuleState != SafetyModuleState.ACTIVE) return;
 
     _dripFees(deltaT_);
   }
