@@ -73,6 +73,21 @@ contract Manager is Governable, IManager {
     }
   }
 
+  /// @notice Batch pauses safetyModules_. The manager's pauser or owner can perform this action.
+  function pause(ISafetyModule[] calldata safetyModules_) external {
+    if (msg.sender != pauser && msg.sender != owner) revert Unauthorized();
+    for (uint256 i = 0; i < safetyModules_.length; i++) {
+      safetyModules_[i].pause();
+    }
+  }
+
+  /// @notice Batch unpauses safetyModules_. The manager's owner can perform this action.
+  function unpause(ISafetyModule[] calldata safetyModules_) external onlyOwner {
+    for (uint256 i = 0; i < safetyModules_.length; i++) {
+      safetyModules_[i].unpause();
+    }
+  }
+
   // ----------------------------------------
   // -------- Permissionless Actions --------
   // ----------------------------------------

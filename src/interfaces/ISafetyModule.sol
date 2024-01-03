@@ -15,7 +15,15 @@ interface ISafetyModule {
     Delays calldata delaysConfig_
   ) external;
 
+  /// @notice Updates the safety module's user rewards data prior to a stkToken transfer.
   function updateUserRewardsForStkTokenTransfer(address from_, address to_) external;
 
+  /// @notice Pauses the safety module.
+  function pause() external;
+
+  /// @notice Unpauses the safety module.
+  function unpause() external;
+
+  // @notice Claims the safety module's fees.
   function claimFees(address owner_) external;
 }

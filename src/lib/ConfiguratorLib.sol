@@ -104,7 +104,7 @@ library ConfiguratorLib {
     UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
     Delays calldata delaysConfig_
   ) external {
-    if (safetyModuleState_ != SafetyModuleState.ACTIVE) revert ICommonErrors.InvalidState();
+    if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert ICommonErrors.InvalidState();
     if (block.timestamp < lastConfigUpdate_.configUpdateTime) revert ICommonErrors.InvalidStateTransition();
     if (block.timestamp > lastConfigUpdate_.configUpdateDeadline) revert ICommonErrors.InvalidStateTransition();
     if (

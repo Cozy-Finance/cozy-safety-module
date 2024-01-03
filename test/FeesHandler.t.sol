@@ -130,6 +130,17 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     assertEq(component.getReservePools(), initialReservePools_);
   }
 
+  function testFuzz_noDripIfSafetyModuleIsTriggered(uint64 timeElapsed_) public {
+    _setUpDefault();
+    component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
+    timeElapsed_ = uint64(bound(timeElapsed_, 0, type(uint64).max - component.getLastDripTime()));
+    skip(timeElapsed_);
+
+    ReservePool[] memory initialReservePools_ = component.getReservePools();
+    component.dripFees();
+    assertEq(component.getReservePools(), initialReservePools_);
+  }
+
   function test_noDripIfNoTimeElapsed() public {
     _setUpDefault();
     component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
