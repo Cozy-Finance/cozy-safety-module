@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import {UndrippedRewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
 import {UserRewardsData} from "../../src/lib/structs/Rewards.sol";
+import {SafetyModuleState, TriggerState} from "../../src/lib/SafetyModuleStates.sol";
 import {Test} from "forge-std/Test.sol";
 
 abstract contract TestAssertions is Test {
@@ -58,5 +59,13 @@ abstract contract TestAssertions is Test {
   function assertEq(UserRewardsData memory actual_, UserRewardsData memory expected_) internal {
     assertEq(actual_.accruedRewards, expected_.accruedRewards, "UndrippedRewardPool.accruedRewards");
     assertEq(actual_.indexSnapshot, expected_.indexSnapshot, "UndrippedRewardPool.indexSnapshot");
+  }
+
+  function assertEq(SafetyModuleState actual_, SafetyModuleState expected_) internal {
+    assertEq(uint256(actual_), uint256(expected_), "SafetyModuleState");
+  }
+
+  function assertEq(TriggerState actual_, TriggerState expected_) internal {
+    assertEq(uint256(actual_), uint256(expected_), "TriggerState");
   }
 }

@@ -699,16 +699,16 @@ contract TestableConfigurator is Configurator {
 
   function _updateUnstakesAfterTrigger(
     uint16, /* reservePoolId_ */
-    uint128, /* oldStakeAmount_ */
-    uint128 /* slashAmount_ */
+    uint256, /* oldStakeAmount_ */
+    uint256 /* slashAmount_ */
   ) internal view override {
     __readStub__();
   }
 
   function _updateWithdrawalsAfterTrigger(
     uint16, /* reservePoolId_ */
-    uint128, /* oldStakeAmount_ */
-    uint128 /* slashAmount_ */
+    uint256, /* oldStakeAmount_ */
+    uint256 /* slashAmount_ */
   ) internal view override {
     __readStub__();
   }

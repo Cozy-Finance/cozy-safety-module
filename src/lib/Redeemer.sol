@@ -360,7 +360,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   }
 
   /// @inheritdoc SafetyModuleCommon
-  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint128 oldDepositAmount_, uint128 slashAmount_)
+  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint256 oldDepositAmount_, uint256 slashAmount_)
     internal
     override
   {
@@ -369,7 +369,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   }
 
   /// @inheritdoc SafetyModuleCommon
-  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint128 oldStakeAmount_, uint128 slashAmount_)
+  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 oldStakeAmount_, uint256 slashAmount_)
     internal
     override
   {

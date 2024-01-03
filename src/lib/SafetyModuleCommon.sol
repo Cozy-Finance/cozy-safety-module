@@ -42,12 +42,12 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     returns (uint256);
 
   /// @dev Prepares pending unstakes to have their exchange rates adjusted after a trigger. Defined in `Redeemer`.
-  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint128 stakeAmount_, uint128 slashAmount_)
+  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 stakeAmount_, uint256 slashAmount_)
     internal
     virtual;
 
   /// @dev Prepares pending withdrawals to have their exchange rates adjusted after a trigger. Defined in `Redeemer`.
-  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint128 stakeAmount_, uint128 slashAmount_)
+  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint256 stakeAmount_, uint256 slashAmount_)
     internal
     virtual;
 
