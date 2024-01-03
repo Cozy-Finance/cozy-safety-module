@@ -12,6 +12,8 @@ import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
 import {Depositor} from "./lib/Depositor.sol";
 import {Governable} from "./lib/Governable.sol";
 import {Redeemer} from "./lib/Redeemer.sol";
+import {TriggerHandler} from "./lib/TriggerHandler.sol";
+import {SlashHandler} from "./lib/SlashHandler.sol";
 import {Staker} from "./lib/Staker.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
@@ -19,15 +21,15 @@ import {RewardsHandler} from "./lib/RewardsHandler.sol";
 import {FeesHandler} from "./lib/FeesHandler.sol";
 import {StateChanger} from "./lib/StateChanger.sol";
 
-/// @dev Multiple asset SafetyModule.
 contract SafetyModule is
   SafetyModuleBaseStorage,
   Depositor,
   Redeemer,
+  TriggerHandler,
+  SlashHandler,
   Staker,
   RewardsHandler,
-  FeesHandler,
-  StateChanger
+  FeesHandler
 {
   constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(manager_));
@@ -61,28 +63,4 @@ contract SafetyModule is
     dripTimes.lastFeesDripTime = uint128(block.timestamp);
     dripTimes.lastRewardsDripTime = uint128(block.timestamp);
   }
-
-  // -------------------------------------------------------------------
-  // --------- TODO: Move these functions to abstract contracts --------
-  // -------------------------------------------------------------------
-
-  /// @dev Expects `from_` to have approved this SafetyModule for `amount_` of `reservePools[reservePoolId_]` so it can
-  /// `transferFrom`
-  function depositReserveAssets(uint16 reservePoolId_, address from_, uint256 amount_) external {}
-
-  /// @dev Expects depositer to transfer assets to the SafetyModule beforehand.
-  function depositReserveAssetsWithoutTransfer(uint16 reservePoolId_, address from_, uint256 amount_) external {}
-
-  /// @dev Rewards can be any token (not necessarily the same as the reserve asset)
-  function depositRewardsAssets(uint16 claimableRewardPoolId_, address from_, uint256 amount_) external {}
-
-  /// @dev Helpful in cases where depositing reserve and rewards asset in single transfer (same token)
-  function deposit(
-    uint16 reservePoolId_,
-    uint16 claimableRewardPoolId_,
-    address from_,
-    uint256 amount_,
-    uint256 rewardsPercentage_,
-    uint256 reservePercentage_
-  ) external {}
 }

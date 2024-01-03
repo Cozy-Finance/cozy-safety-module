@@ -93,7 +93,7 @@ library RedemptionLib {
   /// @dev Prepares pending redemptions to have their exchange rates adjusted after a trigger.
   function updateRedemptionsAfterTrigger(
     uint256 redemptionAmount_,
-    uint128 slashAmount_,
+    uint256 slashAmount_,
     uint256[] storage pendingAccISFs_
   ) external {
     uint256 numScalingFactors_ = pendingAccISFs_.length;
