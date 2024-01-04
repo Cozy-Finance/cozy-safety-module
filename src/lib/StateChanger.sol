@@ -62,7 +62,7 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
     // triggered. Payout handlers can be assigned to multiple triggers, but each trigger can only have one payout
     // handler.
     numPendingSlashes += 1;
-    payoutHandlerData[triggerData_.payoutHandler].numPendingSlashes += 1;
+    payoutHandlerNumPendingSlashes[triggerData_.payoutHandler] += 1;
     triggerData[trigger_].triggered = true;
     emit Triggered(trigger_);
 

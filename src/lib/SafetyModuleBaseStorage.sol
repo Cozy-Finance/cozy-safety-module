@@ -33,32 +33,29 @@ abstract contract SafetyModuleBaseStorage {
   /// @dev Used for doing aggregate accounting of reserve assets.
   mapping(IERC20 reserveAsset_ => AssetPool assetPool_) public assetPools;
 
-  /// @dev Array of triggers.
-  ITrigger[] public triggers;
-
   /// @dev Maps triggers to trigger data.
   mapping(ITrigger trigger_ => Trigger triggerData_) public triggerData;
 
   /// @dev Maps payout handlers to payout handler data.
-  mapping(address payoutHandler_ => PayoutHandler payoutHandlerData_) public payoutHandlerData;
-
-  /// @notice The number of slashes that must occur before the safety module can be active.
-  /// @dev This value is incremented when a trigger occurs, and decremented when a slash from a trigger assigned payout
-  /// handler occurs. When this value is non-zero, the safety module is triggered (or paused).
-  uint16 public numPendingSlashes;
+  mapping(address payoutHandler_ => uint256 numPendingSlashes_) public payoutHandlerNumPendingSlashes;
 
   /// @dev Config, withdrawal and unstake delays.
   Delays public delays;
-
-  /// @dev Has config for deposit fee and where to send fees
-  IManager public immutable cozyManager;
-
-  /// @notice Address of the Cozy protocol ReceiptTokenFactory.
-  IReceiptTokenFactory public immutable receiptTokenFactory;
 
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;
 
   /// @notice Fees and rewards drip times.
   DripTimes public dripTimes;
+
+  /// @notice The number of slashes that must occur before the safety module can be active.
+  /// @dev This value is incremented when a trigger occurs, and decremented when a slash from a trigger assigned payout
+  /// handler occurs. When this value is non-zero, the safety module is triggered (or paused).
+  uint16 public numPendingSlashes;
+
+  /// @dev Has config for deposit fee and where to send fees
+  IManager public immutable cozyManager;
+
+  /// @notice Address of the Cozy protocol ReceiptTokenFactory.
+  IReceiptTokenFactory public immutable receiptTokenFactory;
 }

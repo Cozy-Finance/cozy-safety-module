@@ -35,8 +35,7 @@ contract TriggerHandlerTest is TestBase {
     component = new TestableSlashHandler();
     mockPayoutHandler = _randomAddress();
 
-    PayoutHandler memory payoutHandlerData_ = PayoutHandler({exists: true, numPendingSlashes: 1});
-    component.mockSetPayoutHandlerData(mockPayoutHandler, payoutHandlerData_);
+    component.mockSetPayoutHandlerNumPendingSlashes(mockPayoutHandler, 1);
     component.mockSetNumPendingSlashes(1);
     component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
   }
@@ -87,7 +86,7 @@ contract TriggerHandlerTest is TestBase {
     assertEq(component.assetPools(IERC20(address(mockAsset))), stakeAmount_ + depositAmount_ - slashAmount_);
     assertEq(mockAsset.balanceOf(receiver_), slashAmount_);
     assertEq(component.numPendingSlashes(), 0);
-    assertEq(component.getPayoutHandlerData(mockPayoutHandler).numPendingSlashes, 0);
+    assertEq(component.payoutHandlerNumPendingSlashes(mockPayoutHandler), 0);
     assertEq(component.safetyModuleState(), SafetyModuleState.ACTIVE);
   }
 
@@ -108,8 +107,7 @@ contract TriggerHandlerTest is TestBase {
   }
 
   function test_slash_multipleReservePools() public {
-    PayoutHandler memory payoutHandlerData_ = PayoutHandler({exists: true, numPendingSlashes: 3});
-    component.mockSetPayoutHandlerData(mockPayoutHandler, payoutHandlerData_);
+    component.mockSetPayoutHandlerNumPendingSlashes(mockPayoutHandler, 3);
     component.mockSetNumPendingSlashes(6);
     component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
 
@@ -213,14 +211,13 @@ contract TriggerHandlerTest is TestBase {
     );
     assertEq(mockAsset.balanceOf(receiver_), slashAmountA_ + slashAmountB_ + slashAmountC_);
     assertEq(component.numPendingSlashes(), 5);
-    assertEq(component.getPayoutHandlerData(mockPayoutHandler).numPendingSlashes, 2);
+    assertEq(component.payoutHandlerNumPendingSlashes(mockPayoutHandler), 2);
     assertEq(component.safetyModuleState(), SafetyModuleState.TRIGGERED); // Still triggered because there are pending
       // slashes.
   }
 
   function test_slash_revert_noPendingSlashes() public {
-    PayoutHandler memory payoutHandlerData_ = PayoutHandler({exists: true, numPendingSlashes: 0});
-    component.mockSetPayoutHandlerData(mockPayoutHandler, payoutHandlerData_);
+    component.mockSetPayoutHandlerNumPendingSlashes(mockPayoutHandler, 0);
 
     Slash[] memory slashes_ = new Slash[](1);
     slashes_[0] = Slash({reservePoolId: 0, amount: 1});
@@ -294,10 +291,6 @@ contract TestableSlashHandler is SlashHandler {
 
   // -------- Getters --------
 
-  function getPayoutHandlerData(address payoutHandler_) external view returns (PayoutHandler memory) {
-    return payoutHandlerData[payoutHandler_];
-  }
-
   function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
     return reservePools[reservePoolId_];
   }
@@ -316,8 +309,8 @@ contract TestableSlashHandler is SlashHandler {
     numPendingSlashes = numPendingSlashes_;
   }
 
-  function mockSetPayoutHandlerData(address payoutHandler_, PayoutHandler memory payoutHandlerData_) public {
-    payoutHandlerData[payoutHandler_] = payoutHandlerData_;
+  function mockSetPayoutHandlerNumPendingSlashes(address payoutHandler_, uint256 numPendingSlashes_) public {
+    payoutHandlerNumPendingSlashes[payoutHandler_] = numPendingSlashes_;
   }
 
   function mockAddReservePool(ReservePool memory reservePool_) public {
