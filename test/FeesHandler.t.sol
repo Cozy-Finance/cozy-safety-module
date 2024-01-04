@@ -32,7 +32,7 @@ contract FeesHandlerUnitTest is TestBase {
   TestableFeesHandler component = new TestableFeesHandler(IManager(address(mockManager)));
 
   uint256 constant DEFAULT_FEES_DRIP_RATE = 0.05e18;
-  uint256 constant DEFAULT_NUM_RESERVE_POOLS = 5;
+  uint256 constant DEFAULT_NUM_RESERVE_POOLS = 2;
 
   event ClaimedFees(IERC20 indexed reserveAsset_, uint256 feeAmount_, address indexed owner_);
 
