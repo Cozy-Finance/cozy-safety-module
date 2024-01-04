@@ -529,8 +529,6 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     vm.assume(reservePoolId_ != 0);
 
     skip(timeElapsed_);
-    uint256 userStkTokenBalance_ = component.getReservePool(reservePoolId_).stkToken.balanceOf(user_);
-    uint256[] memory oldClaimableRewardIndices_ = component.getClaimableRewardIndices(reservePoolId_);
 
     // User previews rewards and then claims rewards (rewards drip in the claim).
     vm.startPrank(user_);
