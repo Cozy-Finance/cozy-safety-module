@@ -526,6 +526,7 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     _setUpDefault();
 
     (address user_, uint16 reservePoolId_, address receiver_) = _getUserClaimRewardsFixture();
+    vm.assume(reservePoolId_ != 0);
 
     skip(timeElapsed_);
     uint256 userStkTokenBalance_ = component.getReservePool(reservePoolId_).stkToken.balanceOf(user_);
@@ -533,27 +534,35 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
 
     // User previews rewards and then claims rewards (rewards drip in the claim).
     vm.startPrank(user_);
-    uint16[] memory previewReservePoolIds_ = new uint16[](1);
+    // User previews two pools, reservePoolId_ (the pool they staked into) and 0 (the pool they did not stake into).
+    uint16[] memory previewReservePoolIds_ = new uint16[](2);
     previewReservePoolIds_[0] = reservePoolId_;
+    previewReservePoolIds_[1] = 0;
     PreviewClaimableRewards[] memory previewClaimableRewards_ =
       component.previewClaimableRewards(previewReservePoolIds_, user_);
     component.claimRewards(reservePoolId_, receiver_);
     vm.stopPrank();
 
-    // Check receiver balances and user rewards data.
-    PreviewClaimableRewards[] memory expectedPreviewClaimableRewards_ = new PreviewClaimableRewards[](1);
+    // Check preview claimable rewards.
+    PreviewClaimableRewards[] memory expectedPreviewClaimableRewards_ = new PreviewClaimableRewards[](2);
     UndrippedRewardPool[] memory undrippedRewardPools_ = component.getUndrippedRewardPools();
     PreviewClaimableRewardsData[] memory expectedPreviewClaimableRewardsData_ =
+      new PreviewClaimableRewardsData[](undrippedRewardPools_.length);
+    PreviewClaimableRewardsData[] memory expectedPreviewClaimableRewardsDataPool0_ =
       new PreviewClaimableRewardsData[](undrippedRewardPools_.length);
     for (uint16 i = 0; i < undrippedRewardPools_.length; i++) {
       IERC20 asset_ = undrippedRewardPools_[i].asset;
       expectedPreviewClaimableRewardsData_[i] =
         PreviewClaimableRewardsData({rewardPoolId: i, amount: asset_.balanceOf(receiver_), asset: asset_});
+      expectedPreviewClaimableRewardsDataPool0_[i] =
+        PreviewClaimableRewardsData({rewardPoolId: i, amount: 0, asset: asset_});
     }
     expectedPreviewClaimableRewards_[0] = PreviewClaimableRewards({
       reservePoolId: reservePoolId_,
       claimableRewardsData: expectedPreviewClaimableRewardsData_
     });
+    expectedPreviewClaimableRewards_[1] =
+      PreviewClaimableRewards({reservePoolId: 0, claimableRewardsData: expectedPreviewClaimableRewardsDataPool0_});
 
     assertEq(previewClaimableRewards_, expectedPreviewClaimableRewards_);
   }
