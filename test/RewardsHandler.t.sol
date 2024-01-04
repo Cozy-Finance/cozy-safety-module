@@ -528,6 +528,25 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     (address user_, uint16 reservePoolId_, address receiver_) = _getUserClaimRewardsFixture();
     vm.assume(reservePoolId_ != 0);
 
+    // Compute original number of reward pools.
+    uint256 oldNumRewardPools_ = component.getUndrippedRewardPools().length;
+
+    // Add new reward asset pool.
+    {
+      MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
+      uint256 newRewardPoolAmount_ = _randomUint256() % 500_000_000;
+      UndrippedRewardPool memory rewardPool_ = UndrippedRewardPool({
+        asset: IERC20(address(mockAsset_)),
+        depositToken: IReceiptToken(address(0)),
+        dripModel: IDripModel(mockRewardsDripModel),
+        amount: newRewardPoolAmount_
+      });
+      component.mockAddUndrippedRewardPool(rewardPool_);
+      // Mint safety module undripped rewards.
+      mockAsset_.mint(address(component), newRewardPoolAmount_);
+      component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: newRewardPoolAmount_}));
+    }
+
     skip(timeElapsed_);
 
     // User previews rewards and then claims rewards (rewards drip in the claim).
@@ -563,6 +582,7 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
       PreviewClaimableRewards({reservePoolId: 0, claimableRewardsData: expectedPreviewClaimableRewardsDataPool0_});
 
     assertEq(previewClaimableRewards_, expectedPreviewClaimableRewards_);
+    assertEq(previewClaimableRewards_[0].claimableRewardsData.length, oldNumRewardPools_ + 1);
   }
 
   function testFuzz_claimRewards(uint64 timeElapsed_) public {

@@ -86,7 +86,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
       previewClaimableRewards_[i] = _previewClaimableRewards(reservePoolIds_[i], owner_, nextRewardDrips_);
     }
   }
-  
+
   function _previewClaimableRewards(uint16 reservePoolId_, address owner_, RewardDrip[] memory nextRewardDrips_)
     internal
     view
