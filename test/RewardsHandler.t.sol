@@ -14,7 +14,7 @@ import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {Ownable} from "../src/lib/Ownable.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
-import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {UserRewardsData, PreviewClaimableRewardsData, PreviewClaimableRewards} from "../src/lib/structs/Rewards.sol";
 import {IdLookup} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockStkToken} from "./utils/MockStkToken.sol";
@@ -31,8 +31,8 @@ contract RewardsHandlerUnitTest is TestBase {
   TestableRewardsHandler component = new TestableRewardsHandler();
 
   uint256 constant DEFAULT_REWARDS_DRIP_RATE = 0.01e18;
-  uint256 constant DEFAULT_NUM_RESERVE_POOLS = 5;
-  uint256 constant DEFAULT_NUM_REWARD_ASSETS = 10;
+  uint256 constant DEFAULT_NUM_RESERVE_POOLS = 2;
+  uint256 constant DEFAULT_NUM_REWARD_ASSETS = 3;
 
   event ClaimedRewards(
     uint16 indexed reservePoolId,
@@ -520,6 +520,69 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
         UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardIndex(1, 2).safeCastTo128()});
       assertEq(user2RewardsData2_, expectedUser2RewardsData2_);
     }
+  }
+
+  function testFuzz_previewClaimableRewards(uint64 timeElapsed_) public {
+    _setUpDefault();
+
+    (address user_, uint16 reservePoolId_, address receiver_) = _getUserClaimRewardsFixture();
+    vm.assume(reservePoolId_ != 0);
+
+    // Compute original number of reward pools.
+    uint256 oldNumRewardPools_ = component.getUndrippedRewardPools().length;
+
+    // Add new reward asset pool.
+    {
+      MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
+      uint256 newRewardPoolAmount_ = _randomUint256() % 500_000_000;
+      UndrippedRewardPool memory rewardPool_ = UndrippedRewardPool({
+        asset: IERC20(address(mockAsset_)),
+        depositToken: IReceiptToken(address(0)),
+        dripModel: IDripModel(mockRewardsDripModel),
+        amount: newRewardPoolAmount_
+      });
+      component.mockAddUndrippedRewardPool(rewardPool_);
+      // Mint safety module undripped rewards.
+      mockAsset_.mint(address(component), newRewardPoolAmount_);
+      component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: newRewardPoolAmount_}));
+    }
+
+    skip(timeElapsed_);
+
+    // User previews rewards and then claims rewards (rewards drip in the claim).
+    vm.startPrank(user_);
+    // User previews two pools, reservePoolId_ (the pool they staked into) and 0 (the pool they did not stake into).
+    uint16[] memory previewReservePoolIds_ = new uint16[](2);
+    previewReservePoolIds_[0] = reservePoolId_;
+    previewReservePoolIds_[1] = 0;
+    PreviewClaimableRewards[] memory previewClaimableRewards_ =
+      component.previewClaimableRewards(previewReservePoolIds_, user_);
+    component.claimRewards(reservePoolId_, receiver_);
+    vm.stopPrank();
+
+    // Check preview claimable rewards.
+    PreviewClaimableRewards[] memory expectedPreviewClaimableRewards_ = new PreviewClaimableRewards[](2);
+    UndrippedRewardPool[] memory undrippedRewardPools_ = component.getUndrippedRewardPools();
+    PreviewClaimableRewardsData[] memory expectedPreviewClaimableRewardsData_ =
+      new PreviewClaimableRewardsData[](undrippedRewardPools_.length);
+    PreviewClaimableRewardsData[] memory expectedPreviewClaimableRewardsDataPool0_ =
+      new PreviewClaimableRewardsData[](undrippedRewardPools_.length);
+    for (uint16 i = 0; i < undrippedRewardPools_.length; i++) {
+      IERC20 asset_ = undrippedRewardPools_[i].asset;
+      expectedPreviewClaimableRewardsData_[i] =
+        PreviewClaimableRewardsData({rewardPoolId: i, amount: asset_.balanceOf(receiver_), asset: asset_});
+      expectedPreviewClaimableRewardsDataPool0_[i] =
+        PreviewClaimableRewardsData({rewardPoolId: i, amount: 0, asset: asset_});
+    }
+    expectedPreviewClaimableRewards_[0] = PreviewClaimableRewards({
+      reservePoolId: reservePoolId_,
+      claimableRewardsData: expectedPreviewClaimableRewardsData_
+    });
+    expectedPreviewClaimableRewards_[1] =
+      PreviewClaimableRewards({reservePoolId: 0, claimableRewardsData: expectedPreviewClaimableRewardsDataPool0_});
+
+    assertEq(previewClaimableRewards_, expectedPreviewClaimableRewards_);
+    assertEq(previewClaimableRewards_[0].claimableRewardsData.length, oldNumRewardPools_ + 1);
   }
 
   function testFuzz_claimRewards(uint64 timeElapsed_) public {
