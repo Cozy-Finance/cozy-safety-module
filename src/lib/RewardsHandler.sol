@@ -146,32 +146,23 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     uint256 lastRewardsDripTime_ = dripTimes.lastRewardsDripTime;
     uint256 numRewardAssets_ = undrippedRewardPools.length;
     for (uint16 i = 0; i < numRewardAssets_; i++) {
-      _executeNextRewardDrip(i, lastRewardsDripTime_, deltaT_, reservePools_);
+      UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
+      RewardDrip memory rewardDrip_ = _previewNextRewardDrip(undrippedRewardPool_, lastRewardsDripTime_, deltaT_);
+
+      if (rewardDrip_.amount > 0) {
+        for (uint16 j = 0; j < reservePools_.length; j++) {
+          claimableRewardsIndices[j][i] = _previewNextClaimableRewardIndex(
+            claimableRewardsIndices[j][i],
+            rewardDrip_.amount,
+            reservePools_[j].rewardsPoolsWeight,
+            reservePools_[j].stkToken.totalSupply()
+          );
+        }
+        undrippedRewardPool_.amount -= rewardDrip_.amount;
+      }
     }
 
     dripTimes.lastRewardsDripTime = uint128(block.timestamp);
-  }
-
-  function _executeNextRewardDrip(
-    uint16 rewardPoolId_,
-    uint256 lastDripTime_,
-    uint256 deltaT_,
-    ReservePool[] memory reservePools_
-  ) internal {
-    UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
-    RewardDrip memory rewardDrip_ = _previewNextRewardDrip(undrippedRewardPool_, lastDripTime_, deltaT_);
-
-    if (rewardDrip_.amount > 0) {
-      for (uint16 i = 0; i < reservePools_.length; i++) {
-        claimableRewardsIndices[i][rewardPoolId_] = _previewNextClaimableRewardIndex(
-          claimableRewardsIndices[i][rewardPoolId_],
-          rewardDrip_.amount,
-          reservePools_[i].rewardsPoolsWeight,
-          reservePools_[i].stkToken.totalSupply()
-        );
-      }
-      undrippedRewardPool_.amount -= rewardDrip_.amount;
-    }
   }
 
   function _previewNextRewardDrip(
