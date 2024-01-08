@@ -42,9 +42,6 @@ library ConfiguratorLib {
     Delays delaysConfig
   );
 
-  event TriggerAdded(ITrigger indexed trigger, address indexed payoutHandler);
-  event TriggerRemoved(ITrigger indexed trigger);
-
   /// @notice Emitted when a reserve pool is created.
   event ReservePoolCreated(
     uint16 indexed reservePoolId, address reserveAssetAddress, address stkTokenAddress, address depositTokenAddress
