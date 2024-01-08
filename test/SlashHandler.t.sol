@@ -288,7 +288,7 @@ contract TriggerHandlerTest is TestBase {
     slashes_[0] = Slash({reservePoolId: 0, amount: slashAmountA_});
     slashes_[1] = Slash({reservePoolId: 1, amount: slashAmountB_});
 
-    uint256 slashPercentage_ = uint256(slashAmountB_).divWadUp(stakeAmount_ + depositAmount_);
+    uint256 slashPercentage_ = uint256(slashAmountB_ - depositAmount_).divWadUp(stakeAmount_);
     vm.expectRevert(abi.encodeWithSelector(ISlashHandlerErrors.ExceedsMaxSlashPercentage.selector, 1, slashPercentage_));
     vm.prank(mockPayoutHandler);
     component.slash(slashes_, receiver_);

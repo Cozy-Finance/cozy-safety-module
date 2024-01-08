@@ -34,17 +34,10 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
       Slash memory slash_ = slashes_[i];
       ReservePool storage reservePool_ = reservePools[slash_.reservePoolId];
       IERC20 reserveAsset_ = reservePool_.asset;
-
       uint256 slashAmountRemaining_ = slash_.amount;
-      uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
-      uint256 reservePoolStakeAmount_ = reservePool_.stakeAmount;
-      uint256 slashPercentage_ =
-        _computeSlashPercentage(slashAmountRemaining_, reservePoolDepositAmount_ + reservePoolStakeAmount_);
-      if (slashPercentage_ > reservePool_.maxSlashPercentage) {
-        revert ExceedsMaxSlashPercentage(slash_.reservePoolId, slashPercentage_);
-      }
 
       // 1. Slash deposited assets
+      uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
       _updateWithdrawalsAfterTrigger(slash_.reservePoolId, reservePoolDepositAmount_, slashAmountRemaining_);
       if (reservePoolDepositAmount_ <= slashAmountRemaining_) {
         slashAmountRemaining_ -= reservePoolDepositAmount_;
@@ -58,6 +51,12 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
 
       // 2. Slash staked assets
       if (slashAmountRemaining_ > 0) {
+        uint256 reservePoolStakeAmount_ = reservePool_.stakeAmount;
+        uint256 slashPercentage_ = _computeSlashPercentage(slashAmountRemaining_, reservePoolStakeAmount_);
+        if (slashPercentage_ > reservePool_.maxSlashPercentage) {
+          revert ExceedsMaxSlashPercentage(slash_.reservePoolId, slashPercentage_);
+        }
+
         _updateUnstakesAfterTrigger(slash_.reservePoolId, reservePoolStakeAmount_, slashAmountRemaining_);
         reservePool_.stakeAmount -= slashAmountRemaining_;
         assetPools[reserveAsset_].amount -= slashAmountRemaining_;
