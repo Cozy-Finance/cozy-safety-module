@@ -255,9 +255,10 @@ library ConfiguratorLib {
     // Update trigger configs.
     for (uint256 i = 0; i < configUpdates_.triggerConfigUpdates.length; i++) {
       // Triggers that have successfully called trigger() on the safety module cannot be updated.
-      if (triggerData_[configUpdates_.triggerConfigUpdates[i].trigger].triggered) {
-        revert IConfiguratorErrors.InvalidConfiguration();
-      }
+      if (
+        triggerData_[configUpdates_.triggerConfigUpdates[i].trigger].triggered
+          || configUpdates_.triggerConfigUpdates[i].trigger.state() == TriggerState.TRIGGERED
+      ) revert IConfiguratorErrors.InvalidConfiguration();
       triggerData_[configUpdates_.triggerConfigUpdates[i].trigger] = Trigger({
         exists: configUpdates_.triggerConfigUpdates[i].exists,
         payoutHandler: configUpdates_.triggerConfigUpdates[i].payoutHandler,

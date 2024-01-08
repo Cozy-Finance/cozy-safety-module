@@ -294,9 +294,7 @@ contract StateChangerTriggerTest is StateChangerUnitTest {
 
     // The number of pending slashes should always increase by 1.
     assertEq(component.numPendingSlashes(), currNumPendingSlashes_ + 1);
-    assertEq(
-      component.payoutHandlerNumPendingSlashes(mockPayoutHandler), payoutHandlerCurrNumPendingSlashes_ + 1
-    );
+    assertEq(component.payoutHandlerNumPendingSlashes(mockPayoutHandler), payoutHandlerCurrNumPendingSlashes_ + 1);
 
     // The trigger should be marked as triggered.
     assertEq(component.getTriggerData(mockTrigger_).triggered, true);

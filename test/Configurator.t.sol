@@ -801,6 +801,34 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       Delays memory delayConfig_
     ) = _generateBasicConfigs();
 
+    // The trigger is already triggered.
+    MockTrigger(address(triggerConfigUpdates_[0].trigger)).mockState(TriggerState.TRIGGERED);
+
+    ConfigUpdateMetadata memory lastConfigUpdate_ =
+      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
+    component.mockSetLastConfigUpdate(lastConfigUpdate_);
+
+    vm.warp(lastConfigUpdate_.configUpdateTime); // Ensure delay has passed and is within the grace period.
+
+    vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
+    component.finalizeUpdateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delayConfig_
+      })
+    );
+  }
+
+  function test_finalizeUpdateConfigs_RevertQueuedConfigUpdateTriggerAlreadyTriggeredSafetyModule() external {
+    (
+      ReservePoolConfig[] memory reservePoolConfigs_,
+      UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_,
+      TriggerConfig[] memory triggerConfigUpdates_,
+      Delays memory delayConfig_
+    ) = _generateBasicConfigs();
+
     // The trigger has already successfully called `trigger()` on the safety module before.
     component.mockSetTriggerData(
       triggerConfigUpdates_[0].trigger,
