@@ -7,7 +7,6 @@ import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {ISlashHandlerErrors} from "../interfaces/ISlashHandlerErrors.sol";
-import {PayoutHandler} from "./structs/PayoutHandler.sol";
 import {Slash} from "./structs/Slash.sol";
 import {Trigger} from "./structs/Trigger.sol";
 import {ReservePool} from "./structs/Pools.sol";

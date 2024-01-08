@@ -11,7 +11,6 @@ import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {StateChanger} from "../src/lib/StateChanger.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
-import {PayoutHandler} from "../src/lib/structs/PayoutHandler.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";

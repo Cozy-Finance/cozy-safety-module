@@ -15,7 +15,6 @@ import {ISlashHandlerErrors} from "../src/interfaces/ISlashHandlerErrors.sol";
 import {SlashHandler} from "../src/lib/SlashHandler.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
-import {PayoutHandler} from "../src/lib/structs/PayoutHandler.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {Slash} from "../src/lib/structs/Slash.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";

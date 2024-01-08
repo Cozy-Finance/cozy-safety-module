@@ -6,7 +6,6 @@ import {IManager} from "../interfaces/IManager.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
-import {PayoutHandler} from "./structs/PayoutHandler.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
 import {Trigger} from "./structs/Trigger.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
