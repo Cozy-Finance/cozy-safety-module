@@ -10,6 +10,7 @@ import {SafeCastLib} from "./SafeCastLib.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
+import {MathConstants} from "./MathConstants.sol";
 import {UndrippedRewardPool, IdLookup} from "./structs/Pools.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
@@ -56,6 +57,8 @@ abstract contract FeesHandler is SafetyModuleCommon {
   function _dripFees(uint256 deltaT_) internal {
     uint256 dripFactor_ =
       cozyManager.getFeeDripModel(ISafetyModule(address(this))).dripFactor(dripTimes.lastFeesDripTime, deltaT_);
+
+    if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
 
     uint256 numReservePools_ = reservePools.length;
     for (uint16 i = 0; i < numReservePools_; i++) {

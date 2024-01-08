@@ -6,6 +6,7 @@ import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
+import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {RewardsHandler} from "../src/lib/RewardsHandler.sol";
 import {Staker} from "../src/lib/Staker.sol";
@@ -342,6 +343,24 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
     assertEq(component.getUndrippedRewardPools(), expectedUndrippedRewardPools_);
     assertEq(component.getClaimableRewardIndices(), expectedClaimableRewardsIndices_);
     assertEq(component.getLastDripTime(), block.timestamp);
+  }
+
+  function test_revertOnInvalidDripFactor() public {
+    _setUpDefault();
+
+    component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
+    skip(99);
+
+    uint256 dripRate_ = MathConstants.WAD + 1;
+    MockDripModel model_ = new MockDripModel(dripRate_);
+    // Update a random pool to an invalid drip model.
+    uint16 poolId_ = _randomUint16() % uint16(component.getUndrippedRewardPools().length);
+    UndrippedRewardPool memory undrippedRewardPool_ = copyUndrippedRewardPool(component.getUndrippedRewardPool(poolId_));
+    undrippedRewardPool_.dripModel = model_;
+    component.mockSetUndrippedRewardPool(poolId_, undrippedRewardPool_);
+
+    vm.expectRevert(ICommonErrors.InvalidDripFactor.selector);
+    component.dripRewards();
   }
 }
 

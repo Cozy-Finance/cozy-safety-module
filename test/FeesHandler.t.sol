@@ -7,6 +7,7 @@ import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
+import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {RewardsHandler} from "../src/lib/RewardsHandler.sol";
 import {FeesHandler} from "../src/lib/FeesHandler.sol";
@@ -241,6 +242,20 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     // No fees should be dripped, so all accounting should be the same.
     assertEq(component.getReservePools(), expectedReservePools_);
     assertEq(component.getLastDripTime(), block.timestamp);
+  }
+
+  function test_revertOnInvalidDripFactor() public {
+    _setUpDefault();
+
+    component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
+    skip(99);
+
+    uint256 dripRate_ = MathConstants.WAD + 1;
+    MockDripModel model_ = new MockDripModel(dripRate_);
+    mockManager.setFeeDripModel(IDripModel(address(model_)));
+
+    vm.expectRevert(ICommonErrors.InvalidDripFactor.selector);
+    component.dripFees();
   }
 }
 
