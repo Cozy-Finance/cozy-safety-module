@@ -9,6 +9,7 @@ import {IReceiptTokenFactory} from "./interfaces/IReceiptTokenFactory.sol";
 import {UndrippedRewardPoolConfig, ReservePoolConfig, UpdateConfigsCalldataParams} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
 import {TriggerConfig} from "./lib/structs/Trigger.sol";
+import {Configurator} from "./lib/Configurator.sol";
 import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
 import {Depositor} from "./lib/Depositor.sol";
 import {Redeemer} from "./lib/Redeemer.sol";
@@ -22,6 +23,7 @@ import {StateChanger} from "./lib/StateChanger.sol";
 
 contract SafetyModule is
   SafetyModuleBaseStorage,
+  Configurator,
   Depositor,
   Redeemer,
   SlashHandler,
