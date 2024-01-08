@@ -11,7 +11,6 @@ import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {StateChanger} from "../src/lib/StateChanger.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
-import {PayoutHandler} from "../src/lib/structs/PayoutHandler.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
@@ -272,7 +271,7 @@ contract StateChangerTriggerTest is StateChangerUnitTest {
   function _assertTriggerSuccess(ITrigger mockTrigger_) internal {
     SafetyModuleState currState_ = component.safetyModuleState();
     uint256 currNumPendingSlashes_ = component.numPendingSlashes();
-    uint256 payoutHandlerCurrNumPendingSlashes_ = component.getPayoutHandlerData(mockPayoutHandler).numPendingSlashes;
+    uint256 payoutHandlerCurrNumPendingSlashes_ = component.payoutHandlerNumPendingSlashes(mockPayoutHandler);
 
     _expectEmit();
     emit DripRewardsCalled();
@@ -294,9 +293,7 @@ contract StateChangerTriggerTest is StateChangerUnitTest {
 
     // The number of pending slashes should always increase by 1.
     assertEq(component.numPendingSlashes(), currNumPendingSlashes_ + 1);
-    assertEq(
-      component.getPayoutHandlerData(mockPayoutHandler).numPendingSlashes, payoutHandlerCurrNumPendingSlashes_ + 1
-    );
+    assertEq(component.payoutHandlerNumPendingSlashes(mockPayoutHandler), payoutHandlerCurrNumPendingSlashes_ + 1);
 
     // The trigger should be marked as triggered.
     assertEq(component.getTriggerData(mockTrigger_).triggered, true);
@@ -405,10 +402,6 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
   // -------- Mock getters --------
   function manager() public view returns (IManager) {
     return cozyManager;
-  }
-
-  function getPayoutHandlerData(address payoutHandler_) external view returns (PayoutHandler memory) {
-    return payoutHandlerData[payoutHandler_];
   }
 
   function getTriggerData(ITrigger trigger_) external view returns (Trigger memory) {

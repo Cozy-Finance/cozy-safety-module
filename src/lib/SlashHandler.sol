@@ -7,7 +7,6 @@ import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {ISlashHandlerErrors} from "../interfaces/ISlashHandlerErrors.sol";
-import {PayoutHandler} from "./structs/PayoutHandler.sol";
 import {Slash} from "./structs/Slash.sol";
 import {Trigger} from "./structs/Trigger.sol";
 import {ReservePool} from "./structs/Pools.sol";
@@ -19,16 +18,14 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
   /// state if there are no payout handlers that still need to slash assets. Note: Payout handlers can call this
   /// function once for each triggered trigger that has it assigned as its payout handler.
   function slash(Slash[] memory slashes_, address receiver_) external {
-    PayoutHandler storage payoutHandler_ = payoutHandlerData[msg.sender];
-
     // If the payout handler is invalid, the default numPendingSlashes state is also 0.
-    if (payoutHandler_.numPendingSlashes == 0) revert Ownable.Unauthorized();
+    if (payoutHandlerNumPendingSlashes[msg.sender] == 0) revert Ownable.Unauthorized();
     if (safetyModuleState != SafetyModuleState.TRIGGERED) revert InvalidState();
 
     // Once all slashes are processed from each of the triggered trigger's assigned payout handlers, the safety module
     // is returned to the ACTIVE state.
     numPendingSlashes -= 1;
-    payoutHandler_.numPendingSlashes -= 1;
+    payoutHandlerNumPendingSlashes[msg.sender] -= 1;
     if (numPendingSlashes == 0) safetyModuleState = SafetyModuleState.ACTIVE;
 
     for (uint16 i = 0; i < slashes_.length; i++) {

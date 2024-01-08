@@ -10,19 +10,27 @@ import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
+import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {ConfiguratorLib} from "../src/lib/ConfiguratorLib.sol";
 import {Configurator} from "../src/lib/Configurator.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
-import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
+import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleBaseStorage} from "../src/lib/SafetyModuleBaseStorage.sol";
 import {ReservePool, UndrippedRewardPool, AssetPool, IdLookup} from "../src/lib/structs/Pools.sol";
-import {ReservePoolConfig, UndrippedRewardPoolConfig, ConfigUpdateMetadata} from "../src/lib/structs/Configs.sol";
+import {
+  ReservePoolConfig,
+  UndrippedRewardPoolConfig,
+  ConfigUpdateMetadata,
+  UpdateConfigsCalldataParams
+} from "../src/lib/structs/Configs.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
+import {TriggerConfig, Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
+import {MockTrigger} from "./utils/MockTrigger.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
@@ -122,28 +130,41 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     });
   }
 
+  function _generateValidTriggerConfig() private returns (TriggerConfig memory) {
+    return TriggerConfig({
+      trigger: ITrigger(address(new MockTrigger(TriggerState.ACTIVE))),
+      payoutHandler: _randomAddress(),
+      exists: _randomUint256() % 2 == 0
+    });
+  }
+
   function _generateBasicConfigs()
     private
-    returns (ReservePoolConfig[] memory, UndrippedRewardPoolConfig[] memory, Delays memory)
+    returns (ReservePoolConfig[] memory, UndrippedRewardPoolConfig[] memory, TriggerConfig[] memory, Delays memory)
   {
     Delays memory delayConfig_ = _generateValidDelays();
     UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
     undrippedRewardPoolConfigs_[0] = _generateValidUndrippedRewardPoolConfig();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC));
-    return (reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+    TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
+    triggerConfigUpdates_[0] = _generateValidTriggerConfig();
+    return (reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
   }
 
   function _getConfigUpdateMetadata(
     ReservePoolConfig[] memory reservePoolConfigs_,
     UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_,
+    TriggerConfig[] memory triggerConfigUpdates_,
     Delays memory delaysConfig_
   ) private view returns (ConfigUpdateMetadata memory) {
     uint64 now_ = uint64(block.timestamp);
     uint64 configUpdateTime_ = now_ + DEFAULT_CONFIG_UPDATE_DELAY;
     uint64 configUpdateDeadline_ = configUpdateTime_ + DEFAULT_CONFIG_UPDATE_GRACE_PERIOD;
     return ConfigUpdateMetadata({
-      queuedConfigUpdateHash: keccak256(abi.encode(reservePoolConfigs_, undrippedRewardPoolConfigs_, delaysConfig_)),
+      queuedConfigUpdateHash: keccak256(
+        abi.encode(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delaysConfig_)
+        ),
       configUpdateTime: configUpdateTime_,
       configUpdateDeadline: configUpdateDeadline_
     });
@@ -173,22 +194,33 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
     reservePoolConfigs_[0] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2);
     reservePoolConfigs_[1] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2);
+    TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](2);
+    triggerConfigUpdates_[0] = _generateValidTriggerConfig();
+    triggerConfigUpdates_[1] = _generateValidTriggerConfig();
     uint256 now_ = block.timestamp;
 
     _expectEmit();
     emit ConfigUpdatesQueued(
       reservePoolConfigs_,
       undrippedRewardPoolConfigs_,
+      triggerConfigUpdates_,
       delaysConfig_,
       now_ + DEFAULT_CONFIG_UPDATE_DELAY,
       now_ + DEFAULT_CONFIG_UPDATE_DELAY + DEFAULT_CONFIG_UPDATE_GRACE_PERIOD
     );
-    component.updateConfigs(reservePoolConfigs_, undrippedRewardPoolConfigs_, delaysConfig_);
+    component.updateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delaysConfig_
+      })
+    );
 
     ConfigUpdateMetadata memory result_ = component.getLastConfigUpdate();
     assertEq(
       result_.queuedConfigUpdateHash,
-      keccak256(abi.encode(reservePoolConfigs_, undrippedRewardPoolConfigs_, delaysConfig_))
+      keccak256(abi.encode(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delaysConfig_))
     );
     assertEq(result_.configUpdateTime, now_ + DEFAULT_CONFIG_UPDATE_DELAY);
     assertEq(result_.configUpdateDeadline, now_ + DEFAULT_CONFIG_UPDATE_DELAY + DEFAULT_CONFIG_UPDATE_GRACE_PERIOD);
@@ -244,11 +276,33 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     undrippedRewardPoolConfigs_[0] = _generateValidUndrippedRewardPoolConfig();
     undrippedRewardPoolConfigs_[1] = _generateValidUndrippedRewardPoolConfig();
 
-    assertTrue(component.isValidUpdate(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
+    TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](2);
+    triggerConfigUpdates_[0] = _generateValidTriggerConfig();
+    triggerConfigUpdates_[1] = _generateValidTriggerConfig();
+
+    assertTrue(
+      component.isValidUpdate(
+        UpdateConfigsCalldataParams({
+          reservePoolConfigs: reservePoolConfigs_,
+          undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+          triggerConfigUpdates: triggerConfigUpdates_,
+          delaysConfig: delayConfig_
+        })
+      )
+    );
 
     reservePoolConfigs_[0].rewardsPoolsWeight = 1e4 - 1; // Weight should equal 100%, simulate isValidConfiguration
       // returning false.
-    assertFalse(component.isValidUpdate(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
+    assertFalse(
+      component.isValidUpdate(
+        UpdateConfigsCalldataParams({
+          reservePoolConfigs: reservePoolConfigs_,
+          undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+          triggerConfigUpdates: triggerConfigUpdates_,
+          delaysConfig: delayConfig_
+        })
+      )
+    );
   }
 
   function test_isValidUpdate_ExistingReservePoolsChecks() external {
@@ -266,23 +320,54 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
     undrippedRewardPoolConfigs_[0] = _generateValidUndrippedRewardPoolConfig();
 
+    // Generate valid new configs for triggers.
+    TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
+    triggerConfigUpdates_[0] = _generateValidTriggerConfig();
+
     // Invalid update because `invalidReservePoolConfigs_.length < numExistingReservePools`.
     ReservePoolConfig[] memory invalidReservePoolConfigs_ = new ReservePoolConfig[](1);
     invalidReservePoolConfigs_[0] = reservePoolConfig1_;
-    assertFalse(component.isValidUpdate(invalidReservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
+    assertFalse(
+      component.isValidUpdate(
+        UpdateConfigsCalldataParams({
+          reservePoolConfigs: invalidReservePoolConfigs_,
+          undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+          triggerConfigUpdates: triggerConfigUpdates_,
+          delaysConfig: delayConfig_
+        })
+      )
+    );
 
     // Invalid update because `reservePool2.address != invalidReservePoolConfigs_[1].address`.
     invalidReservePoolConfigs_ = new ReservePoolConfig[](2);
     invalidReservePoolConfigs_[0] = reservePoolConfig1_;
     invalidReservePoolConfigs_[1] = ReservePoolConfig({asset: IERC20(_randomAddress()), rewardsPoolsWeight: 0});
-    assertFalse(component.isValidUpdate(invalidReservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
+    assertFalse(
+      component.isValidUpdate(
+        UpdateConfigsCalldataParams({
+          reservePoolConfigs: invalidReservePoolConfigs_,
+          undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+          triggerConfigUpdates: triggerConfigUpdates_,
+          delaysConfig: delayConfig_
+        })
+      )
+    );
 
     // Valid update.
     ReservePoolConfig[] memory validReservePoolConfigs_ = new ReservePoolConfig[](3);
     validReservePoolConfigs_[0] = reservePoolConfig1_;
     validReservePoolConfigs_[1] = reservePoolConfig2_;
     validReservePoolConfigs_[2] = _generateValidReservePoolConfig(0);
-    assertTrue(component.isValidUpdate(validReservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
+    assertTrue(
+      component.isValidUpdate(
+        UpdateConfigsCalldataParams({
+          reservePoolConfigs: validReservePoolConfigs_,
+          undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+          triggerConfigUpdates: triggerConfigUpdates_,
+          delaysConfig: delayConfig_
+        })
+      )
+    );
   }
 
   function test_isValidUpdate_ExistingUndrippedRewardPoolsChecks() external {
@@ -301,24 +386,99 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC));
 
+    // Generate valid new configs for triggers.
+    TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
+    triggerConfigUpdates_[0] = _generateValidTriggerConfig();
+
     // Invalid update because `invalidUndrippedRewardPoolConfigs_.length < numExistingRewardPools`.
     UndrippedRewardPoolConfig[] memory invalidUndrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
     invalidUndrippedRewardPoolConfigs_[0] = rewardPoolConfig1_;
-    assertFalse(component.isValidUpdate(reservePoolConfigs_, invalidUndrippedRewardPoolConfigs_, delayConfig_));
+    assertFalse(
+      component.isValidUpdate(
+        UpdateConfigsCalldataParams({
+          reservePoolConfigs: reservePoolConfigs_,
+          undrippedRewardPoolConfigs: invalidUndrippedRewardPoolConfigs_,
+          triggerConfigUpdates: triggerConfigUpdates_,
+          delaysConfig: delayConfig_
+        })
+      )
+    );
 
     // Invalid update because `rewardPool2.address != invalidUndrippedRewardPoolConfigs_[1].address`.
     invalidUndrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](2);
     invalidUndrippedRewardPoolConfigs_[0] = rewardPoolConfig1_;
     invalidUndrippedRewardPoolConfigs_[1] =
       UndrippedRewardPoolConfig({asset: IERC20(_randomAddress()), dripModel: IDripModel(_randomAddress())});
-    assertFalse(component.isValidUpdate(reservePoolConfigs_, invalidUndrippedRewardPoolConfigs_, delayConfig_));
+    assertFalse(
+      component.isValidUpdate(
+        UpdateConfigsCalldataParams({
+          reservePoolConfigs: reservePoolConfigs_,
+          undrippedRewardPoolConfigs: invalidUndrippedRewardPoolConfigs_,
+          triggerConfigUpdates: triggerConfigUpdates_,
+          delaysConfig: delayConfig_
+        })
+      )
+    );
 
     // Valid update.
     UndrippedRewardPoolConfig[] memory validUndrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](3);
     validUndrippedRewardPoolConfigs_[0] = rewardPoolConfig1_;
     validUndrippedRewardPoolConfigs_[1] = rewardPoolConfig2_;
     validUndrippedRewardPoolConfigs_[2] = _generateValidUndrippedRewardPoolConfig();
-    assertTrue(component.isValidUpdate(reservePoolConfigs_, validUndrippedRewardPoolConfigs_, delayConfig_));
+    assertTrue(
+      component.isValidUpdate(
+        UpdateConfigsCalldataParams({
+          reservePoolConfigs: reservePoolConfigs_,
+          undrippedRewardPoolConfigs: validUndrippedRewardPoolConfigs_,
+          triggerConfigUpdates: triggerConfigUpdates_,
+          delaysConfig: delayConfig_
+        })
+      )
+    );
+  }
+
+  function test_isValidUpdate_TriggerAlreadyTriggeredSafetyModule() external {
+    Delays memory delayConfig_ = _generateValidDelays();
+
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2);
+    reservePoolConfigs_[1] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2);
+
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](2);
+    undrippedRewardPoolConfigs_[0] = _generateValidUndrippedRewardPoolConfig();
+    undrippedRewardPoolConfigs_[1] = _generateValidUndrippedRewardPoolConfig();
+
+    TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
+    triggerConfigUpdates_[0] = _generateValidTriggerConfig();
+
+    component.mockSetTriggerData(
+      triggerConfigUpdates_[0].trigger, Trigger({exists: true, payoutHandler: _randomAddress(), triggered: true})
+    );
+    assertFalse(
+      component.isValidUpdate(
+        UpdateConfigsCalldataParams({
+          reservePoolConfigs: reservePoolConfigs_,
+          undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+          triggerConfigUpdates: triggerConfigUpdates_,
+          delaysConfig: delayConfig_
+        })
+      )
+    );
+
+    // Regardless of if the trigger is not being used by the safety module at this point in time.
+    component.mockSetTriggerData(
+      triggerConfigUpdates_[0].trigger, Trigger({exists: false, payoutHandler: _randomAddress(), triggered: true})
+    );
+    assertFalse(
+      component.isValidUpdate(
+        UpdateConfigsCalldataParams({
+          reservePoolConfigs: reservePoolConfigs_,
+          undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+          triggerConfigUpdates: triggerConfigUpdates_,
+          delaysConfig: delayConfig_
+        })
+      )
+    );
   }
 
   function test_finalizeUpdateConfigsActive() external {
@@ -354,17 +514,27 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     reservePoolConfigs_[1] =
       ReservePoolConfig({asset: reservePool2.asset, rewardsPoolsWeight: uint16(MathConstants.ZOC) / 4});
     reservePoolConfigs_[2] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2);
+    TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](2);
+    triggerConfigUpdates_[0] = _generateValidTriggerConfig();
+    triggerConfigUpdates_[1] = _generateValidTriggerConfig();
 
     ConfigUpdateMetadata memory lastConfigUpdate_ =
-      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
     component.mockSetLastConfigUpdate(lastConfigUpdate_);
 
     // Ensure config updates can be applied
     vm.warp(lastConfigUpdate_.configUpdateTime);
 
     _expectEmit();
-    emit ConfigUpdatesFinalized(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
-    component.finalizeUpdateConfigs(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+    emit ConfigUpdatesFinalized(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
+    component.finalizeUpdateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delayConfig_
+      })
+    );
 
     // Delay config updates applied.
     Delays memory delays_ = component.getDelays();
@@ -387,6 +557,14 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     _assertUndrippedRewardPoolUpdatesApplied(undrippedRewardPools_[1], undrippedRewardPoolConfigs_[1]);
     _assertUndrippedRewardPoolUpdatesApplied(undrippedRewardPools_[2], undrippedRewardPoolConfigs_[2]);
 
+    // Trigger config updates applied.
+    Trigger memory trigger_ = component.getTriggerData(triggerConfigUpdates_[0].trigger);
+    assertEq(trigger_.exists, triggerConfigUpdates_[0].exists);
+    assertEq(trigger_.payoutHandler, triggerConfigUpdates_[0].payoutHandler);
+    trigger_ = component.getTriggerData(triggerConfigUpdates_[1].trigger);
+    assertEq(trigger_.payoutHandler, triggerConfigUpdates_[1].payoutHandler);
+    assertEq(trigger_.exists, triggerConfigUpdates_[1].exists);
+
     // The lastConfigUpdate hash is reset to 0.
     ConfigUpdateMetadata memory result_ = component.getLastConfigUpdate();
     assertEq(result_.queuedConfigUpdateHash, bytes32(0));
@@ -396,6 +574,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     (
       ReservePoolConfig[] memory reservePoolConfigs_,
       UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_,
+      TriggerConfig[] memory triggerConfigUpdates_,
       Delays memory delayConfig_
     ) = _generateBasicConfigs();
 
@@ -404,7 +583,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     uint64 configUpdateTime_ = now_ + _randomUint32();
     uint64 configUpdateDeadline_ = configUpdateTime_ + _randomUint32();
     ConfigUpdateMetadata memory lastConfigUpdate_ = ConfigUpdateMetadata({
-      queuedConfigUpdateHash: keccak256(abi.encode(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_)),
+      queuedConfigUpdateHash: keccak256(
+        abi.encode(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_)
+        ),
       configUpdateTime: configUpdateTime_,
       configUpdateDeadline: configUpdateDeadline_
     });
@@ -413,13 +594,21 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     // Current timestamp is before configUpdateTime.
     vm.warp(bound(_randomUint256(), 0, configUpdateTime_));
     vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
-    component.finalizeUpdateConfigs(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+    component.finalizeUpdateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delayConfig_
+      })
+    );
   }
 
   function test_finalizeUpdateConfigs_RevertAfterConfigUpdateDeadline() external {
     (
       ReservePoolConfig[] memory reservePoolConfigs_,
       UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_,
+      TriggerConfig[] memory triggerConfigUpdates_,
       Delays memory delayConfig_
     ) = _generateBasicConfigs();
 
@@ -427,7 +616,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     uint64 configUpdateTime_ = now_ + _randomUint32();
     uint64 configUpdateDeadline_ = configUpdateTime_ + _randomUint32();
     ConfigUpdateMetadata memory lastConfigUpdate_ = ConfigUpdateMetadata({
-      queuedConfigUpdateHash: keccak256(abi.encode(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_)),
+      queuedConfigUpdateHash: keccak256(
+        abi.encode(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_)
+        ),
       configUpdateTime: configUpdateTime_,
       configUpdateDeadline: configUpdateDeadline_
     });
@@ -436,18 +627,26 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     // Current timestamp is after configUpdateDeadline.
     vm.warp(bound(_randomUint256(), configUpdateDeadline_ + 1, type(uint64).max));
     vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
-    component.finalizeUpdateConfigs(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+    component.finalizeUpdateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delayConfig_
+      })
+    );
   }
 
   function test_finalizeUpdateConfigs_RevertQueuedConfigUpdateSafetyModuleStateTriggered() external {
     (
       ReservePoolConfig[] memory reservePoolConfigs_,
       UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_,
+      TriggerConfig[] memory triggerConfigUpdates_,
       Delays memory delayConfig_
     ) = _generateBasicConfigs();
 
     ConfigUpdateMetadata memory lastConfigUpdate_ =
-      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
     component.mockSetLastConfigUpdate(lastConfigUpdate_);
 
     vm.warp(lastConfigUpdate_.configUpdateTime); // Ensure delay has passed and is within the grace period.
@@ -455,18 +654,26 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     // Set state to TRIGGERED.
     component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
     vm.expectRevert(ICommonErrors.InvalidState.selector);
-    component.finalizeUpdateConfigs(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+    component.finalizeUpdateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delayConfig_
+      })
+    );
   }
 
   function test_finalizeUpdateConfigs_RevertQueuedConfigUpdateHashReservePoolConfigMismatch() external {
     (
       ReservePoolConfig[] memory reservePoolConfigs_,
       UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_,
+      TriggerConfig[] memory triggerConfigUpdates_,
       Delays memory delayConfig_
     ) = _generateBasicConfigs();
 
     ConfigUpdateMetadata memory lastConfigUpdate_ =
-      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
     component.mockSetLastConfigUpdate(lastConfigUpdate_);
 
     vm.warp(lastConfigUpdate_.configUpdateTime); // Ensure delay has passed and is within the grace period.
@@ -474,18 +681,26 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     // finalizeUpdateConfigs is called with different reserve pool config.
     reservePoolConfigs_[0] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC));
     vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
-    component.finalizeUpdateConfigs(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+    component.finalizeUpdateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delayConfig_
+      })
+    );
   }
 
   function test_finalizeUpdateConfigs_RevertQueuedConfigUpdateHashRewardPoolConfigMismatch() external {
     (
       ReservePoolConfig[] memory reservePoolConfigs_,
       UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_,
+      TriggerConfig[] memory triggerConfigUpdates_,
       Delays memory delayConfig_
     ) = _generateBasicConfigs();
 
     ConfigUpdateMetadata memory lastConfigUpdate_ =
-      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
     component.mockSetLastConfigUpdate(lastConfigUpdate_);
 
     vm.warp(lastConfigUpdate_.configUpdateTime); // Ensure delay has passed and is within the grace period.
@@ -493,18 +708,26 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     // finalizeUpdateConfigs is called with different reward pool config.
     undrippedRewardPoolConfigs_[0] = _generateValidUndrippedRewardPoolConfig();
     vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
-    component.finalizeUpdateConfigs(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+    component.finalizeUpdateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delayConfig_
+      })
+    );
   }
 
   function test_finalizeUpdateConfigs_RevertQueuedConfigUpdateHashDelayConfigMismatch() external {
     (
       ReservePoolConfig[] memory reservePoolConfigs_,
       UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_,
+      TriggerConfig[] memory triggerConfigUpdates_,
       Delays memory delayConfig_
     ) = _generateBasicConfigs();
 
     ConfigUpdateMetadata memory lastConfigUpdate_ =
-      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
     component.mockSetLastConfigUpdate(lastConfigUpdate_);
 
     vm.warp(lastConfigUpdate_.configUpdateTime); // Ensure delay has passed and is within the grace period.
@@ -512,7 +735,14 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     // finalizeUpdateConfigs is called with different delay config.
     delayConfig_ = _generateValidDelays();
     vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
-    component.finalizeUpdateConfigs(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_);
+    component.finalizeUpdateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delayConfig_
+      })
+    );
   }
 
   function test_initializeReservePool() external {
@@ -562,6 +792,69 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     UndrippedRewardPool memory newRewardPool_ = component.getUndrippedRewardPool(1);
     _assertUndrippedRewardPoolUpdatesApplied(newRewardPool_, newRewardPoolConfig_);
   }
+
+  function test_finalizeUpdateConfigs_RevertQueuedConfigUpdateTriggerAlreadyTriggered() external {
+    (
+      ReservePoolConfig[] memory reservePoolConfigs_,
+      UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_,
+      TriggerConfig[] memory triggerConfigUpdates_,
+      Delays memory delayConfig_
+    ) = _generateBasicConfigs();
+
+    // The trigger is already triggered.
+    MockTrigger(address(triggerConfigUpdates_[0].trigger)).mockState(TriggerState.TRIGGERED);
+
+    ConfigUpdateMetadata memory lastConfigUpdate_ =
+      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
+    component.mockSetLastConfigUpdate(lastConfigUpdate_);
+
+    vm.warp(lastConfigUpdate_.configUpdateTime); // Ensure delay has passed and is within the grace period.
+
+    vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
+    component.finalizeUpdateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delayConfig_
+      })
+    );
+  }
+
+  function test_finalizeUpdateConfigs_RevertQueuedConfigUpdateTriggerAlreadyTriggeredSafetyModule() external {
+    (
+      ReservePoolConfig[] memory reservePoolConfigs_,
+      UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_,
+      TriggerConfig[] memory triggerConfigUpdates_,
+      Delays memory delayConfig_
+    ) = _generateBasicConfigs();
+
+    // The trigger has already successfully called `trigger()` on the safety module before.
+    component.mockSetTriggerData(
+      triggerConfigUpdates_[0].trigger,
+      Trigger({
+        exists: triggerConfigUpdates_[0].exists,
+        payoutHandler: triggerConfigUpdates_[0].payoutHandler,
+        triggered: true
+      })
+    );
+
+    ConfigUpdateMetadata memory lastConfigUpdate_ =
+      _getConfigUpdateMetadata(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
+    component.mockSetLastConfigUpdate(lastConfigUpdate_);
+
+    vm.warp(lastConfigUpdate_.configUpdateTime); // Ensure delay has passed and is within the grace period.
+
+    vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
+    component.finalizeUpdateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delayConfig_
+      })
+    );
+  }
 }
 
 contract TestableConfigurator is Configurator {
@@ -590,6 +883,10 @@ contract TestableConfigurator is Configurator {
 
   function mockAddUndrippedRewardPool(UndrippedRewardPool memory rewardPool_) external {
     undrippedRewardPools.push(rewardPool_);
+  }
+
+  function mockSetTriggerData(ITrigger trigger_, Trigger memory triggerData_) public {
+    triggerData[trigger_] = triggerData_;
   }
 
   // -------- Mock getters --------
@@ -625,6 +922,10 @@ contract TestableConfigurator is Configurator {
     return undrippedRewardPools;
   }
 
+  function getTriggerData(ITrigger trigger_) external view returns (Trigger memory) {
+    return triggerData[trigger_];
+  }
+
   // -------- Internal function wrappers for testing --------
   function isValidConfiguration(ReservePoolConfig[] calldata reservePoolConfigs_, Delays calldata delaysConfig_)
     external
@@ -634,14 +935,8 @@ contract TestableConfigurator is Configurator {
     return ConfiguratorLib.isValidConfiguration(reservePoolConfigs_, delaysConfig_);
   }
 
-  function isValidUpdate(
-    ReservePoolConfig[] calldata reservePoolConfigs_,
-    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
-    Delays calldata delaysConfig_
-  ) external view returns (bool) {
-    return ConfiguratorLib.isValidUpdate(
-      reservePools, undrippedRewardPools, reservePoolConfigs_, undrippedRewardPoolConfigs_, delaysConfig_
-    );
+  function isValidUpdate(UpdateConfigsCalldataParams calldata configUpdates_) external view returns (bool) {
+    return ConfiguratorLib.isValidUpdate(reservePools, undrippedRewardPools, triggerData, configUpdates_);
   }
 
   function initializeReservePool(ReservePoolConfig calldata reservePoolConfig_) external {
