@@ -74,7 +74,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       pendingUnstakesAmount: _randomUint256(),
       pendingWithdrawalsAmount: _randomUint256(),
       feeAmount: _randomUint256(),
-      rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2
+      rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2,
+      maxSlashPercentage: MathConstants.WAD
     });
     reservePool2 = ReservePool({
       asset: IERC20(_randomAddress()),
@@ -85,7 +86,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       pendingUnstakesAmount: _randomUint256(),
       pendingWithdrawalsAmount: _randomUint256(),
       feeAmount: _randomUint256(),
-      rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2
+      rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2,
+      maxSlashPercentage: MathConstants.WAD
     });
 
     rewardPool1 = UndrippedRewardPool({
@@ -105,7 +107,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
   function _generateValidReservePoolConfig(uint16 weight_) private returns (ReservePoolConfig memory) {
     return ReservePoolConfig({
       asset: IERC20(address(new MockERC20("Mock Asset", "cozyMock", 6))),
-      rewardsPoolsWeight: weight_
+      rewardsPoolsWeight: weight_,
+      maxSlashPercentage: MathConstants.WAD
     });
   }
 
@@ -311,9 +314,13 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     component.mockAddReservePool(reservePool2);
 
     // Two possible reserve pool configs.
-    ReservePoolConfig memory reservePoolConfig1_ =
-      ReservePoolConfig({asset: reservePool1.asset, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
-    ReservePoolConfig memory reservePoolConfig2_ = ReservePoolConfig({asset: reservePool2.asset, rewardsPoolsWeight: 0});
+    ReservePoolConfig memory reservePoolConfig1_ = ReservePoolConfig({
+      asset: reservePool1.asset,
+      rewardsPoolsWeight: uint16(MathConstants.ZOC),
+      maxSlashPercentage: MathConstants.WAD
+    });
+    ReservePoolConfig memory reservePoolConfig2_ =
+      ReservePoolConfig({asset: reservePool2.asset, rewardsPoolsWeight: 0, maxSlashPercentage: MathConstants.WAD});
 
     // Generate valid new configs for delays and reward pools.
     Delays memory delayConfig_ = _generateValidDelays();
@@ -341,7 +348,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     // Invalid update because `reservePool2.address != invalidReservePoolConfigs_[1].address`.
     invalidReservePoolConfigs_ = new ReservePoolConfig[](2);
     invalidReservePoolConfigs_[0] = reservePoolConfig1_;
-    invalidReservePoolConfigs_[1] = ReservePoolConfig({asset: IERC20(_randomAddress()), rewardsPoolsWeight: 0});
+    invalidReservePoolConfigs_[1] =
+      ReservePoolConfig({asset: IERC20(_randomAddress()), rewardsPoolsWeight: 0, maxSlashPercentage: MathConstants.WAD});
     assertFalse(
       component.isValidUpdate(
         UpdateConfigsCalldataParams({
@@ -509,10 +517,16 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       UndrippedRewardPoolConfig({asset: rewardPool2.asset, dripModel: IDripModel(_randomAddress())});
     undrippedRewardPoolConfigs_[2] = _generateValidUndrippedRewardPoolConfig();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](3);
-    reservePoolConfigs_[0] =
-      ReservePoolConfig({asset: reservePool1.asset, rewardsPoolsWeight: uint16(MathConstants.ZOC) / 4});
-    reservePoolConfigs_[1] =
-      ReservePoolConfig({asset: reservePool2.asset, rewardsPoolsWeight: uint16(MathConstants.ZOC) / 4});
+    reservePoolConfigs_[0] = ReservePoolConfig({
+      asset: reservePool1.asset,
+      rewardsPoolsWeight: uint16(MathConstants.ZOC) / 4,
+      maxSlashPercentage: MathConstants.WAD
+    });
+    reservePoolConfigs_[1] = ReservePoolConfig({
+      asset: reservePool2.asset,
+      rewardsPoolsWeight: uint16(MathConstants.ZOC) / 4,
+      maxSlashPercentage: MathConstants.WAD
+    });
     reservePoolConfigs_[2] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2);
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](2);
     triggerConfigUpdates_[0] = _generateValidTriggerConfig();

@@ -82,7 +82,8 @@ contract RewardsHandlerUnitTest is TestBase {
         pendingUnstakesAmount: 0,
         pendingWithdrawalsAmount: 0,
         feeAmount: 0,
-        rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16()
+        rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16(),
+        maxSlashPercentage: MathConstants.WAD
       });
       component.mockRegisterStkToken(i, stkToken_);
       component.mockAddReservePool(reservePool_);
@@ -127,7 +128,8 @@ contract RewardsHandlerUnitTest is TestBase {
       pendingUnstakesAmount: 0,
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
-      rewardsPoolsWeight: 0.1e4 // 10% weight
+      rewardsPoolsWeight: 0.1e4, // 10% weight
+      maxSlashPercentage: MathConstants.WAD
     });
     stkToken1_.mint(address(0), 0.1e18);
     component.mockAddReservePool(reservePool1_);
@@ -148,7 +150,8 @@ contract RewardsHandlerUnitTest is TestBase {
       pendingUnstakesAmount: 0,
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
-      rewardsPoolsWeight: 0.9e4 // 90% weight
+      rewardsPoolsWeight: 0.9e4, // 90% weight,
+      maxSlashPercentage: MathConstants.WAD
     });
     stkToken2_.mint(address(0), 10);
     component.mockAddReservePool(reservePool2_);

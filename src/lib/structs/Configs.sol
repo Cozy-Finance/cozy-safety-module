@@ -12,6 +12,7 @@ struct UndrippedRewardPoolConfig {
 }
 
 struct ReservePoolConfig {
+  uint256 maxSlashPercentage;
   IERC20 asset;
   uint16 rewardsPoolsWeight;
 }

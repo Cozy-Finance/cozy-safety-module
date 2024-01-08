@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Ownable} from "./Ownable.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
@@ -12,6 +13,7 @@ import {Trigger} from "./structs/Trigger.sol";
 import {ReservePool} from "./structs/Pools.sol";
 
 abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
+  using FixedPointMathLib for uint256;
   using SafeERC20 for IERC20;
 
   /// @notice Slashes the reserve pools, sends the assets to the receiver, and returns the safety module to the ACTIVE
@@ -32,10 +34,17 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
       Slash memory slash_ = slashes_[i];
       ReservePool storage reservePool_ = reservePools[slash_.reservePoolId];
       IERC20 reserveAsset_ = reservePool_.asset;
+
       uint256 slashAmountRemaining_ = slash_.amount;
+      uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
+      uint256 reservePoolStakeAmount_ = reservePool_.stakeAmount;
+      uint256 slashPercentage_ =
+        _computeSlashPercentage(slashAmountRemaining_, reservePoolDepositAmount_ + reservePoolStakeAmount_);
+      if (slashPercentage_ > reservePool_.maxSlashPercentage) {
+        revert ExceedsMaxSlashPercentage(slash_.reservePoolId, slashPercentage_);
+      }
 
       // 1. Slash deposited assets
-      uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
       _updateWithdrawalsAfterTrigger(slash_.reservePoolId, reservePoolDepositAmount_, slashAmountRemaining_);
       if (reservePoolDepositAmount_ <= slashAmountRemaining_) {
         slashAmountRemaining_ -= reservePoolDepositAmount_;
@@ -49,20 +58,22 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
 
       // 2. Slash staked assets
       if (slashAmountRemaining_ > 0) {
-        uint256 reservePoolStakeAmount_ = reservePool_.stakeAmount;
         _updateUnstakesAfterTrigger(slash_.reservePoolId, reservePoolStakeAmount_, slashAmountRemaining_);
-        if (reservePoolStakeAmount_ < slashAmountRemaining_) {
-          // The staked assets are insufficient to cover the remaining slash amount, so the reserve pool is insolvent
-          // wrt the slash amount specified.
-          revert InsufficientReserveAssets(slash_.reservePoolId);
-        } else {
-          reservePool_.stakeAmount -= slashAmountRemaining_;
-          assetPools[reserveAsset_].amount -= slashAmountRemaining_;
-        }
+        reservePool_.stakeAmount -= slashAmountRemaining_;
+        assetPools[reserveAsset_].amount -= slashAmountRemaining_;
       }
 
       // Transfer the slashed assets to the receiver.
       reserveAsset_.safeTransfer(receiver_, slash_.amount);
     }
+  }
+
+  function _computeSlashPercentage(uint256 slashAmount_, uint256 totalReservePoolAmount_)
+    internal
+    pure
+    returns (uint256)
+  {
+    // Round up, in favor of stakers and depositors.
+    return slashAmount_.divWadUp(totalReservePoolAmount_);
   }
 }

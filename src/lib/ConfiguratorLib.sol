@@ -204,10 +204,11 @@ library ConfiguratorLib {
         || delaysConfig_.configUpdateDelay <= delaysConfig_.withdrawDelay
     ) return false;
 
-    // Validate rewards pools weights.
+    // Validate rewards pools weights and max slash percentages.
     uint16 weightSum_ = 0;
     for (uint16 i = 0; i < reservePoolConfigs_.length; i++) {
       weightSum_ += reservePoolConfigs_[i].rewardsPoolsWeight;
+      if (reservePoolConfigs_[i].maxSlashPercentage > MathConstants.WAD) return false;
     }
     if (weightSum_ != MathConstants.ZOC) return false;
     return true;
@@ -303,7 +304,8 @@ library ConfiguratorLib {
         pendingUnstakesAmount: 0,
         pendingWithdrawalsAmount: 0,
         feeAmount: 0,
-        rewardsPoolsWeight: reservePoolConfig_.rewardsPoolsWeight
+        rewardsPoolsWeight: reservePoolConfig_.rewardsPoolsWeight,
+        maxSlashPercentage: reservePoolConfig_.maxSlashPercentage
       })
     );
     stkTokenToReservePoolIds_[stkToken_] = IdLookup({index: reservePoolId_, exists: true});

@@ -37,7 +37,8 @@ contract StakerUnitTest is TestBase {
       pendingUnstakesAmount: 0,
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
-      rewardsPoolsWeight: 1e4
+      rewardsPoolsWeight: 1e4,
+      maxSlashPercentage: MathConstants.WAD
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: 150e18});
     component.mockAddReservePool(initialReservePool_);

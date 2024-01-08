@@ -166,7 +166,8 @@ abstract contract ReedemerUnitTestBase is TestBase {
         feeAmount: 0,
         pendingUnstakesAmount: 0,
         pendingWithdrawalsAmount: 0,
-        rewardsPoolsWeight: 1e4
+        rewardsPoolsWeight: 1e4,
+        maxSlashPercentage: MathConstants.WAD
       })
     );
     component.mockAddRewardPool(

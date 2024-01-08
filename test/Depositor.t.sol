@@ -11,6 +11,7 @@ import {Depositor} from "../src/lib/Depositor.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {MathConstants} from "../src/lib/MathConstants.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -46,7 +47,8 @@ abstract contract DepositorUnitTest is TestBase {
       pendingUnstakesAmount: 0,
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
-      rewardsPoolsWeight: 1e4
+      rewardsPoolsWeight: 1e4,
+      maxSlashPercentage: MathConstants.WAD
     });
     UndrippedRewardPool memory initialUndrippedRewardPool_ = UndrippedRewardPool({
       asset: IERC20(address(mockAsset)),

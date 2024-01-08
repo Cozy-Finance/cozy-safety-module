@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Ownable} from "../src/lib/Ownable.sol";
 import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
@@ -15,6 +16,7 @@ import {ISlashHandlerErrors} from "../src/interfaces/ISlashHandlerErrors.sol";
 import {SlashHandler} from "../src/lib/SlashHandler.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
+import {MathConstants} from "../src/lib/MathConstants.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {Slash} from "../src/lib/structs/Slash.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
@@ -24,6 +26,8 @@ import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
 contract TriggerHandlerTest is TestBase {
+  using FixedPointMathLib for uint256;
+
   TestableSlashHandler component;
   address mockPayoutHandler;
 
@@ -51,7 +55,8 @@ contract TriggerHandlerTest is TestBase {
         pendingUnstakesAmount: _randomUint256(),
         pendingWithdrawalsAmount: _randomUint256(),
         feeAmount: _randomUint256(),
-        rewardsPoolsWeight: 1e4
+        rewardsPoolsWeight: 1e4,
+        maxSlashPercentage: MathConstants.WAD
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: stakeAmount_ + depositAmount_}));
@@ -131,7 +136,8 @@ contract TriggerHandlerTest is TestBase {
         pendingUnstakesAmount: _randomUint256(),
         pendingWithdrawalsAmount: _randomUint256(),
         feeAmount: _randomUint256(),
-        rewardsPoolsWeight: 0.25e4
+        rewardsPoolsWeight: 0.25e4,
+        maxSlashPercentage: MathConstants.WAD
       })
     );
     // Reserve pool 1.
@@ -145,7 +151,8 @@ contract TriggerHandlerTest is TestBase {
         pendingUnstakesAmount: _randomUint256(),
         pendingWithdrawalsAmount: _randomUint256(),
         feeAmount: _randomUint256(),
-        rewardsPoolsWeight: 0.25e4
+        rewardsPoolsWeight: 0.25e4,
+        maxSlashPercentage: MathConstants.WAD
       })
     );
     // Reserve pool 2.
@@ -159,7 +166,8 @@ contract TriggerHandlerTest is TestBase {
         pendingUnstakesAmount: _randomUint256(),
         pendingWithdrawalsAmount: _randomUint256(),
         feeAmount: _randomUint256(),
-        rewardsPoolsWeight: 0.5e4
+        rewardsPoolsWeight: 0.5e4,
+        maxSlashPercentage: MathConstants.WAD
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: (stakeAmount_ + depositAmount_) * 3}));
@@ -254,7 +262,8 @@ contract TriggerHandlerTest is TestBase {
         pendingUnstakesAmount: _randomUint256(),
         pendingWithdrawalsAmount: _randomUint256(),
         feeAmount: _randomUint256(),
-        rewardsPoolsWeight: 0.5e4
+        rewardsPoolsWeight: 0.5e4,
+        maxSlashPercentage: MathConstants.WAD
       })
     );
     component.mockAddReservePool(
@@ -267,18 +276,20 @@ contract TriggerHandlerTest is TestBase {
         pendingUnstakesAmount: _randomUint256(),
         pendingWithdrawalsAmount: _randomUint256(),
         feeAmount: _randomUint256(),
-        rewardsPoolsWeight: 0.5e4
+        rewardsPoolsWeight: 0.5e4,
+        maxSlashPercentage: MathConstants.WAD
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: (stakeAmount_ + depositAmount_) * 2}));
-    // Mint safety module undripped rewards.
+    // Mint safety module reserve assets.
     mockAsset.mint(address(component), (stakeAmount_ + depositAmount_) * 2);
 
     Slash[] memory slashes_ = new Slash[](2);
     slashes_[0] = Slash({reservePoolId: 0, amount: slashAmountA_});
     slashes_[1] = Slash({reservePoolId: 1, amount: slashAmountB_});
 
-    vm.expectRevert(abi.encodeWithSelector(ISlashHandlerErrors.InsufficientReserveAssets.selector, 1));
+    uint256 slashPercentage_ = uint256(slashAmountB_).divWadUp(stakeAmount_ + depositAmount_);
+    vm.expectRevert(abi.encodeWithSelector(ISlashHandlerErrors.ExceedsMaxSlashPercentage.selector, 1, slashPercentage_));
     vm.prank(mockPayoutHandler);
     component.slash(slashes_, receiver_);
   }
