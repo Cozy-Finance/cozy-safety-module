@@ -7,3 +7,6 @@
 [submodule "lib/solmate"]
 	path = lib/solmate
 	url = https://github.com/transmissions11/solmate
+[submodule "lib/cozy-safety-module-models"]
+	path = lib/cozy-safety-module-models
+	url = https://github.com/Cozy-Finance/cozy-safety-module-models

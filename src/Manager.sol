@@ -2,12 +2,11 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "./interfaces/IERC20.sol";
-import {UndrippedRewardPoolConfig} from "./lib/structs/Configs.sol";
 import {IDripModel} from "./interfaces/IDripModel.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
-import {UndrippedRewardPoolConfig, ReservePoolConfig} from "./lib/structs/Configs.sol";
+import {UndrippedRewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
 import {FeesConfig, DripModelLookup} from "./lib/structs/Manager.sol";
 import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
@@ -95,27 +94,23 @@ contract Manager is Governable, IManager {
   /// @notice Deploys a new Safety Module with the provided parameters.
   /// @param owner_ The owner of the safety module.
   /// @param pauser_ The pauser of the safety module.
-  /// @param reservePoolConfigs_ The array of reserve pool configs for the safety module.
-  /// @param undrippedRewardPoolConfigs_ The array of undripped reward pool configs for the safety module.
-  /// @param delaysConfig_ The delays config for the safety module.
+  /// @param configs_ The configuration for the safety module.
   /// @param salt_ Used to compute the resulting address of the set.
   function createSafetyModule(
     address owner_,
     address pauser_,
-    ReservePoolConfig[] calldata reservePoolConfigs_,
-    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
-    Delays calldata delaysConfig_,
+    UpdateConfigsCalldataParams calldata configs_,
     bytes32 salt_
   ) external returns (ISafetyModule safetyModule_) {
     _assertAddressNotZero(owner_);
     _assertAddressNotZero(pauser_);
 
-    if (!ConfiguratorLib.isValidConfiguration(reservePoolConfigs_, delaysConfig_)) revert InvalidConfiguration();
+    if (!ConfiguratorLib.isValidConfiguration(configs_.reservePoolConfigs, configs_.delaysConfig)) {
+      revert InvalidConfiguration();
+    }
 
     isSafetyModule[ISafetyModule(safetyModuleFactory.computeAddress(salt_))] = true;
-    safetyModule_ = safetyModuleFactory.deploySafetyModule(
-      owner_, pauser_, reservePoolConfigs_, undrippedRewardPoolConfigs_, delaysConfig_, salt_
-    );
+    safetyModule_ = safetyModuleFactory.deploySafetyModule(owner_, pauser_, configs_, salt_);
   }
 
   function getFeeDripModel(ISafetyModule safetyModule_) external view returns (IDripModel) {
