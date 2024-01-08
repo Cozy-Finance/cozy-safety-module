@@ -183,7 +183,10 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     returns (uint256)
   {
     if (deltaT_ == 0) return 0;
-    return _computeNextDripAmount(totalBaseAmount_, dripModel_.dripFactor(lastDripTime_, deltaT_));
+    uint256 dripFactor_ = dripModel_.dripFactor(lastDripTime_, deltaT_);
+    if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
+
+    return _computeNextDripAmount(totalBaseAmount_, dripFactor_);
   }
 
   function _computeNextDripAmount(uint256 totalBaseAmount_, uint256 dripFactor_)
