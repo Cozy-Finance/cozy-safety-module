@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import {Clones} from "openzeppelin-contracts/contracts/proxy/Clones.sol";
 import {UndrippedRewardPoolConfig, ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
+import {UpdateConfigsCalldataParams} from "./lib/structs/Configs.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
@@ -39,16 +40,12 @@ contract SafetyModuleFactory is ISafetyModuleFactory {
   /// @notice Creates a new Safety Module contract with the specified configuration.
   /// @param owner_ The owner of the safety module.
   /// @param pauser_ The pauser of the safety module.
-  /// @param reservePoolConfigs_ The array of reserve pool configs for the safety module.
-  /// @param undrippedRewardPoolConfigs_ The array of undripped reward pool configs for the safety module.
-  /// @param delaysConfig_ The delays config for the safety module.
+  /// @param configs_ The configuration for the safety module.
   /// @param baseSalt_ Used to compute the resulting address of the safety module.
   function deploySafetyModule(
     address owner_,
     address pauser_,
-    ReservePoolConfig[] calldata reservePoolConfigs_,
-    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
-    Delays calldata delaysConfig_,
+    UpdateConfigsCalldataParams calldata configs_,
     bytes32 baseSalt_
   ) public returns (ISafetyModule safetyModule_) {
     // It'd be harmless to let anyone deploy safety modules, but to make it more clear where the proper entry
@@ -56,7 +53,7 @@ contract SafetyModuleFactory is ISafetyModuleFactory {
     if (msg.sender != address(cozyManager)) revert Unauthorized();
 
     safetyModule_ = ISafetyModule(address(safetyModuleLogic).cloneDeterministic(salt(baseSalt_)));
-    safetyModule_.initialize(owner_, pauser_, reservePoolConfigs_, undrippedRewardPoolConfigs_, delaysConfig_);
+    safetyModule_.initialize(owner_, pauser_, configs_);
     emit SafetyModuleDeployed(safetyModule_);
   }
 

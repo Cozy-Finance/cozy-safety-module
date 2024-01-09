@@ -9,6 +9,7 @@ remappings = [
   "@openzeppelin/=lib/openzeppelin-contracts",
   "openzeppelin-contracts/contracts=lib/openzeppelin-contracts/contracts/",
   "solmate/=lib/solmate/src/",
+  "cozy-safety-module-models/=lib/cozy-safety-module-models/src"
 ]
 fs_permissions = [{ access = "read", path = "./script/input"}]
 
