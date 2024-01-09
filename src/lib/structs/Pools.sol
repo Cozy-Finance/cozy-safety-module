@@ -18,6 +18,11 @@ struct ReservePool {
   uint256 pendingUnstakesAmount;
   uint256 pendingWithdrawalsAmount;
   uint256 feeAmount;
+  /// @dev The max percentage of the stake amount that can be slashed in a SINGLE slash as a WAD. If multiple slashes
+  /// occur, they compound, and the final stake amount can be less than (1 - maxSlashPercentage)% following all the
+  /// slashes. The max slash percentage is only a guarantee for stakers; depositors are always at risk to be fully
+  /// slashed.
+  uint256 maxSlashPercentage;
   IERC20 asset;
   IReceiptToken stkToken;
   IReceiptToken depositToken;

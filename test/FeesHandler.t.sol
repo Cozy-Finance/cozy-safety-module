@@ -63,7 +63,8 @@ contract FeesHandlerUnitTest is TestBase {
         pendingUnstakesAmount: pendingUnstakesAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: 0,
-        rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16()
+        rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16(),
+        maxSlashPercentage: MathConstants.WAD
       });
       component.mockAddReservePool(reservePool_);
       component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: stakeAmount_ + depositAmount_}));
@@ -89,7 +90,8 @@ contract FeesHandlerUnitTest is TestBase {
       pendingUnstakesAmount: 100e6,
       pendingWithdrawalsAmount: 25e6,
       feeAmount: 0,
-      rewardsPoolsWeight: 0.1e4 // 10% weight
+      rewardsPoolsWeight: 0.1e4, // 10% weight,
+      maxSlashPercentage: MathConstants.WAD
     });
     component.mockAddReservePool(reservePool1_);
     component.mockAddAssetPool(IERC20(address(mockAsset1_)), AssetPool({amount: 150e6}));
@@ -105,7 +107,8 @@ contract FeesHandlerUnitTest is TestBase {
       pendingUnstakesAmount: 10e6,
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
-      rewardsPoolsWeight: 0.9e4 // 90% weight
+      rewardsPoolsWeight: 0.9e4, // 90% weight,
+      maxSlashPercentage: MathConstants.WAD
     });
     component.mockAddReservePool(reservePool2_);
     component.mockAddAssetPool(IERC20(address(mockAsset2_)), AssetPool({amount: 220e6}));
@@ -169,6 +172,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
       expectedPool1_.pendingUnstakesAmount = concreteReservePools_[0].pendingUnstakesAmount;
       expectedPool1_.pendingWithdrawalsAmount = concreteReservePools_[0].pendingWithdrawalsAmount;
       expectedPool1_.rewardsPoolsWeight = concreteReservePools_[0].rewardsPoolsWeight;
+      expectedPool1_.maxSlashPercentage = concreteReservePools_[0].maxSlashPercentage;
       expectedReservePools_[0] = expectedPool1_;
     }
     {
@@ -184,6 +188,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
       expectedPool2_.pendingUnstakesAmount = concreteReservePools_[1].pendingUnstakesAmount;
       expectedPool2_.pendingWithdrawalsAmount = concreteReservePools_[1].pendingWithdrawalsAmount;
       expectedPool2_.rewardsPoolsWeight = concreteReservePools_[1].rewardsPoolsWeight;
+      expectedPool2_.maxSlashPercentage = concreteReservePools_[1].maxSlashPercentage;
       expectedReservePools_[1] = expectedPool2_;
     }
 
@@ -365,7 +370,8 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
       pendingUnstakesAmount: 9000,
       pendingWithdrawalsAmount: 10_000,
       feeAmount: 50,
-      rewardsPoolsWeight: 0
+      rewardsPoolsWeight: 0,
+      maxSlashPercentage: MathConstants.WAD
     });
     component.mockAddReservePool(reservePool_);
     component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: 10_000 + 10_000 + 50}));

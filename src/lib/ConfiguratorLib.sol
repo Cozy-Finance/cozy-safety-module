@@ -204,10 +204,11 @@ library ConfiguratorLib {
         || delaysConfig_.configUpdateDelay <= delaysConfig_.withdrawDelay
     ) return false;
 
-    // Validate rewards pools weights.
+    // Validate rewards pools weights and max slash percentages.
     uint16 weightSum_ = 0;
     for (uint16 i = 0; i < reservePoolConfigs_.length; i++) {
       weightSum_ += reservePoolConfigs_[i].rewardsPoolsWeight;
+      if (reservePoolConfigs_[i].maxSlashPercentage > MathConstants.WAD) return false;
     }
     if (weightSum_ != MathConstants.ZOC) return false;
     return true;
@@ -226,7 +227,9 @@ library ConfiguratorLib {
     // Update existing reserve pool weights. No need to update the reserve pool asset since it cannot change.
     uint256 numExistingReservePools_ = reservePools_.length;
     for (uint256 i = 0; i < numExistingReservePools_; i++) {
-      reservePools_[i].rewardsPoolsWeight = configUpdates_.reservePoolConfigs[i].rewardsPoolsWeight;
+      ReservePool storage reservePool_ = reservePools_[i];
+      reservePool_.rewardsPoolsWeight = configUpdates_.reservePoolConfigs[i].rewardsPoolsWeight;
+      reservePool_.maxSlashPercentage = configUpdates_.reservePoolConfigs[i].maxSlashPercentage;
     }
 
     // Initialize new reserve pools.
@@ -303,7 +306,8 @@ library ConfiguratorLib {
         pendingUnstakesAmount: 0,
         pendingWithdrawalsAmount: 0,
         feeAmount: 0,
-        rewardsPoolsWeight: reservePoolConfig_.rewardsPoolsWeight
+        rewardsPoolsWeight: reservePoolConfig_.rewardsPoolsWeight,
+        maxSlashPercentage: reservePoolConfig_.maxSlashPercentage
       })
     );
     stkTokenToReservePoolIds_[stkToken_] = IdLookup({index: reservePoolId_, exists: true});
