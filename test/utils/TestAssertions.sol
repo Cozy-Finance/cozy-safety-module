@@ -35,6 +35,7 @@ abstract contract TestAssertions is Test {
     );
     assertEq(actual_.feeAmount, expected_.feeAmount, "ReservePool.feeAmount");
     assertEq(actual_.rewardsPoolsWeight, expected_.rewardsPoolsWeight, "ReservePool.rewardsPoolsWeight");
+    assertEq(actual_.maxSlashPercentage, expected_.maxSlashPercentage, "ReservePool.maxSlashPercentage");
   }
 
   function assertEq(UndrippedRewardPool[] memory actual_, UndrippedRewardPool[] memory expected_) internal {

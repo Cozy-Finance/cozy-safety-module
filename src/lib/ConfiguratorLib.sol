@@ -227,7 +227,9 @@ library ConfiguratorLib {
     // Update existing reserve pool weights. No need to update the reserve pool asset since it cannot change.
     uint256 numExistingReservePools_ = reservePools_.length;
     for (uint256 i = 0; i < numExistingReservePools_; i++) {
-      reservePools_[i].rewardsPoolsWeight = configUpdates_.reservePoolConfigs[i].rewardsPoolsWeight;
+      ReservePool storage reservePool_ = reservePools_[i];
+      reservePool_.rewardsPoolsWeight = configUpdates_.reservePoolConfigs[i].rewardsPoolsWeight;
+      reservePool_.maxSlashPercentage = configUpdates_.reservePoolConfigs[i].maxSlashPercentage;
     }
 
     // Initialize new reserve pools.

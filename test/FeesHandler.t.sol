@@ -172,6 +172,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
       expectedPool1_.pendingUnstakesAmount = concreteReservePools_[0].pendingUnstakesAmount;
       expectedPool1_.pendingWithdrawalsAmount = concreteReservePools_[0].pendingWithdrawalsAmount;
       expectedPool1_.rewardsPoolsWeight = concreteReservePools_[0].rewardsPoolsWeight;
+      expectedPool1_.maxSlashPercentage = concreteReservePools_[0].maxSlashPercentage;
       expectedReservePools_[0] = expectedPool1_;
     }
     {
@@ -187,6 +188,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
       expectedPool2_.pendingUnstakesAmount = concreteReservePools_[1].pendingUnstakesAmount;
       expectedPool2_.pendingWithdrawalsAmount = concreteReservePools_[1].pendingWithdrawalsAmount;
       expectedPool2_.rewardsPoolsWeight = concreteReservePools_[1].rewardsPoolsWeight;
+      expectedPool2_.maxSlashPercentage = concreteReservePools_[1].maxSlashPercentage;
       expectedReservePools_[1] = expectedPool2_;
     }
 
