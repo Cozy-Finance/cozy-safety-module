@@ -249,7 +249,7 @@ contract TriggerHandlerTest is TestBase {
     uint128 stakeAmount_ = 100e6;
     uint128 depositAmount_ = 200e6;
     uint128 slashAmountA_ = 250e6;
-    uint128 slashAmountB_ = 301e6;
+    uint128 slashAmountB_ = 251e6;
 
     address receiver_ = _randomAddress();
     component.mockAddReservePool(
@@ -263,7 +263,7 @@ contract TriggerHandlerTest is TestBase {
         pendingWithdrawalsAmount: _randomUint256(),
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4,
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: 0.5e18
       })
     );
     component.mockAddReservePool(
@@ -277,7 +277,7 @@ contract TriggerHandlerTest is TestBase {
         pendingWithdrawalsAmount: _randomUint256(),
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4,
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: 0.49e18
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: (stakeAmount_ + depositAmount_) * 2}));
