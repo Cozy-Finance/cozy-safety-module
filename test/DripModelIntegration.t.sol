@@ -21,6 +21,7 @@ import {MockTrigger} from "./utils/MockTrigger.sol";
 
 abstract contract DripModelIntegrationTestSetup is MockDeployProtocol {
   uint256 internal constant ONE_YEAR = 365.25 days;
+  uint256 internal constant DEFAULT_DRIP_RATE = 9_116_094_774; // 25% annually as a WAD
 
   SafetyModule safetyModule;
   address self = address(this);
@@ -35,19 +36,12 @@ abstract contract DripModelIntegrationTestSetup is MockDeployProtocol {
     rewardAsset = IERC20(address(new MockERC20("MockReward", "MOCK", 18)));
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] = ReservePoolConfig({asset: reserveAsset, rewardsPoolsWeight: 10_000});
+    reservePoolConfigs_[0] = ReservePoolConfig({asset: reserveAsset, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
 
     UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
-    // Let's set the rewards model drip rate to 25% annually.
-    // r = 9116094774 as a WAD
-    // At this rate, the dripFactor is:
-    //  - 0.13397459686 at 0.5 years
-    //  - 0.06939514124 at 0.25 years
-    //  - 0.02835834225 at 0.1 years
-    //  - 0.0142811467 at 0.05 years
     undrippedRewardPoolConfigs_[0] = UndrippedRewardPoolConfig({
       asset: rewardAsset,
-      dripModel: IDripModel(address(new DripModelExponential(9_116_094_774)))
+      dripModel: IDripModel(address(new DripModelExponential(DEFAULT_DRIP_RATE)))
     });
 
     Delays memory delaysConfig_ =
@@ -95,122 +89,146 @@ abstract contract DripModelIntegrationTestSetup is MockDeployProtocol {
 }
 
 contract RewardsDripModelIntegrationTest is DripModelIntegrationTestSetup {
+  uint256 internal constant REWARD_POOL_AMOUNT = 1000;
+
   function setUp() public virtual override {
     super.setUp();
-    depositRewards(safetyModule, 1000, _randomAddress());
+    depositRewards(safetyModule, REWARD_POOL_AMOUNT, _randomAddress());
     stake(safetyModule, 99, alice);
   }
 
-  function test_skipOneYear() public {
-    vm.warp(ONE_YEAR);
-    address receiver_ = _randomAddress();
-
-    vm.prank(alice);
-    safetyModule.claimRewards(0, receiver_);
-    // 1000 * dripFactor(1 year) ~= 1000 * 0.25 ~= 248 (up to rounding down in favor the protocol)
-    assertEq(rewardAsset.balanceOf(receiver_), 248);
+  function _setRewardsDripModel(uint256 rate_) internal {
+    DripModelExponential rewardsDripModel_ = new DripModelExponential(rate_);
+    (,, IDripModel currentRewardsDripModel_,) = safetyModule.undrippedRewardPools(0);
+    vm.etch(address(currentRewardsDripModel_), address(rewardsDripModel_).code);
   }
 
-  function test_skipOneHalfYear() public {
-    vm.warp(ONE_YEAR / 2);
+  function _assertRewardDripAmountAndReset(uint256 skipTime_, uint256 expectedClaimedRewards_) internal {
+    skip(skipTime_);
     address receiver_ = _randomAddress();
 
     vm.prank(alice);
     safetyModule.claimRewards(0, receiver_);
-    // 1000 * dripFactor(0.5 years) ~= 1000 * 0.13397459686 ~= 132 (up to rounding down in favor the protocol)
-    assertEq(rewardAsset.balanceOf(receiver_), 132);
+    assertEq(rewardAsset.balanceOf(receiver_), expectedClaimedRewards_);
+
+    // Reset reward pool.
+    (uint256 currentAmount_,,,) = safetyModule.undrippedRewardPools(0);
+    depositRewards(safetyModule, REWARD_POOL_AMOUNT - currentAmount_, _randomAddress());
   }
 
-  function test_skipOneFourthYear() public {
-    vm.warp(ONE_YEAR / 4);
-    address receiver_ = _randomAddress();
-
-    vm.prank(alice);
-    safetyModule.claimRewards(0, receiver_);
-    // 1000 * dripFactor(0.25 years) ~= 1000 * 0.06939514124 ~= 68 (up to rounding down in favor the protocol)
-    assertEq(rewardAsset.balanceOf(receiver_), 68);
+  function _testSeveralRewardsDrips(uint256 rate_, uint256[] memory expectedClaimedRewards_) internal {
+    _setRewardsDripModel(rate_);
+    _assertRewardDripAmountAndReset(ONE_YEAR, expectedClaimedRewards_[0]);
+    _assertRewardDripAmountAndReset(ONE_YEAR / 2, expectedClaimedRewards_[1]);
+    _assertRewardDripAmountAndReset(ONE_YEAR / 4, expectedClaimedRewards_[2]);
+    _assertRewardDripAmountAndReset(ONE_YEAR / 10, expectedClaimedRewards_[3]);
+    _assertRewardDripAmountAndReset(ONE_YEAR / 20, expectedClaimedRewards_[4]);
+    _assertRewardDripAmountAndReset(0, expectedClaimedRewards_[5]);
   }
 
-  function test_skipOneTenthYear() public {
-    vm.warp(ONE_YEAR / 10);
-    address receiver_ = _randomAddress();
-
-    vm.prank(alice);
-    safetyModule.claimRewards(0, receiver_);
-    // 1000 * dripFactor(0.1 years) ~= 1000 * 0.02835834225 ~= 27 (up to rounding down in favor the protocol)
-    assertEq(rewardAsset.balanceOf(receiver_), 27);
+  function test_RewardsDrip50Percent() public {
+    uint256[] memory expectedClaimedRewards_ = new uint256[](6);
+    expectedClaimedRewards_[0] = 249; // 1000 * dripFactor(1 year) ~= 1000 * 0.25 ~= 249 (up to rounding down in favor
+      // the protocol)
+    expectedClaimedRewards_[1] = 132; // 1000 * dripFactor(0.5 years) ~= 1000 * 0.13397459686 ~= 132
+    expectedClaimedRewards_[2] = 68; // 1000 * dripFactor(0.25 years) ~= 1000 * 0.06939514124 ~= 68
+    expectedClaimedRewards_[3] = 27; // 1000 * dripFactor(0.1 years) ~= 1000 * 0.02835834225 ~= 27
+    expectedClaimedRewards_[4] = 13; // 1000 * dripFactor(0.05 years) ~= 1000 * 0.0142811467 ~= 13
+    expectedClaimedRewards_[5] = 0; // 1000 * dripFactor(0) ~= 1000 * 0 ~= 0
+    _testSeveralRewardsDrips(DEFAULT_DRIP_RATE, expectedClaimedRewards_);
   }
 
-  function test_skipOneTwentiethYear() public {
-    vm.warp(ONE_YEAR / 20);
-    address receiver_ = _randomAddress();
+  function test_RewardsDripZeroPercent() public {
+    uint256[] memory expectedClaimedRewards_ = new uint256[](6);
+    expectedClaimedRewards_[0] = 0; // 1000 * dripFactor(1 year) = 1000 * 0 = 0
+    expectedClaimedRewards_[1] = 0; // 1000 * dripFactor(0.5 years) = 1000 * 0 = 0
+    expectedClaimedRewards_[2] = 0; // 1000 * dripFactor(0.25 years) = 1000 * 0 = 0
+    expectedClaimedRewards_[3] = 0; // 1000 * dripFactor(0.1 years) = 1000 * 0 = 0
+    expectedClaimedRewards_[4] = 0; // 1000 * dripFactor(0.05 years) = 1000 * 0 = 0
+    expectedClaimedRewards_[5] = 0; // 1000 * dripFactor(0) ~= 1000 * 0 ~= 0
+    _testSeveralRewardsDrips(0, expectedClaimedRewards_);
+  }
 
-    vm.prank(alice);
-    safetyModule.claimRewards(0, receiver_);
-    // 1000 * dripFactor(0.05 years) ~= 1000 * 0.0142811467 ~= 13 (up to rounding down in favor the protocol)
-    assertEq(rewardAsset.balanceOf(receiver_), 13);
+  function test_RewardsDrip100Percent() public {
+    uint256[] memory expectedClaimedRewards_ = new uint256[](6);
+    expectedClaimedRewards_[0] = 999; // 1000 * dripFactor(1 year) = 1000 * 1 ~= 999 (up to rounding down in favor
+      // the protocol)
+    expectedClaimedRewards_[1] = 999; // 1000 * dripFactor(0.5 years) = 1000 * 1 ~= 999
+    expectedClaimedRewards_[2] = 999; // 1000 * dripFactor(0.25 years) = 1000 * 1 ~= 999
+    expectedClaimedRewards_[3] = 999; // 1000 * dripFactor(0.1 years) = 1000 * 1 ~= 999
+    expectedClaimedRewards_[4] = 999; // 1000 * dripFactor(0.05 years) = 1000 * 1 ~= 999
+    expectedClaimedRewards_[5] = 0; // 1000 * dripFactor(0) ~= 1000 * 0 ~= 0
+    _testSeveralRewardsDrips(MathConstants.WAD, expectedClaimedRewards_);
   }
 }
 
 contract FeesDripModelIntegration is DripModelIntegrationTestSetup {
+  uint256 internal constant RESERVE_POOL_AMOUNT = 1000;
+
   function setUp() public virtual override {
     super.setUp();
+    stake(safetyModule, RESERVE_POOL_AMOUNT, _randomAddress());
+  }
 
-    // Set the fee drip model to a constant drip rate of 25% annually.
-    DripModelExponential feeDripModel_ = new DripModelExponential(9_116_094_774);
+  function _setOverrideFeeDripModel(uint256 rate_) internal {
+    DripModelExponential feeDripModel_ = new DripModelExponential(rate_);
     vm.prank(address(owner));
     manager.updateOverrideFeeDripModel(ISafetyModule(address(safetyModule)), IDripModel(address(feeDripModel_)));
-
-    stake(safetyModule, 1000, alice);
   }
 
-  function test_skipOneYear() public {
-    vm.warp(ONE_YEAR);
+  function _assertFeeDripAmountAndReset(uint256 skipTime_, uint256 expectedClaimedFees_) internal {
+    skip(skipTime_);
     address receiver_ = _randomAddress();
 
     vm.prank(address(manager));
     safetyModule.claimFees(receiver_);
-    // 1000 * dripFactor(1 year) ~= 1000 * 0.25 ~= 249 (up to rounding down in favor the protocol)
-    assertEq(reserveAsset.balanceOf(receiver_), 249);
+    assertEq(reserveAsset.balanceOf(receiver_), expectedClaimedFees_);
+
+    // Reset reserve pool.
+    (uint256 currentAmount_,,,,,,,,) = safetyModule.reservePools(0);
+    stake(safetyModule, RESERVE_POOL_AMOUNT - currentAmount_, _randomAddress());
   }
 
-  function test_skipOneHalfYear() public {
-    vm.warp(ONE_YEAR / 2);
-    address receiver_ = _randomAddress();
-
-    vm.prank(address(manager));
-    safetyModule.claimFees(receiver_);
-    // 1000 * dripFactor(0.5 years) ~= 1000 * 0.13397459686 ~= 133 (up to rounding down in favor the protocol)
-    assertEq(reserveAsset.balanceOf(receiver_), 133);
+  function _testSeveralRewardsDrips(uint256 rate_, uint256[] memory expectedClaimedFees_) internal {
+    _setOverrideFeeDripModel(rate_);
+    _assertFeeDripAmountAndReset(ONE_YEAR, expectedClaimedFees_[0]);
+    _assertFeeDripAmountAndReset(ONE_YEAR / 2, expectedClaimedFees_[1]);
+    _assertFeeDripAmountAndReset(ONE_YEAR / 4, expectedClaimedFees_[2]);
+    _assertFeeDripAmountAndReset(ONE_YEAR / 10, expectedClaimedFees_[3]);
+    _assertFeeDripAmountAndReset(ONE_YEAR / 20, expectedClaimedFees_[4]);
+    _assertFeeDripAmountAndReset(0, expectedClaimedFees_[5]);
   }
 
-  function test_skipOneFourthYear() public {
-    vm.warp(ONE_YEAR / 4);
-    address receiver_ = _randomAddress();
-
-    vm.prank(address(manager));
-    safetyModule.claimFees(receiver_);
-    // 1000 * dripFactor(0.25 years) ~= 1000 * 0.06939514124 ~= 69 (up to rounding down in favor the protocol)
-    assertEq(reserveAsset.balanceOf(receiver_), 69);
+  function test_FeesDrip50Percent() public {
+    uint256[] memory expectedClaimedRewards_ = new uint256[](6);
+    expectedClaimedRewards_[0] = 250; // 1000 * dripFactor(1 year) ~= 1000 * 0.25 ~= 250
+    expectedClaimedRewards_[1] = 133; // 1000 * dripFactor(0.5 years) ~= 1000 * 0.13397459686 ~= 133
+    expectedClaimedRewards_[2] = 69; // 1000 * dripFactor(0.25 years) ~= 1000 * 0.06939514124 ~= 69
+    expectedClaimedRewards_[3] = 28; // 1000 * dripFactor(0.1 years) ~= 1000 * 0.02835834225 ~= 28
+    expectedClaimedRewards_[4] = 14; // 1000 * dripFactor(0.05 years) ~= 1000 * 0.0142811467 ~= 14
+    expectedClaimedRewards_[5] = 0; // 1000 * dripFactor(0) ~= 1000 * 0 ~= 0
+    _testSeveralRewardsDrips(DEFAULT_DRIP_RATE, expectedClaimedRewards_);
   }
 
-  function test_skipOneTenthYear() public {
-    vm.warp(ONE_YEAR / 10);
-    address receiver_ = _randomAddress();
-
-    vm.prank(address(manager));
-    safetyModule.claimFees(receiver_);
-    // 1000 * dripFactor(0.1 years) ~= 1000 * 0.02835834225 ~= 28 (up to rounding down in favor the protocol)
-    assertEq(reserveAsset.balanceOf(receiver_), 28);
+  function test_FeesDripZeroPercent() public {
+    uint256[] memory expectedClaimedRewards_ = new uint256[](6);
+    expectedClaimedRewards_[0] = 0; // 1000 * dripFactor(1 year) = 1000 * 0 = 0
+    expectedClaimedRewards_[1] = 0; // 1000 * dripFactor(0.5 years) = 1000 * 0 = 0
+    expectedClaimedRewards_[2] = 0; // 1000 * dripFactor(0.25 years) = 1000 * 0 = 0
+    expectedClaimedRewards_[3] = 0; // 1000 * dripFactor(0.1 years) = 1000 * 0 = 0
+    expectedClaimedRewards_[4] = 0; // 1000 * dripFactor(0.05 years) = 1000 * 0 = 0
+    expectedClaimedRewards_[5] = 0; // 1000 * dripFactor(0) ~= 1000 * 0 ~= 0
+    _testSeveralRewardsDrips(0, expectedClaimedRewards_);
   }
 
-  function test_skipOneTwentiethYear() public {
-    vm.warp(ONE_YEAR / 20);
-    address receiver_ = _randomAddress();
-
-    vm.prank(address(manager));
-    safetyModule.claimFees(receiver_);
-    // 1000 * dripFactor(0.05 years) ~= 1000 * 0.0142811467 ~= 14 (up to rounding down in favor the protocol)
-    assertEq(reserveAsset.balanceOf(receiver_), 14);
+  function test_FeesDrip100Percent() public {
+    uint256[] memory expectedClaimedRewards_ = new uint256[](6);
+    expectedClaimedRewards_[0] = 1000; // 1000 * dripFactor(1 year) = 1000 * 1 = 1000
+    expectedClaimedRewards_[1] = 1000; // 1000 * dripFactor(0.5 years) = 1000 * 1 = 1000
+    expectedClaimedRewards_[2] = 1000; // 1000 * dripFactor(0.25 years) = 1000 * 1 = 1000
+    expectedClaimedRewards_[3] = 1000; // 1000 * dripFactor(0.1 years) = 1000 * 1 = 1000
+    expectedClaimedRewards_[4] = 1000; // 1000 * dripFactor(0.05 years) = 1000 * 1 = 1000
+    expectedClaimedRewards_[5] = 0; // 1000 * dripFactor(0) = 1000 * 0 = 0
+    _testSeveralRewardsDrips(MathConstants.WAD, expectedClaimedRewards_);
   }
 }
