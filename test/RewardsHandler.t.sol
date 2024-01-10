@@ -636,28 +636,41 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
   }
 
   function test_claimRewardsWithNewRewardAssets() public {
-    _setUpConcrete();
+    _test_claimRewardsWithNewRewardAssets(DEFAULT_NUM_REWARD_ASSETS);
+  }
+
+  function test_claimRewardsWithZeroInitialRewardAssets() public {
+    _test_claimRewardsWithNewRewardAssets(0);
+  }
+
+  function _test_claimRewardsWithNewRewardAssets(uint256 numRewardsPools_) public {
+    _setUpReservePools(DEFAULT_NUM_RESERVE_POOLS);
+    _setUpUndrippedRewardPools(numRewardsPools_);
+    _setUpClaimableRewardIndices(DEFAULT_NUM_RESERVE_POOLS, numRewardsPools_);
+
     (address user_, uint16 reservePoolId_, address receiver_) = _getUserClaimRewardsFixture();
 
     // Add new reward asset pool.
     MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
-    uint256 amount_ = 9000;
-    UndrippedRewardPool memory rewardPool_ = UndrippedRewardPool({
-      asset: IERC20(address(mockAsset_)),
-      depositToken: IReceiptToken(address(0)),
-      dripModel: IDripModel(mockRewardsDripModel),
-      amount: amount_
-    });
-    component.mockAddUndrippedRewardPool(rewardPool_);
-    mockAsset_.mint(address(component), amount_);
-    component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: amount_}));
+    {
+      uint256 amount_ = 9000;
+      UndrippedRewardPool memory rewardPool_ = UndrippedRewardPool({
+        asset: IERC20(address(mockAsset_)),
+        depositToken: IReceiptToken(address(0)),
+        dripModel: IDripModel(mockRewardsDripModel),
+        amount: amount_
+      });
+      component.mockAddUndrippedRewardPool(rewardPool_);
+      mockAsset_.mint(address(component), amount_);
+      component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: amount_}));
+    }
 
     ReservePool memory reservePool_ = component.getReservePool(reservePoolId_);
     uint256 userStkTokenBalance_ = reservePool_.stkToken.balanceOf(user_);
 
-    vm.startPrank(user_);
+    skip(100);
+    vm.prank(user_);
     component.claimRewards(reservePoolId_, receiver_);
-    vm.stopPrank();
 
     // Make sure receiver received rewards from new reward asset pool.
     uint256 userShare_ = userStkTokenBalance_.divWadDown(reservePool_.stkToken.totalSupply());
@@ -669,8 +682,11 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
 
     // Make sure user rewards data reflects new reward asset pool.
     UserRewardsData[] memory userRewardsData_ = component.getUserRewards(reservePoolId_, user_);
-    assertEq(userRewardsData_[3].accruedRewards, 0);
-    assertEq(userRewardsData_[3].indexSnapshot, component.getClaimableRewardIndex(reservePoolId_, 3));
+    assertEq(userRewardsData_[numRewardsPools_].accruedRewards, 0);
+    assertEq(
+      userRewardsData_[numRewardsPools_].indexSnapshot,
+      component.getClaimableRewardIndex(reservePoolId_, uint16(numRewardsPools_))
+    );
   }
 
   function test_claimRewardsTwice() public {
