@@ -13,13 +13,14 @@ library SafetyModuleCalculationsLib {
 
   /// @notice The `tokenAmount_` that the safety module would exchange for `assetAmount_` of receipt token provided.
   /// @dev See the ERC-4626 spec for more info.
-  function convertToReceiptTokenAmount(uint256 assetAmount_, uint256 tokenSupply_, uint256 poolAmount_)
+  function convertToReceiptTokenAmount(uint256 assetAmount_, uint256 receiptTokenSupply_, uint256 poolAmount_)
     internal
     pure
     returns (uint256 receiptTokenAmount_)
   {
-    receiptTokenAmount_ =
-      tokenSupply_ == 0 ? assetAmount_ : assetAmount_.mulDivDown(tokenSupply_, _poolAmountWithFloor(poolAmount_));
+    receiptTokenAmount_ = receiptTokenSupply_ == 0
+      ? assetAmount_
+      : assetAmount_.mulDivDown(receiptTokenSupply_, _poolAmountWithFloor(poolAmount_));
   }
 
   /// @notice The `assetAmount_` that the safety module would exchange for `receiptTokenAmount_` of the receipt
@@ -31,7 +32,7 @@ library SafetyModuleCalculationsLib {
     returns (uint256 assetAmount_)
   {
     assetAmount_ = receiptTokenSupply_ == 0
-      ? poolAmount_
+      ? 0
       : receiptTokenAmount_.mulDivDown(_poolAmountWithFloor(poolAmount_), receiptTokenSupply_);
   }
 
