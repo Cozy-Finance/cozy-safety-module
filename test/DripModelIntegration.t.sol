@@ -36,7 +36,8 @@ abstract contract DripModelIntegrationTestSetup is MockDeployProtocol {
     rewardAsset = IERC20(address(new MockERC20("MockReward", "MOCK", 18)));
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] = ReservePoolConfig({asset: reserveAsset, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
+    reservePoolConfigs_[0] =
+      ReservePoolConfig({maxSlashPercentage: 0, asset: reserveAsset, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
 
     UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
     undrippedRewardPoolConfigs_[0] = UndrippedRewardPoolConfig({
@@ -185,7 +186,7 @@ contract FeesDripModelIntegration is DripModelIntegrationTestSetup {
     assertEq(reserveAsset.balanceOf(receiver_), expectedClaimedFees_);
 
     // Reset reserve pool.
-    (uint256 currentAmount_,,,,,,,,) = safetyModule.reservePools(0);
+    (uint256 currentAmount_,,,,,,,,,) = safetyModule.reservePools(0);
     stake(safetyModule, RESERVE_POOL_AMOUNT - currentAmount_, _randomAddress());
   }
 
