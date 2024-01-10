@@ -16,6 +16,7 @@ import {Redeemer} from "./lib/Redeemer.sol";
 import {SlashHandler} from "./lib/SlashHandler.sol";
 import {Staker} from "./lib/Staker.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
+import {SafetyModuleInspector} from "./lib/SafetyModuleInspector.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
 import {RewardsHandler} from "./lib/RewardsHandler.sol";
 import {FeesHandler} from "./lib/FeesHandler.sol";
@@ -23,6 +24,7 @@ import {StateChanger} from "./lib/StateChanger.sol";
 
 contract SafetyModule is
   SafetyModuleBaseStorage,
+  SafetyModuleInspector,
   Configurator,
   Depositor,
   Redeemer,
