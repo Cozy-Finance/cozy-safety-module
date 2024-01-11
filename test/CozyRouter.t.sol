@@ -1000,6 +1000,90 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
   }
 }
 
+contract CozyRouterUnstakeTest is CozyRouterTestSetup {
+  address testStaker = address(this);
+  uint256 shares;
+
+  function _setUpWethBalances(ISafetyModule safetyModule_, uint16 reservePoolId_, uint256 initialAmount_) internal {
+    vm.startPrank(testStaker);
+    // Mint some WETH and approve the router to move it.
+    vm.deal(testStaker, initialAmount_);
+    weth.deposit{value: initialAmount_}();
+    // Grant full approval to the router.
+    weth.approve(address(router), type(uint256).max);
+    // Stake assets.
+    uint256 stkTokenAmount_ = router.stake(safetyModule_, reservePoolId_, initialAmount_, testStaker, initialAmount_);
+    // Approve for test redemptions.
+    IERC20 stkToken_ = getReservePool(safetyModule_, reservePoolId_).stkToken;
+    stkToken_.approve(address(router), stkTokenAmount_);
+    vm.stopPrank();
+  }
+
+  function testFuzz_Unstake(uint256 assets_) public {
+    vm.assume(assets_ > 0 && assets_ <= type(uint128).max);
+    _setUpWethBalances(safetyModule, wethReservePoolId, assets_);
+    (uint64 redemptionId_, uint256 actualAssets_) =
+      router.unstake(safetyModule, wethReservePoolId, assets_, testStaker, assets_);
+    assertEq(actualAssets_, assets_);
+    assertEq(redemptionId_, 0);
+  }
+
+  function test_UnstakeRespectsMinAssetsOut() public {
+    _setUpWethBalances(safetyModule, wethReservePoolId, 100);
+    vm.expectRevert(CozyRouter.SlippageExceeded.selector);
+    router.unstake(safetyModule, wethReservePoolId, 100, testStaker, 101);
+  }
+
+  function test_UnstakeRevertsIfReceiverIsZeroAddress() public {
+    vm.expectRevert(CozyRouter.InvalidAddress.selector);
+    router.unstake(safetyModule, wethReservePoolId, 100, address(0), 101);
+  }
+}
+
+contract CozyRouterUnstakeAssetAmountTest is CozyRouterTestSetup {
+  function testFuzz_UnstakeRequiresAllowance(address user_, uint256 assets_) public {
+    vm.assume(user_ != address(0));
+    vm.assume(user_ != address(safetyModule));
+    vm.assume(user_ != address(router));
+    assets_ = bound(assets_, 1, type(uint96).max);
+
+    vm.startPrank(user_);
+
+    // Mint some WETH and approve the router to move it.
+    vm.deal(user_, assets_);
+    weth.deposit{value: assets_}();
+    weth.approve(address(router), assets_);
+
+    // The router stakes assets on behalf of the user.
+    uint256 preStakeBalance_ = weth.balanceOf(user_);
+    uint256 depositTokens_ = router.stake(safetyModule, wethReservePoolId, assets_, user_, assets_);
+    uint256 postStakeBalance_ = weth.balanceOf(user_);
+    assertGt(preStakeBalance_, postStakeBalance_);
+
+    // Request WETH unstake via the router. This should fail because the user hasn't approved it.
+    _expectPanic(PANIC_MATH_UNDEROVERFLOW);
+    router.unstakeAssetAmount(safetyModule, wethReservePoolId, assets_, user_, depositTokens_);
+
+    IERC20 stkToken_ = getReservePool(safetyModule, wethReservePoolId).stkToken;
+
+    // Approve WETH unstake request, then router initiates it.
+    stkToken_.approve(address(router), depositTokens_);
+    router.unstakeAssetAmount(safetyModule, wethReservePoolId, assets_, user_, depositTokens_);
+    // Fast-forward to end of delay period.
+    skip(getDelays(safetyModule).unstakeDelay);
+    router.completeRedemption(safetyModule, 0);
+
+    vm.stopPrank();
+
+    assertEq(weth.balanceOf(user_), preStakeBalance_);
+  }
+
+  function test_UnstakeAssetAmountRevertsIfReceiverIsZeroAddress() public {
+    vm.expectRevert(Ownable.InvalidAddress.selector);
+    router.unstakeAssetAmount(safetyModule, wethReservePoolId, 10, address(0), 10);
+  }
+}
+
 contract CozyRouterCompleteWithdrawRedeemTest is CozyRouterTestSetup {
   uint256 poolAssetAmount = 10_000;
   address testOwner = alice;
@@ -1031,7 +1115,7 @@ contract CozyRouterCompleteWithdrawRedeemTest is CozyRouterTestSetup {
 
     // Complete withdrawal, the receiver specified when the withdrawal was signalled receives the assets.
     if (useCompleteWithdraw) router.completeWithdraw(safetyModule, 0);
-    else router.completeRedeem(safetyModule, 0);
+    else router.completeRedemption(safetyModule, 0);
 
     vm.stopPrank();
 
@@ -1043,7 +1127,7 @@ contract CozyRouterCompleteWithdrawRedeemTest is CozyRouterTestSetup {
     completeWithdrawRedeem(true);
   }
 
-  function test_CompleteRedeem() public {
+  function test_completeRedemption() public {
     completeWithdrawRedeem(false);
   }
 }

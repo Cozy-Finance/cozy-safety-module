@@ -507,7 +507,7 @@ contract CozyRouter {
   }
 
   /// @notice Completes the redemption corresponding to `id_` in `safetyModule_`.
-  function completeRedeem(ISafetyModule safetyModule_, uint64 id_) external payable {
+  function completeRedemption(ISafetyModule safetyModule_, uint64 id_) external payable {
     safetyModule_.completeRedemption(id_);
   }
 
