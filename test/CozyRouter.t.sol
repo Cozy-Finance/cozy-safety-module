@@ -585,10 +585,6 @@ contract CozyRouterConnectorSetup is CozyRouterTestSetup {
   MockConnector mockConnector;
   // MockERC20 wrappedAsset;
   MockERC20 baseAsset = new MockERC20("Mock Base Asset", "MOCKBASE", 6);
-
-  function setUp() public override {
-    super.setUp();
-  }
 }
 
 contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnectorSetup {
@@ -693,5 +689,150 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     _testWrapBaseAssetViaConnectorForDepositSlippage(
       false, mockConnector, safetyModule, 0, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
     );
+  }
+}
+
+contract CozyRouterUnwrapWrappedAssetViaConnectorForWithdraw is CozyRouterConnectorSetup {
+  MockERC20 wrappedAsset;
+
+  function setUp() public override {
+    super.setUp();
+    mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(reserveAssetA)));
+    wrappedAsset = MockERC20(address(reserveAssetA));
+  }
+
+  function test_UnwrapWrappedAssetViaConnector() public {
+    uint256 assets_ = 500;
+    uint256 baseAssets_ = 250; // assetsNeeded / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
+
+    // Deal connector the wrapped assets held as a result of calling: withdraw, redeem, cancel, sell, claim, payout.
+    wrappedAsset.mint(address(mockConnector), assets_);
+    uint256 initWrappedAssetSupply = wrappedAsset.totalSupply();
+    // Deal connector the base assets it should receive from wrapped asset contract when it unwraps.
+    deal(address(baseAsset), address(mockConnector), baseAssets_, true);
+
+    vm.startPrank(alice);
+    router.unwrapWrappedAssetViaConnector(mockConnector, assets_, alice);
+    vm.stopPrank();
+
+    // Alice should hold the relevant amount of base assets.
+    assertEq(mockConnector.baseAsset().balanceOf(alice), baseAssets_);
+    // Supply of wrapped assets should have decreased by the amount withdrawn.
+    assertEq(wrappedAsset.totalSupply(), initWrappedAssetSupply - assets_);
+  }
+
+  function test_UnwrapWrappedAssetViaConnectorForWithdrawFullBalance() public {
+    uint256 assets_ = 500;
+    uint256 baseAssets_ = 250; // assetsNeeded / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
+
+    // Deal connector the wrapped assets held as a result of calling: withdraw, redeem, cancel, sell, claim, payout.
+    wrappedAsset.mint(address(mockConnector), assets_);
+    uint256 initWrappedAssetSupply = wrappedAsset.totalSupply();
+    // Deal connector the base assets it should receive from wrapped asset contract when it unwraps.
+    deal(address(baseAsset), address(mockConnector), baseAssets_, true);
+
+    vm.startPrank(alice);
+    router.unwrapWrappedAssetViaConnectorForWithdraw(mockConnector, alice);
+    vm.stopPrank();
+
+    // Alice should hold the relevant amount of base assets.
+    assertEq(mockConnector.baseAsset().balanceOf(alice), baseAssets_);
+    // Supply of wrapped assets should have decreased by the amount withdrawn.
+    assertEq(wrappedAsset.totalSupply(), initWrappedAssetSupply - assets_);
+  }
+
+  function testFail_UnwrapWrappedAssetViaConnectorZeroAssets() public {
+    vm.expectCall(address(mockConnector), abi.encodeCall(mockConnector.unwrapWrappedAsset, (alice, 0)));
+    router.unwrapWrappedAssetViaConnector(mockConnector, 0, alice);
+  }
+
+  function testFail_UnwrapWrappedAssetViaConnectorForWithdrawFullBalanceZeroAssets() public {
+    vm.mockCall(
+      address(mockConnector),
+      abi.encodeWithSelector(mockConnector.balanceOf.selector, address(mockConnector)),
+      abi.encode(0)
+    );
+    vm.expectCall(address(mockConnector), abi.encodeCall(mockConnector.unwrapWrappedAsset, (alice, 0)));
+    router.unwrapWrappedAssetViaConnectorForWithdraw(mockConnector, alice);
+  }
+}
+
+contract CozyRouterWithdrawTest is CozyRouterTestSetup {
+  function test_Withdraw() public {}
+  function test_RespectsMinSharesOut() public {}
+
+  function _testWithdrawRequiresAllowance(
+    bool isReserveWithdraw_,
+    ISafetyModule safetyModule_,
+    uint16 poolId_,
+    address user_,
+    uint256 assets_
+  ) internal {
+    vm.startPrank(user_);
+
+    // Mint some WETH and approve the router to move it.
+    vm.deal(user_, assets_);
+    weth.deposit{value: assets_}();
+    weth.approve(address(router), assets_);
+
+    // The router deposits assets on behalf of the user.
+    uint256 preDepositBalance_ = weth.balanceOf(user_);
+    uint256 depositTokens_ = isReserveWithdraw_
+      ? router.depositReserveAssets(safetyModule_, poolId_, assets_, user_, assets_)
+      : router.depositRewardAssets(safetyModule_, poolId_, assets_, user_, assets_);
+    uint256 postDepositBalance_ = weth.balanceOf(user_);
+    assertGt(preDepositBalance_, postDepositBalance_);
+
+    // Request WETH withdrawal via the router. This should fail because the user hasn't approved it.
+    _expectPanic(PANIC_MATH_UNDEROVERFLOW);
+    if (isReserveWithdraw_) router.withdrawReservePoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
+    else router.withdrawRewardPoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
+
+    IERC20 depositToken_ = isReserveWithdraw_
+      ? getReservePool(safetyModule_, poolId_).depositToken
+      : getUndrippedRewardPool(safetyModule_, poolId_).depositToken;
+
+    // Approve WETH withdrawal request, then router initiates it.
+    depositToken_.approve(address(router), depositTokens_);
+    if (isReserveWithdraw_) {
+      router.withdrawReservePoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
+
+      // Fast-forward to end of delay period.
+      skip(getDelays(safetyModule_).withdrawDelay);
+
+      router.completeWithdraw(safetyModule_, 0);
+    } else {
+      // Withdrawal from undripped rewwards is instant.
+      router.withdrawRewardPoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
+    }
+    vm.stopPrank();
+
+    assertEq(weth.balanceOf(user_), preDepositBalance_);
+  }
+
+  function testFuzz_WithdrawFromReserveRequiresAllowance(address user_, uint256 assets_) public {
+    vm.assume(user_ != address(0));
+    vm.assume(user_ != address(safetyModule));
+    vm.assume(user_ != address(router));
+    assets_ = bound(assets_, 1, type(uint96).max);
+
+    _testWithdrawRequiresAllowance(true, safetyModule, wethReservePoolId, user_, assets_);
+  }
+
+  function testFuzz_WithdrawFromRewardsRequiresAllowance(address user_, uint256 assets_) public {
+    vm.assume(user_ != address(0));
+    vm.assume(user_ != address(safetyModule));
+    vm.assume(user_ != address(router));
+    assets_ = bound(assets_, 1, type(uint96).max);
+
+    _testWithdrawRequiresAllowance(false, safetyModule, wethRewardPoolId, user_, assets_);
+  }
+
+  function test_WithdrawRevertsIfReceiverIsZeroAddress() public {
+    vm.expectRevert(Ownable.InvalidAddress.selector);
+    router.withdrawReservePoolAssets(safetyModule, wethReservePoolId, 10, address(0), 10);
+
+    vm.expectRevert(Ownable.InvalidAddress.selector);
+    router.withdrawRewardPoolAssets(safetyModule, wethRewardPoolId, 10, address(0), 10);
   }
 }

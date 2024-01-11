@@ -45,6 +45,20 @@ interface ISafetyModule {
     view
     returns (uint256 rewardAssetAmount_);
 
+  function delays()
+    external
+    view
+    returns (
+      // Duration between when safety module updates are queued and when they can be executed.
+      uint64 configUpdateDelay,
+      // Defines how long the owner has to execute a configuration change, once it can be executed.
+      uint64 configUpdateGracePeriod,
+      // Delay for two-step unstake process (for staked assets).
+      uint64 unstakeDelay,
+      // Delay for two-step withdraw process (for deposited assets).
+      uint64 withdrawDelay
+    );
+
   function depositReserveAssetsWithoutTransfer(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
     external
     returns (uint256 depositTokenAmount_);
