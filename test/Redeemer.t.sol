@@ -19,6 +19,7 @@ import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {RedemptionPreview} from "../src/lib/structs/Redemptions.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
@@ -114,12 +115,11 @@ abstract contract ReedemerUnitTestBase is TestBase {
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
     if (isUnstakeTest) return component.unstake(reservePoolId_, receiptTokenAmount_, receiver_, owner_);
-    else return component.redeem(reservePoolId_, receiptTokenAmount_, receiver_, owner_);
+    else return component.withdraw(reservePoolId_, receiptTokenAmount_, receiver_, owner_);
   }
 
   function _completeRedeem(uint64 redemptionId_) internal returns (uint256 reserveAssetAmount_) {
-    if (isUnstakeTest) return component.completeUnstake(redemptionId_);
-    else return component.completeRedemption(redemptionId_);
+    return component.completeRedemption(redemptionId_);
   }
 
   function _updateRedemptionsAfterTrigger(uint16 reservePoolId_, uint256 oldReservePoolAmount_, uint256 slashAmount_)
@@ -154,6 +154,11 @@ abstract contract ReedemerUnitTestBase is TestBase {
     ReservePool memory reservePool_ = component.getReservePool(reservePoolId_);
     if (isUnstakeTest) return reservePool_.stkToken;
     else return reservePool_.depositToken;
+  }
+
+  function _setNextDripAmount(uint256 amount_) internal {
+    if (isUnstakeTest) component.mockSetNextStakeDripAmount(amount_);
+    else component.mockSetNextDepositDripAmount(amount_);
   }
 
   function _assertReservePoolAccounting(
@@ -232,6 +237,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     ) = _setupDefaultSingleUserFixture(0);
 
     _expectEmit();
+    emit TestableRedeemerEvents.DripFeesCalled();
+    _expectEmit();
     emit Transfer(owner_, address(0), receiptTokenAmount_);
     _expectEmit();
     emit Redeemed(
@@ -260,6 +267,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     ) = _setupDefaultSingleUserFixture(0);
 
     _expectEmit();
+    emit TestableRedeemerEvents.DripFeesCalled();
+    _expectEmit();
     emit Redeemed(
       owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
@@ -284,6 +293,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     uint256 reserveAssetsToReceive_ =
       uint256(reserveAssetAmount_).mulDivDown(receiptTokenAmountToRedeem_, receiptTokenAmount_);
 
+    _expectEmit();
+    emit TestableRedeemerEvents.DripFeesCalled();
     _expectEmit();
     emit Transfer(owner_, address(0), receiptTokenAmountToRedeem_);
     _expectEmit();
@@ -324,6 +335,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     uint256 reserveAssetsToReceive_ =
       uint256(reserveAssetAmount_).mulDivDown(receiptTokenAmountToRedeem_, receiptTokenAmount_);
 
+    _expectEmit();
+    emit TestableRedeemerEvents.DripFeesCalled();
     _expectEmit();
     emit Transfer(owner_, address(0), receiptTokenAmountToRedeem_);
     _expectEmit();
@@ -423,6 +436,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     testReceiptToken.approve(spender_, receiptTokenAmount_ + 1); // Allowance is 1 extra.
 
     _expectEmit();
+    emit TestableRedeemerEvents.DripFeesCalled();
+    _expectEmit();
     emit Redeemed(
       spender_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
@@ -457,6 +472,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     ) = _setupDefaultSingleUserFixture(0);
 
     // Queue.
+    _expectEmit();
+    emit TestableRedeemerEvents.DripFeesCalled();
     _expectEmit();
     emit RedemptionPending(
       owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
@@ -494,6 +511,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
 
     // Queue.
     _expectEmit();
+    emit TestableRedeemerEvents.DripFeesCalled();
+    _expectEmit();
     emit RedemptionPending(
       owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
@@ -530,6 +549,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
 
     // Queue.
     _expectEmit();
+    emit TestableRedeemerEvents.DripFeesCalled();
+    _expectEmit();
     emit RedemptionPending(
       owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
@@ -563,6 +584,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     ) = _setupDefaultSingleUserFixture(0);
 
     // Queue.
+    _expectEmit();
+    emit TestableRedeemerEvents.DripFeesCalled();
     _expectEmit();
     emit RedemptionPending(
       owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
@@ -602,6 +625,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     ) = _setupDefaultSingleUserFixture(0);
 
     // Queue.
+    _expectEmit();
+    emit TestableRedeemerEvents.DripFeesCalled();
     _expectEmit();
     emit RedemptionPending(
       owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
@@ -778,6 +803,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
       vm.prank(user_.owner);
       {
         if (assetsToRedeem_ == 0) vm.expectRevert(ICommonErrors.RoundsToZero.selector);
+        _expectEmit();
+        emit TestableRedeemerEvents.DripFeesCalled();
         (uint64 redemptionId_, uint256 assetsRedeemed_) = _redeem(0, receiptTokensToRedeem_, user_.owner, user_.owner);
         assertEq(uint256(redemptionId_), i, "redemption id");
         assertEq(assetsRedeemed_, uint256(assetsToRedeem_), "assets redeemed");
@@ -824,6 +851,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
       totalReceiptTokenAmount_ -= user_.receiptTokensRedeemed;
       {
         uint64 nextRedemptionId_ = component.getRedemptionIdCounter();
+        _expectEmit();
+        emit TestableRedeemerEvents.DripFeesCalled();
         _expectEmit();
         emit RedemptionPending(
           user_.owner,
@@ -874,6 +903,70 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
       _assertReservePoolAccounting(0, totalAssets_, totalAssetsToRedeem_);
     }
     assertEq(component.getRedemptionIdCounter(), numOwners_, "redemptionCounter");
+  }
+
+  function test_previewRedemption() external {
+    (address owner_, address receiver_, uint256 reserveAssetAmount_, uint256 receiptTokenAmount_,) =
+      _setupDefaultSingleUserFixture(0);
+
+    mockManager.setFeeDripModel(IDripModel(_randomAddress()));
+    _setNextDripAmount(reserveAssetAmount_ / 4);
+
+    skip(_randomUint256());
+
+    // Preview and actually redeemed assets match.
+    uint256 previewRedeemedAssets_ = component.previewRedemption(0, receiptTokenAmount_, isUnstakeTest);
+    vm.prank(owner_);
+    (, uint256 resultRedeemedAssets_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
+    assertEq(previewRedeemedAssets_, resultRedeemedAssets_, "redeemed assets");
+    assertEq(previewRedeemedAssets_, reserveAssetAmount_ * 3 / 4);
+  }
+
+  function test_previewRedemption_roundsDownToZero() external {
+    address owner_ = _randomAddress();
+    uint256 reserveAssetAmount_ = 1;
+    uint256 receiptTokenAmount_ = 3;
+    _depositOrStake(0, owner_, reserveAssetAmount_, receiptTokenAmount_);
+
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
+    component.previewRedemption(0, 2, isUnstakeTest);
+  }
+
+  function test_previewQueuedRedemption() external {
+    (
+      address owner_,
+      address receiver_,
+      uint256 reserveAssetAmount_,
+      uint256 receiptTokenAmount_,
+      uint64 nextRedemptionId_
+    ) = _setupDefaultSingleUserFixture(0);
+
+    // Queue.
+    vm.prank(owner_);
+    (uint64 resultRedemptionId_, uint256 resultReserveAssetAmount_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
+    // Sanity checks.
+    assertEq(resultRedemptionId_, nextRedemptionId_, "redemptionId");
+    assertEq(resultReserveAssetAmount_, reserveAssetAmount_, "reserve assets received");
+
+    (RedemptionPreview memory redemptionPreview_) = component.previewQueuedRedemption(resultRedemptionId_);
+    assertEq(redemptionPreview_.delayRemaining, _getRedemptionDelay(), "delayRemaining");
+    assertEq(redemptionPreview_.receiptTokenAmount, receiptTokenAmount_, "receiptTokenAmount");
+    assertEq(redemptionPreview_.reserveAssetAmount, reserveAssetAmount_, "reserveAssetAmount");
+    assertEq(address(_getReceiptToken(0)), address(redemptionPreview_.receiptToken), "receiptToken");
+    assertEq(redemptionPreview_.owner, owner_, "owner");
+    assertEq(redemptionPreview_.receiver, receiver_, "receiver");
+
+    skip(_getRedemptionDelay() / 2);
+    // Trigger, taking 10% of the reserve pool.
+    _updateRedemptionsAfterTrigger(0, reserveAssetAmount_, reserveAssetAmount_ / 10);
+
+    (redemptionPreview_) = component.previewQueuedRedemption(resultRedemptionId_);
+    assertEq(redemptionPreview_.delayRemaining, _getRedemptionDelay() / 2, "delayRemaining");
+    assertEq(redemptionPreview_.receiptTokenAmount, receiptTokenAmount_, "receiptTokenAmount");
+    assertEq(redemptionPreview_.reserveAssetAmount, reserveAssetAmount_ * 9 / 10 - 1, "reserveAssetAmount");
+    assertEq(address(_getReceiptToken(0)), address(redemptionPreview_.receiptToken), "receiptToken");
+    assertEq(redemptionPreview_.owner, owner_, "owner");
+    assertEq(redemptionPreview_.receiver, receiver_, "receiver");
   }
 }
 
@@ -984,7 +1077,7 @@ contract RedeemUndrippedRewards is TestBase {
     internal
     returns (uint256 rewardAssetAmount_)
   {
-    return component.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, owner_);
+    return component.withdrawUnrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, owner_);
   }
 
   function _assertRewardPoolAccounting(uint16 reservePoolId_, uint256 poolAssetAmount_) internal {
@@ -1057,7 +1150,7 @@ contract RedeemUndrippedRewards is TestBase {
       _setupDefaultSingleUserFixture(0);
 
     // Drip half of the assets in the undripped reward pool.
-    component.mockSetNextDripAmount(rewardAssetAmount_ / 2);
+    component.mockSetNextRewardsDripAmount(rewardAssetAmount_ / 2);
 
     _expectEmit();
     emit Transfer(owner_, address(0), depositTokenAmount_ / 2);
@@ -1137,9 +1230,9 @@ contract RedeemUndrippedRewards is TestBase {
 
     // Next drip (which occurs on redeem), drip half of the assets in the undripped reward pool.
     vm.warp(100);
-    component.mockSetNextDripAmount(rewardAssetAmount_ / 2);
+    component.mockSetNextRewardsDripAmount(rewardAssetAmount_ / 2);
 
-    uint256 previewRewardAssetAmount_ = component.previewUndrippedRewardsRedemption(0, depositTokenAmount_);
+    uint256 previewRewardAssetAmount_ = component.previewUndrippedRewardsWithdrawal(0, depositTokenAmount_);
 
     vm.prank(owner_);
     uint256 resultRewardAssetAmount_ = _redeem(0, depositTokenAmount_, receiver_, owner_);
@@ -1156,10 +1249,10 @@ contract RedeemUndrippedRewards is TestBase {
 
     // Next drip (which occurs on redeem), drip half of the assets in the undripped reward pool.
     vm.warp(100);
-    component.mockSetNextDripAmount(rewardAssetAmount_);
+    component.mockSetNextRewardsDripAmount(rewardAssetAmount_);
 
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
-    component.previewUndrippedRewardsRedemption(0, depositTokenAmount_);
+    component.previewUndrippedRewardsWithdrawal(0, depositTokenAmount_);
 
     vm.prank(owner_);
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
@@ -1173,22 +1266,30 @@ contract RedeemUndrippedRewards is TestBase {
     _deposit(0, owner_, reserveAssetAmount_, receiptTokenAmount_);
 
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
-    component.previewUndrippedRewardsRedemption(0, 2);
+    component.previewUndrippedRewardsWithdrawal(0, 2);
   }
 }
 
 interface TestableRedeemerEvents {
   event MockClaimedRewards();
+  event DripFeesCalled();
 }
 
 contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
-  MockManager public immutable mockManager;
+  enum DripType {
+    REWARDS,
+    DEPOSITS,
+    STAKES
+  }
 
-  uint256 internal mockNextDripAmount;
+  uint256 internal mockNextRewardsDripAmount;
+  uint256 internal mockNextDepositDripAmount;
+  uint256 internal mockNextStakeDripAmount;
+  DripType internal mockNextDripType;
   uint256 internal mockNextRewardClaimAmount;
 
   constructor(IManager manager_) {
-    mockManager = MockManager(address(manager_));
+    cozyManager = manager_;
   }
 
   function mockStake(uint16 reservePoolId_, address staker_, uint256 reserveAssetAmountStaked_, uint256 stkTokenAmount_)
@@ -1262,9 +1363,19 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
   }
 
   // -------- Mock setters --------
+  function mockSetNextDepositDripAmount(uint256 nextDripAmount_) external {
+    mockNextDepositDripAmount = nextDripAmount_;
+    mockNextDripType = DripType.DEPOSITS;
+  }
 
-  function mockSetNextDripAmount(uint256 nextDripAmount_) external {
-    mockNextDripAmount = nextDripAmount_;
+  function mockSetNextStakeDripAmount(uint256 nextDripAmount_) external {
+    mockNextStakeDripAmount = nextDripAmount_;
+    mockNextDripType = DripType.STAKES;
+  }
+
+  function mockSetNextRewardsDripAmount(uint256 nextDripAmount_) external {
+    mockNextRewardsDripAmount = nextDripAmount_;
+    mockNextDripType = DripType.REWARDS;
   }
 
   function mockSetNextRewardClaimAmount(uint256 nextRewardClaimAmount_) external {
@@ -1308,7 +1419,6 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
   }
 
   // -------- Mock getters --------
-
   function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
     return reservePools[reservePoolId_];
   }
@@ -1354,14 +1464,25 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
   // Mock drip of rewards based on mocked next amount.
   function dripRewards() public override {
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[0];
-    uint256 totalDrippedRewards_ = mockNextDripAmount;
+    uint256 totalDrippedRewards_ = mockNextRewardsDripAmount;
 
     if (totalDrippedRewards_ > 0) undrippedRewardPool_.amount -= totalDrippedRewards_;
 
     dripTimes.lastRewardsDripTime = uint128(block.timestamp);
   }
 
-  function dripFees() public view override {}
+  function dripFees() public override {
+    if (mockNextDripType == DripType.REWARDS) {
+      emit DripFeesCalled();
+      return;
+    }
+
+    ReservePool storage reservePool_ = reservePools[0];
+    if (mockNextDripType == DripType.DEPOSITS) reservePool_.depositAmount -= mockNextDepositDripAmount;
+    else reservePool_.stakeAmount -= mockNextStakeDripAmount;
+
+    dripTimes.lastFeesDripTime = uint128(block.timestamp);
+  }
 
   function _getNextDripAmount(
     uint256, /* totalBaseAmount_ */
@@ -1369,8 +1490,13 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     uint256, /* lastDripTime_ */
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {
-    if (dripTimes.lastRewardsDripTime == block.timestamp) return 0;
-    else return mockNextDripAmount;
+    if (mockNextDripType == DripType.REWARDS) {
+      return block.timestamp == dripTimes.lastRewardsDripTime ? 0 : mockNextRewardsDripAmount;
+    } else if (mockNextDripType == DripType.DEPOSITS) {
+      return block.timestamp == dripTimes.lastFeesDripTime ? 0 : mockNextDepositDripAmount;
+    } else {
+      return block.timestamp == dripTimes.lastFeesDripTime ? 0 : mockNextStakeDripAmount;
+    }
   }
 
   function _computeNextDripAmount(uint256, /* totalBaseAmount_ */ uint256 /* dripFactor_ */ )
