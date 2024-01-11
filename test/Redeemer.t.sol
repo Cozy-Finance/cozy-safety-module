@@ -104,6 +104,11 @@ abstract contract ReedemerUnitTestBase is TestBase {
     else _deposit(reservePoolId_, owner_, reserveAssetAmount_, receiptTokenAmount_);
   }
 
+  function _depositOrStakeAssets(uint16 reservePoolId_, uint256 amount_) internal {
+    if (isUnstakeTest) component.mockStakeAssets(reservePoolId_, amount_);
+    else component.mockDepositAssets(reservePoolId_, amount_);
+  }
+
   function _redeem(uint16 reservePoolId_, uint256 receiptTokenAmount_, address receiver_, address owner_)
     internal
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
@@ -138,6 +143,17 @@ abstract contract ReedemerUnitTestBase is TestBase {
     (,, uint64 unstakeDelay_, uint64 withdrawDelay_) = component.delays();
     if (isUnstakeTest) return unstakeDelay_;
     else return withdrawDelay_;
+  }
+
+  function _mintReceiptToken(uint16 reservePoolId_, address receiver_, uint256 amount_) internal {
+    if (isUnstakeTest) component.mockMintStkTokens(reservePoolId_, receiver_, amount_);
+    else component.mockMintDepositTokens(reservePoolId_, receiver_, amount_);
+  }
+
+  function _getReceiptToken(uint16 reservePoolId_) internal view returns (IERC20) {
+    ReservePool memory reservePool_ = component.getReservePool(reservePoolId_);
+    if (isUnstakeTest) return reservePool_.stkToken;
+    else return reservePool_.depositToken;
   }
 
   function _assertReservePoolAccounting(
@@ -738,14 +754,10 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     for (uint256 i; i < numOwners_; ++i) {
       users_[i].owner = _randomAddress();
       totalReceiptTokenAmount_ += users_[i].receiptTokenAmount = uint216(_randomUint256(1e18 - 2) + 2);
-      component.mockMintStkTokens(0, users_[i].owner, users_[i].receiptTokenAmount);
-      assertEq(
-        component.getReservePool(0).stkToken.balanceOf(users_[i].owner),
-        users_[i].receiptTokenAmount,
-        "receipt token balance"
-      );
+      _mintReceiptToken(0, users_[i].owner, users_[i].receiptTokenAmount);
+      assertEq(_getReceiptToken(0).balanceOf(users_[i].owner), users_[i].receiptTokenAmount, "receipt token balance");
     }
-    component.mockStakeAssets(0, totalAssets_);
+    _depositOrStakeAssets(0, totalAssets_);
 
     // Redeem in a random order.
     uint256[] memory idxs_ = _randomIndices(numOwners_);
@@ -773,7 +785,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
       // This component doesn't handle collateral accounting, so manually update it.
       // component.mockSetTotalCollateralAvailable(totalAssets_);
       assertEq(
-        component.getReservePool(0).stkToken.balanceOf(user_.owner),
+        _getReceiptToken(0).balanceOf(user_.owner),
         user_.receiptTokenAmount - receiptTokensToRedeem_,
         "receipt token balance"
       );
@@ -793,14 +805,10 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     for (uint256 i; i < numOwners_; ++i) {
       users_[i].owner = _randomAddress();
       totalReceiptTokenAmount_ += users_[i].receiptTokenAmount = uint216(_randomUint256(1e18 - 2) + 2);
-      component.mockMintStkTokens(0, users_[i].owner, users_[i].receiptTokenAmount);
-      assertEq(
-        component.getReservePool(0).stkToken.balanceOf(users_[i].owner),
-        users_[i].receiptTokenAmount,
-        "receipt token balance"
-      );
+      _mintReceiptToken(0, users_[i].owner, users_[i].receiptTokenAmount);
+      assertEq(_getReceiptToken(0).balanceOf(users_[i].owner), users_[i].receiptTokenAmount, "receipt token balance");
     }
-    component.mockStakeAssets(0, totalAssets_);
+    _depositOrStakeAssets(0, totalAssets_);
 
     // Redeem in a random order.
     uint256[] memory idxs_ = _randomIndices(numOwners_);
@@ -821,7 +829,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
           user_.owner,
           user_.owner,
           user_.owner,
-          component.getReservePool(0).stkToken,
+          IReceiptToken(address(_getReceiptToken(0))),
           uint256(user_.receiptTokensRedeemed),
           uint256(user_.assetsRedeemed),
           nextRedemptionId_
@@ -849,7 +857,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
         address(this),
         user_.owner,
         user_.owner,
-        component.getReservePool(0).stkToken,
+        IReceiptToken(address(_getReceiptToken(0))),
         uint256(user_.receiptTokensRedeemed),
         uint256(user_.assetsRedeemed),
         user_.redemptionId
@@ -858,7 +866,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
       totalAssets_ -= user_.assetsRedeemed;
       totalAssetsToRedeem_ -= user_.assetsRedeemed;
       assertEq(
-        component.getReservePool(0).stkToken.balanceOf(user_.owner),
+        _getReceiptToken(0).balanceOf(user_.owner),
         user_.receiptTokenAmount - user_.receiptTokensRedeemed,
         "receipt token balance"
       );
@@ -930,14 +938,12 @@ contract UnstakeUnitTest is RedeemerUnitTest {
   }
 }
 
-/*
 contract WithdrawUnitTest is RedeemerUnitTest {
   function setUp() public override {
     isUnstakeTest = false;
     super.setUp();
   }
 }
-*/
 
 contract RedeemUndrippedRewards is TestBase {
   IReceiptToken depositToken;
