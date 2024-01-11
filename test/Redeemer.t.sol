@@ -784,7 +784,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
   }
 
   function testFuzz_multipleDelayedRedeem(uint256) external {
-    _setRedemptionDelay(1 days);
+    _setRedemptionDelay(uint64(_randomUint64()));
 
     uint256 numOwners_ = _randomUint256(6) + 2; // 2 to 8 users
     FuzzUserInfo[] memory users_ = new FuzzUserInfo[](numOwners_);
@@ -837,6 +837,35 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
       assertLe(totalAssetsToRedeem_, totalAssets_, "totalAssetsToRedeem_ <= totalAssets");
       assertEq(component.getRedemptionIdCounter(), i + 1, "redemptionCounter");
     }
+
+    skip(_getRedemptionDelay());
+
+    // Complete in a random order.
+    idxs_ = _randomIndices(numOwners_);
+    for (uint256 i; i < numOwners_; ++i) {
+      FuzzUserInfo memory user_ = users_[idxs_[i]];
+      _expectEmit();
+      emit Redeemed(
+        address(this),
+        user_.owner,
+        user_.owner,
+        component.getReservePool(0).stkToken,
+        uint256(user_.receiptTokensRedeemed),
+        uint256(user_.assetsRedeemed),
+        user_.redemptionId
+      );
+      _completeRedeem(user_.redemptionId);
+      totalAssets_ -= user_.assetsRedeemed;
+      totalAssetsToRedeem_ -= user_.assetsRedeemed;
+      assertEq(
+        component.getReservePool(0).stkToken.balanceOf(user_.owner),
+        user_.receiptTokenAmount - user_.receiptTokensRedeemed,
+        "receipt token balance"
+      );
+      assertEq(component.getReservePool(0).asset.balanceOf(user_.owner), user_.assetsRedeemed, "reserve asset balance");
+      _assertReservePoolAccounting(0, totalAssets_, totalAssetsToRedeem_);
+    }
+    assertEq(component.getRedemptionIdCounter(), numOwners_, "redemptionCounter");
   }
 }
 
