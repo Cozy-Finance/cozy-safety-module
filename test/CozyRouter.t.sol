@@ -1070,7 +1070,7 @@ contract CozyRouterUnstakeAssetAmountTest is CozyRouterTestSetup {
     router.unstakeAssetAmount(safetyModule, wethReservePoolId, assets_, user_, depositTokens_);
     // Fast-forward to end of delay period.
     skip(getDelays(safetyModule).unstakeDelay);
-    router.completeRedemption(safetyModule, 0);
+    router.completeUnstake(safetyModule, 0);
 
     vm.stopPrank();
 
