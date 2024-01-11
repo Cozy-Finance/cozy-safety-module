@@ -64,7 +64,15 @@ contract Manager is Governable, IManager {
   /// @param safetyModule_ The safety module to update the fee drip model for.
   /// @param feeDripModel_ The new fee drip model for the safety module.
   function updateOverrideFeeDripModel(ISafetyModule safetyModule_, IDripModel feeDripModel_) external onlyOwner {
-    _updateOverrideFeeDripModel(safetyModule_, feeDripModel_);
+    overrideFeeDripModels[safetyModule_] = DripModelLookup({exists: true, dripModel: feeDripModel_});
+    emit OverrideFeeDripModelUpdated(safetyModule_, feeDripModel_);
+  }
+
+  /// @notice Reset the override fee drip model for the specified safety module back to th default.
+  /// @param safetyModule_ The safety module to update the fee drip model for.
+  function resetOverrideFeeDripModel(ISafetyModule safetyModule_) external onlyOwner {
+    delete overrideFeeDripModels[safetyModule_];
+    emit OverrideFeeDripModelUpdated(safetyModule_, feeDripModel);
   }
 
   // -----------------------------------------------
@@ -134,11 +142,5 @@ contract Manager is Governable, IManager {
   function _updateFeeDripModel(IDripModel feeDripModel_) internal {
     feeDripModel = feeDripModel_;
     emit FeeDripModelUpdated(feeDripModel_);
-  }
-
-  /// @dev Executes the override fee drip model update.
-  function _updateOverrideFeeDripModel(ISafetyModule safetyModule_, IDripModel feeDripModel_) internal {
-    overrideFeeDripModels[safetyModule_] = DripModelLookup({exists: true, dripModel: feeDripModel_});
-    emit OverrideFeeDripModelUpdated(safetyModule_, feeDripModel_);
   }
 }

@@ -163,6 +163,14 @@ contract ManagerUpdateFeeModels is MockDeployProtocol {
     manager.updateOverrideFeeDripModel(safetyModule_, feeDripModel_);
   }
 
+  function test_resetOverrideFeeDripModel_revertNonOwnerAddress() public {
+    ISafetyModule safetyModule_ = ISafetyModule(_randomAddress());
+
+    vm.expectRevert(Ownable.Unauthorized.selector);
+    vm.prank(_randomAddress());
+    manager.resetOverrideFeeDripModel(safetyModule_);
+  }
+
   function testFuzz_updateFeeDripModel(address feeDripModelAddress_) public {
     IDripModel feeDripModel_ = IDripModel(feeDripModelAddress_);
 
@@ -186,6 +194,30 @@ contract ManagerUpdateFeeModels is MockDeployProtocol {
     manager.updateOverrideFeeDripModel(safetyModule_, feeDripModel_);
 
     assertEq(address(manager.getFeeDripModel(safetyModule_)), address(feeDripModel_));
+  }
+
+  function testFuzz_resetOverrideFeeDripModel(
+    address feeDripModelAddress_,
+    address newDefaultFeeDripModelAddress_,
+    address safetyModuleAddress_
+  ) public {
+    IDripModel feeDripModel_ = IDripModel(feeDripModelAddress_);
+    ISafetyModule safetyModule_ = ISafetyModule(safetyModuleAddress_);
+
+    vm.prank(owner);
+    manager.updateOverrideFeeDripModel(safetyModule_, feeDripModel_);
+    assertEq(address(manager.getFeeDripModel(safetyModule_)), address(feeDripModel_));
+
+    _expectEmit();
+    emit IManagerEvents.OverrideFeeDripModelUpdated(safetyModule_, manager.feeDripModel());
+    vm.prank(owner);
+    manager.resetOverrideFeeDripModel(safetyModule_);
+    assertEq(address(manager.getFeeDripModel(safetyModule_)), address(manager.feeDripModel()));
+
+    IDripModel newDefaultFeeDripModel_ = IDripModel(newDefaultFeeDripModelAddress_);
+    vm.prank(owner);
+    manager.updateFeeDripModel(newDefaultFeeDripModel_);
+    assertEq(address(manager.getFeeDripModel(safetyModule_)), address(newDefaultFeeDripModel_));
   }
 
   function testFuzz_getFeeDripModel(
