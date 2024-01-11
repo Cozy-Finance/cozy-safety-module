@@ -79,6 +79,8 @@ contract CozyRouter {
     if (address(stEth) != address(0)) IERC20(address(stEth)).safeIncreaseAllowance(address(wstEth), type(uint256).max);
   }
 
+  receive() external payable {}
+
   // ---------------------------
   // -------- Multicall --------
   // ---------------------------
@@ -163,23 +165,23 @@ contract CozyRouter {
     IERC20(address(stEth)).safeTransfer(recipient_, stEthAmount_);
   }
 
-  /// @notice Wraps all ETH held by this contact into WETH and sends WETH to the `set_`.
+  /// @notice Wraps all ETH held by this contact into WETH and sends WETH to the `safetyModule_`.
   /// @dev This function should be `aggregate` called with `purchaseWithoutTransfer` or `depositWithoutTransfer`.
-  function wrapWeth(address set_) external payable {
-    _assertIsValidSafetyModule(set_);
+  function wrapWeth(address safetyModule_) external payable {
+    _assertIsValidSafetyModule(safetyModule_);
     uint256 amount_ = address(this).balance;
     weth.deposit{value: amount_}();
-    IERC20(address(weth)).safeTransfer(set_, amount_);
+    IERC20(address(weth)).safeTransfer(safetyModule_, amount_);
   }
 
-  /// @notice Wraps the specified `amount_` of ETH from this contact into WETH and sends WETH to the `set_`.
+  /// @notice Wraps the specified `amount_` of ETH from this contact into WETH and sends WETH to the `safetyModule_`.
   /// @dev This function should be `aggregate` called with `purchaseWithoutTransfer` or `depositWithoutTransfer`.
-  function wrapWeth(address set_, uint256 amount_) external payable {
-    _assertIsValidSafetyModule(set_);
+  function wrapWeth(address safetyModule_, uint256 amount_) external payable {
+    _assertIsValidSafetyModule(safetyModule_);
     // Using msg.value in a multicall is dangerous, so we avoid it.
     if (address(this).balance < amount_) revert InsufficientBalance();
     weth.deposit{value: amount_}();
-    IERC20(address(weth)).safeTransfer(set_, amount_);
+    IERC20(address(weth)).safeTransfer(safetyModule_, amount_);
   }
 
   /// @notice Unwraps all WETH held by this contact and sends ETH to the `recipient_`.

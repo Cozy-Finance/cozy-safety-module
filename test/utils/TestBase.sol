@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {IERC20} from "../../src/interfaces/IERC20.sol";
+import {IDripModel} from "../../src/interfaces/IDripModel.sol";
+import {IReceiptToken} from "../../src/interfaces/IReceiptToken.sol";
+import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
 import {UndrippedRewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
 import {Test} from "forge-std/Test.sol";
 import {TestAssertions} from "./TestAssertions.sol";
@@ -75,6 +79,55 @@ contract TestBase is Test, TestAssertions {
 
   function _expectPanic(uint256 code_) internal {
     vm.expectRevert(abi.encodeWithSelector(PANIC_SELECTOR, code_));
+  }
+
+  function getReservePool(ISafetyModule safetyModule_, uint256 reservePoolId_)
+    internal
+    view
+    returns (ReservePool memory)
+  {
+    (
+      uint256 stakeAmount,
+      uint256 depositAmount,
+      uint256 pendingUnstakesAmount,
+      uint256 pendingWithdrawalsAmount,
+      uint256 feeAmount,
+      /// @dev The max percentage of the stake amount that can be slashed in a SINGLE slash as a WAD. If multiple
+      /// slashes
+      /// occur, they compound, and the final stake amount can be less than (1 - maxSlashPercentage)% following all the
+      /// slashes. The max slash percentage is only a guarantee for stakers; depositors are always at risk to be fully
+      /// slashed.
+      uint256 maxSlashPercentage,
+      IERC20 asset,
+      IReceiptToken stkToken,
+      IReceiptToken depositToken,
+      /// @dev The weighting of each stkToken's claim to all reward pools in terms of a ZOC. Must sum to 1.
+      /// e.g. stkTokenA = 10%, means they're eligible for up to 10% of each pool, scaled to their balance of stkTokenA
+      /// wrt totalSupply.
+      uint16 rewardsPoolsWeight
+    ) = safetyModule_.reservePools(reservePoolId_);
+    return ReservePool({
+      stakeAmount: stakeAmount,
+      depositAmount: depositAmount,
+      pendingUnstakesAmount: pendingUnstakesAmount,
+      pendingWithdrawalsAmount: pendingWithdrawalsAmount,
+      feeAmount: feeAmount,
+      maxSlashPercentage: maxSlashPercentage,
+      asset: asset,
+      stkToken: stkToken,
+      depositToken: depositToken,
+      rewardsPoolsWeight: rewardsPoolsWeight
+    });
+  }
+
+  function getUndrippedRewardPool(ISafetyModule safetyModule_, uint256 undrippedRewardPoolId_)
+    internal
+    view
+    returns (UndrippedRewardPool memory)
+  {
+    (uint256 amount, IERC20 asset, IDripModel dripModel, IReceiptToken depositToken) =
+      safetyModule_.undrippedRewardPools(undrippedRewardPoolId_);
+    return UndrippedRewardPool({amount: amount, asset: asset, dripModel: dripModel, depositToken: depositToken});
   }
 
   function copyReservePool(ReservePool memory original_) internal pure returns (ReservePool memory copied_) {

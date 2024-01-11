@@ -9,5 +9,6 @@ enum SafetyModuleState {
 
 enum TriggerState {
   ACTIVE,
-  TRIGGERED
+  TRIGGERED,
+  FROZEN
 }
