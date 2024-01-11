@@ -634,7 +634,6 @@ contract CozyRouterStakeTest is CozyRouterTestSetup {
 
 contract CozyRouterConnectorSetup is CozyRouterTestSetup {
   MockConnector mockConnector;
-  // MockERC20 wrappedAsset;
   MockERC20 baseAsset = new MockERC20("Mock Base Asset", "MOCKBASE", 6);
 }
 
