@@ -10,3 +10,6 @@
 [submodule "lib/cozy-safety-module-models"]
 	path = lib/cozy-safety-module-models
 	url = https://github.com/Cozy-Finance/cozy-safety-module-models
+[submodule "lib/cozy-safety-module-triggers"]
+	path = lib/cozy-safety-module-triggers
+	url = https://github.com/Cozy-Finance/cozy-safety-module-triggers
