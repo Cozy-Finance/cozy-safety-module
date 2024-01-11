@@ -900,3 +900,51 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
     router.redeemRewardPoolDepositTokens(safetyModule, wethReservePoolId, 100, address(0), 101);
   }
 }
+
+contract CozyRouterCompleteWithdrawRedeemTest is CozyRouterTestSetup {
+  uint256 poolAssetAmount = 10_000;
+  address testOwner = alice;
+  address receiver = bob;
+
+  function setUp() public override {
+    super.setUp();
+    vm.startPrank(testOwner);
+
+    // Mint some WETH and approve the router to move it.
+    vm.deal(testOwner, poolAssetAmount);
+    weth.deposit{value: poolAssetAmount}();
+    weth.approve(address(router), type(uint256).max); // Grant full approval to the router.
+
+    // The router deposits assets on behalf of alice.
+    uint256 depositTokens_ =
+      router.depositReserveAssets(safetyModule, wethReservePoolId, poolAssetAmount, testOwner, poolAssetAmount);
+
+    // Initiate a WETH withdrawal request from the reserve pool, with bob as the receiver. The router is pre-approved.
+    getReservePool(safetyModule, wethReservePoolId).depositToken.approve(address(router), depositTokens_);
+    router.withdrawReservePoolAssets(safetyModule, wethReservePoolId, poolAssetAmount, receiver, depositTokens_);
+    skip(getDelays(safetyModule).withdrawDelay);
+
+    vm.stopPrank();
+  }
+
+  function completeWithdrawRedeem(bool useCompleteWithdraw) public {
+    vm.startPrank(testOwner);
+
+    // Complete withdrawal, the receiver specified when the withdrawal was signalled receives the assets.
+    if (useCompleteWithdraw) router.completeWithdraw(safetyModule, 0);
+    else router.completeRedeem(safetyModule, 0);
+
+    vm.stopPrank();
+
+    assertEq(weth.balanceOf(testOwner), 0);
+    assertEq(weth.balanceOf(receiver), poolAssetAmount);
+  }
+
+  function test_CompleteWithdraw() public {
+    completeWithdrawRedeem(true);
+  }
+
+  function test_CompleteRedeem() public {
+    completeWithdrawRedeem(false);
+  }
+}
