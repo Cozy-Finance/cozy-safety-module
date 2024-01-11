@@ -140,6 +140,21 @@ abstract contract ReedemerUnitTestBase is TestBase {
     else return withdrawDelay_;
   }
 
+  function _assertReservePoolAccounting(
+    uint16 reservePoolId_,
+    uint256 poolAssetAmount_,
+    uint256 assetsPendingRedemption_
+  ) internal {
+    ReservePool memory reservePool_ = component.getReservePool(reservePoolId_);
+    if (isUnstakeTest) {
+      assertEq(reservePool_.pendingUnstakesAmount, assetsPendingRedemption_, "reservePool_.pendingUnstakesAmount");
+      assertEq(reservePool_.stakeAmount, poolAssetAmount_, "reservePool_.stakeAmount");
+    } else {
+      assertEq(reservePool_.pendingWithdrawalsAmount, assetsPendingRedemption_, "reservePool_.pendingWithdrawalsAmount");
+      assertEq(reservePool_.depositAmount, poolAssetAmount_, "reservePool_.depositAmount");
+    }
+  }
+
   function setUp() public virtual {
     component.mockSetUnstakeDelay(UNSTAKE_DELAY);
     component.mockSetWithdrawDelay(WITHDRAW_DELAY);
@@ -215,6 +230,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     assertEq(testReceiptToken.balanceOf(owner_), 0, "receipt tokens balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), resultReserveAssetAmount_, "reserve assets balanceOf");
     assertEq(component.getRedemptionIdCounter(), 1, "redemptionidCounter");
+    _assertReservePoolAccounting(0, reserveAssetAmount_ - resultReserveAssetAmount_, 0);
   }
 
   function test_redeem_canRedeemAllInstantly_whenSafetyModuleIsPaused() external {
@@ -232,7 +248,9 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
       owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     vm.prank(owner_);
-    _redeem(0, receiptTokenAmount_, receiver_, owner_);
+    (, uint256 resultReserveAssetAmount_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
+
+    _assertReservePoolAccounting(0, reserveAssetAmount_ - resultReserveAssetAmount_, 0);
   }
 
   function test_redeem_canRedeemPartialInstantly() external {
@@ -272,6 +290,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     assertEq(testReceiptToken.balanceOf(owner_), receiptTokenAmount_ - receiptTokenAmountToRedeem_, "shares balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), reserveAssetsToReceive_, "reserve assets balanceOf");
     assertEq(component.getRedemptionIdCounter(), 1, "redemptionidCounter");
+    _assertReservePoolAccounting(0, reserveAssetAmount_ - resultReserveAssetAmount_, 0);
   }
 
   function test_redeem_canRedeemTotalInstantlyInTwoRedeems() external {
@@ -311,6 +330,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     assertEq(testReceiptToken.balanceOf(owner_), receiptTokenAmount_ - receiptTokenAmountToRedeem_, "shares balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), reserveAssetsToReceive_, "reserve assets balanceOf");
     assertEq(component.getRedemptionIdCounter(), 1, "redemptionIdCounter");
+    _assertReservePoolAccounting(0, reserveAssetAmount_ - resultReserveAssetAmount_, 0);
 
     receiptTokenAmountToRedeem_ = receiptTokenAmount_ - receiptTokenAmountToRedeem_;
     reserveAssetsToReceive_ = reserveAssetAmount_ - reserveAssetsToReceive_;
@@ -337,6 +357,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     assertEq(testReceiptToken.balanceOf(owner_), 0, "shares balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), reserveAssetAmount_, "reserve assets balanceOf");
     assertEq(component.getRedemptionIdCounter(), 2, "redemptionIdCounter");
+    _assertReservePoolAccounting(0, 0, 0);
   }
 
   function test_redeem_cannotRedeemIfSafetyModuleTriggered() external {
@@ -391,10 +412,10 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     );
 
     vm.prank(spender_);
-    _redeem(0, receiptTokenAmount_, receiver_, owner_);
+    (, uint256 resultReserveAssetAmount_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
     assertEq(testReceiptToken.allowance(owner_, spender_), 1, "receiptToken allowance"); // Only 1 allowance left
-      // because
-      // of subtraction.
+      // because of subtraction.
+    _assertReservePoolAccounting(0, reserveAssetAmount_ - resultReserveAssetAmount_, 0);
   }
 
   function test_redeem_cannotRedeem_ThroughAllowance_WithInsufficientAllowance() external {
@@ -430,6 +451,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
         _redeem(0, receiptTokenAmount_, receiver_, owner_);
       assertEq(resultRedemptionId_, nextRedemptionId_, "redemptionId");
       assertEq(resultReserveAssetAmount_, reserveAssetAmount_, "reserve assets received");
+      _assertReservePoolAccounting(0, reserveAssetAmount_, resultReserveAssetAmount_);
     }
 
     skip(_getRedemptionDelay());
@@ -442,6 +464,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
 
     assertEq(testReceiptToken.balanceOf(owner_), 0, "receiptToken balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), reserveAssetAmount_, "assets balanceOf");
+    _assertReservePoolAccounting(0, 0, 0);
   }
 
   function test_redeem_canQueueRedeemAll_ThenCompleteIfSafetyModuleIsPaused() external {
@@ -464,6 +487,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
         _redeem(0, receiptTokenAmount_, receiver_, owner_);
       assertEq(resultRedemptionId_, nextRedemptionId_, "redemptionId");
       assertEq(resultReserveAssetAmount_, reserveAssetAmount_, "reserve assets received");
+      _assertReservePoolAccounting(0, reserveAssetAmount_, resultReserveAssetAmount_);
     }
 
     component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
@@ -476,6 +500,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
 
     assertEq(testReceiptToken.balanceOf(owner_), 0, "receiptToken balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), reserveAssetAmount_, "assets balanceOf");
+    _assertReservePoolAccounting(0, 0, 0);
   }
 
   function test_redeem_delayedRedeemAll_IsNotAffectedByNewRedeem() external {
@@ -493,7 +518,8 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
       owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     vm.prank(owner_);
-    _redeem(0, receiptTokenAmount_, receiver_, owner_);
+    (, uint256 resultReserveAssetAmount_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
+    _assertReservePoolAccounting(0, reserveAssetAmount_, resultReserveAssetAmount_);
 
     // New deposit/stake.
     _depositOrStake(0, _randomAddress(), 1e6, 1e18);
@@ -508,6 +534,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
 
     assertEq(testReceiptToken.balanceOf(owner_), 0, "receiptToken balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), reserveAssetAmount_, "assets balanceOf");
+    _assertReservePoolAccounting(0, 1e6, 0);
   }
 
   function test_redeem_cannotCompleteRedeemBeforeDelayPasses() external {
@@ -564,11 +591,13 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
       owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     vm.prank(owner_);
-    _redeem(0, receiptTokenAmount_, receiver_, owner_);
+    (, uint256 resultReserveAssetAmount_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
+    _assertReservePoolAccounting(0, reserveAssetAmount_, resultReserveAssetAmount_);
 
     skip(_getRedemptionDelay());
     // Complete.
     _completeRedeem(nextRedemptionId_);
+    _assertReservePoolAccounting(0, 0, 0);
     vm.expectRevert(IRedemptionErrors.RedemptionNotFound.selector);
     _completeRedeem(nextRedemptionId_);
   }
@@ -593,15 +622,19 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
       receiptTokensToRedeem_.mulDivDown(reserveAssetAmount_, receiptTokenAmount_),
       "resultReserveAssetAmount"
     );
+    _assertReservePoolAccounting(0, reserveAssetAmount_, queueResultReserveAssetAmount_);
 
     // Trigger, taking 10% of the reserve pool.
     _updateRedemptionsAfterTrigger(0, oldReservePoolAmount_, slashAmount_);
+    _assertReservePoolAccounting(0, reserveAssetAmount_, queueResultReserveAssetAmount_);
 
     skip(_getRedemptionDelay());
     uint256 resultReserveAssetAmount_ = _completeRedeem(nextRedemptionId_);
     // receiptTokens are now worth 90% of what they were before the trigger.
     assertEq(resultReserveAssetAmount_, queueResultReserveAssetAmount_ * 9 / 10 - 1, "reserve assets received");
     assertEq(testReceiptToken.balanceOf(owner_), 0, "receiptToken balanceOf");
+    // This is wrong.
+    _assertReservePoolAccounting(0, reserveAssetAmount_ * 1 / 10 + 1, queueResultReserveAssetAmount_ * 1 / 10 + 1);
   }
 
   function test_redeem_triggerWhileNoneBeingRedeemed() external {
