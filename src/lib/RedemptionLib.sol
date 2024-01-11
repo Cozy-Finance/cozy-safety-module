@@ -122,7 +122,7 @@ library RedemptionLib {
   function computeNewPendingRedemptionsAccumulatedScalingFactor(
     uint256 currAccISF_,
     uint256 oldAssetsPendingRedemption_,
-    uint256 oldRedemptionAmount_,
+    uint256 oldPoolAmount_,
     uint256 slashAmount_
   ) internal pure returns (uint256 newAssetsPendingRedemption_, uint256 newAccISF_) {
     // The incoming accumulator should be less than the threshold to use a new one.
@@ -131,7 +131,7 @@ library RedemptionLib {
     // should only ever increase (or stay the same). This is because scalingFactor will always <= 1.0 and
     // we accumulate *= 1/scalingFactor.
     assert(currAccISF_ >= MathConstants.WAD);
-    uint256 scalingFactor_ = computeNextPendingRedemptionsScalingFactorForTrigger(oldRedemptionAmount_, slashAmount_);
+    uint256 scalingFactor_ = computeNextPendingRedemptionsScalingFactorForTrigger(oldPoolAmount_, slashAmount_);
     // Computed scaling factor as a result of this trigger should be <= 1.0.
     assert(scalingFactor_ <= MathConstants.WAD);
     newAssetsPendingRedemption_ = oldAssetsPendingRedemption_.mulWadDown(scalingFactor_);
@@ -142,17 +142,17 @@ library RedemptionLib {
     assert(newAccISF_ <= MAX_ACCUM_INV_SCALING_FACTOR_VALUE);
   }
 
-  function computeNextPendingRedemptionsScalingFactorForTrigger(uint256 oldRedemptionAmount_, uint256 slashAmount_)
+  function computeNextPendingRedemptionsScalingFactorForTrigger(uint256 oldPoolAmount_, uint256 slashAmount_)
     internal
     pure
     returns (uint256 scalingFactor_)
   {
     // Because the slash amount will be removed from the redemption amount, the value of all
     // redeemed tokens will be scaled (down) by:
-    //      scalingFactor = 1 - slashAmount_ / oldRedemptionAmount_
-    if (slashAmount_ > oldRedemptionAmount_) return 0;
-    if (oldRedemptionAmount_ == 0) return 0;
-    return MathConstants.WAD - slashAmount_.divWadDown(oldRedemptionAmount_);
+    //      scalingFactor = 1 - slashAmount_ / oldPoolAmount_
+    if (slashAmount_ > oldPoolAmount_) return 0;
+    if (oldPoolAmount_ == 0) return 0;
+    return MathConstants.WAD - slashAmount_.divWadDown(oldPoolAmount_);
   }
 
   /// @dev Gets the amount of time remaining that must elapse before a queued redemption can be completed.
