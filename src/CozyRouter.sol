@@ -55,7 +55,6 @@ contract CozyRouter {
   /// @dev Thrown when slippage was larger than the specified threshold.
   error SlippageExceeded();
 
-  /// @param weth_ WETH9 address.
   constructor(
     IManager manager_,
     IWeth weth_,
@@ -115,8 +114,7 @@ contract CozyRouter {
   }
 
   /// @notice Pulls `amount_` of the specified `token_` from the caller and sends them to `recipient_`.
-  /// @dev Used for migration scenarios to allow users to transfer excess tokens to a new set when a refund from an old
-  /// set is insufficient for the new purchase.
+  /// @dev Used for migration scenarios to allow users to transfer excess tokens to a new safety module.
   function pullToken(IERC20 token_, address recipient_, uint256 amount_) external payable {
     _assertAddressNotZero(recipient_);
     token_.safeTransferFrom(msg.sender, recipient_, amount_);
@@ -137,28 +135,28 @@ contract CozyRouter {
     token_.safeTransfer(recipient_, amount_);
   }
 
-  /// @notice Wraps caller's entire balance of stETH as wstETH and transfers to `set_`.
+  /// @notice Wraps caller's entire balance of stETH as wstETH and transfers to `safetyModule_`.
   /// Requires pre-approval of the router to transfer the caller's stETH.
-  /// @dev This function should be `aggregate` called with `purchaseWithoutTransfer` or `depositWithoutTransfer`.
-  function wrapStEth(address set_) external {
-    _assertIsValidSafetyModule(set_);
-    wrapStEth(set_, stEth.balanceOf(msg.sender));
+  /// @dev This function should be `aggregate` called with deposit or stake without transfer functions.
+  function wrapStEth(address safetyModule_) external {
+    _assertIsValidSafetyModule(safetyModule_);
+    wrapStEth(safetyModule_, stEth.balanceOf(msg.sender));
   }
 
-  /// @notice Wraps `amount_` of stETH as wstETH and transfers to `set_`.
+  /// @notice Wraps `amount_` of stETH as wstETH and transfers to `safetyModule_`.
   /// Requires pre-approval of the router to transfer the caller's stETH.
-  /// @dev This function should be `aggregate` called with `purchaseWithoutTransfer` or `depositWithoutTransfer`.
-  function wrapStEth(address set_, uint256 amount_) public {
-    _assertIsValidSafetyModule(set_);
+  /// @dev This function should be `aggregate` called with deposit or stake without transfer functions.
+  function wrapStEth(address safetyModule_, uint256 amount_) public {
+    _assertIsValidSafetyModule(safetyModule_);
     IERC20(address(stEth)).safeTransferFrom(msg.sender, address(this), amount_);
     uint256 wstEthAmount_ = wstEth.wrap(stEth.balanceOf(address(this)));
-    IERC20(address(wstEth)).safeTransfer(set_, wstEthAmount_);
+    IERC20(address(wstEth)).safeTransfer(safetyModule_, wstEthAmount_);
   }
 
   /// @notice Unwraps router's balance of wstETH into stETH and transfers to `recipient_`.
-  /// @dev This function should be `aggregate` called with `sell/cancel` or `completeRedeem/completeWithdraw`. This
-  /// should also be called with `withdraw/redeem` in the case that instant withdrawals/redemptions can occur due to
-  /// the set being PAUSED.
+  /// @dev This function should be `aggregate` called with `completeRedeem/completeWithdraw/completeUnstake`. This
+  /// should also be called with withdraw/redeem/unstake functions in the case that instant withdrawals/redemptions
+  /// can occur due to the safety module being PAUSED.
   function unwrapStEth(address recipient_) external {
     _assertAddressNotZero(recipient_);
     uint256 stEthAmount_ = wstEth.unwrap(wstEth.balanceOf(address(this)));
@@ -166,7 +164,7 @@ contract CozyRouter {
   }
 
   /// @notice Wraps all ETH held by this contact into WETH and sends WETH to the `safetyModule_`.
-  /// @dev This function should be `aggregate` called with `purchaseWithoutTransfer` or `depositWithoutTransfer`.
+  /// @dev This function should be `aggregate` called with deposit or stake without transfer functions.
   function wrapWeth(address safetyModule_) external payable {
     _assertIsValidSafetyModule(safetyModule_);
     uint256 amount_ = address(this).balance;
@@ -175,7 +173,7 @@ contract CozyRouter {
   }
 
   /// @notice Wraps the specified `amount_` of ETH from this contact into WETH and sends WETH to the `safetyModule_`.
-  /// @dev This function should be `aggregate` called with `purchaseWithoutTransfer` or `depositWithoutTransfer`.
+  /// @dev This function should be `aggregate` called with deposit or stake without transfer functions.
   function wrapWeth(address safetyModule_, uint256 amount_) external payable {
     _assertIsValidSafetyModule(safetyModule_);
     // Using msg.value in a multicall is dangerous, so we avoid it.
@@ -186,9 +184,9 @@ contract CozyRouter {
 
   /// @notice Unwraps all WETH held by this contact and sends ETH to the `recipient_`.
   /// @dev Reentrancy is possible here, but this router is stateless and therefore a reentrant call is not harmful.
-  /// @dev This function should be `aggregate` called with `sell/cancel` or `completeRedeem/completeWithdraw`. This
-  /// should also be called with `withdraw/redeem` in the case that instant withdrawals/redemptions can occur due to
-  /// the set being PAUSED.
+  /// @dev This function should be `aggregate` called with `completeRedeem/completeWithdraw/completeUnstake`. This
+  /// should also be called with withdraw/redeem/unstake functions in the case that instant withdrawals/redemptions
+  /// can occur due to the safety module being PAUSED.
   function unwrapWeth(address recipient_) external payable {
     _assertAddressNotZero(recipient_);
     uint256 amount_ = weth.balanceOf(address(this));
@@ -199,9 +197,9 @@ contract CozyRouter {
 
   /// @notice Unwraps the specified `amount_` of WETH held by this contact and sends ETH to the `recipient_`.
   /// @dev Reentrancy is possible here, but this router is stateless and therefore a reentrant call is not harmful.
-  /// @dev This function should be `aggregate` called with `sell/cancel` or `completeRedeem/completeWithdraw`. This
-  /// should also be called with `withdraw/redeem` in the case that instant withdrawals/redemptions can occur due to
-  /// the set being PAUSED.
+  /// @dev This function should be `aggregate` called with `completeRedeem/completeWithdraw/completeUnstake`. This
+  /// should also be called with withdraw/redeem/unstake functions in the case that instant withdrawals/redemptions
+  /// can occur due to the safety module being PAUSED.
   function unwrapWeth(address recipient_, uint256 amount_) external payable {
     _assertAddressNotZero(recipient_);
     if (weth.balanceOf(address(this)) < amount_) revert InsufficientBalance();
@@ -225,7 +223,7 @@ contract CozyRouter {
     address receiver_,
     uint256 minSharesReceived_ // The minimum amount of shares the user expects to receive.
   ) external payable returns (uint256 depositTokenAmount_) {
-    // Caller must first approve this router to spend the set's asset.
+    // Caller must first approve this router to spend the reserve pool's asset.
     (,,,,,, IERC20 asset_,,,) = safetyModule_.reservePools(reservePoolId_);
     asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);
 
@@ -245,7 +243,7 @@ contract CozyRouter {
     address receiver_,
     uint256 minSharesReceived_ // The minimum amount of shares the user expects to receive.
   ) external payable returns (uint256 depositTokenAmount_) {
-    // Caller must first approve this router to spend the set's asset.
+    // Caller must first approve this router to spend the reward pool's asset.
     (,,,,,, IERC20 asset_,,,) = safetyModule_.reservePools(rewardPoolId_);
     asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);
 
@@ -305,7 +303,7 @@ contract CozyRouter {
     uint256 minSharesReceived_ // The minimum amount of shares the user expects to receive.
   ) external payable returns (uint256 stakeTokenAmount_) {
     _assertAddressNotZero(receiver_);
-    // Caller must first approve this router to spend the set's asset.
+    // Caller must first approve this router to spend the reserve pool's asset.
     (,,,,,, IERC20 asset_,,,) = safetyModule_.reservePools(reservePoolId_);
     asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);
 
@@ -366,7 +364,7 @@ contract CozyRouter {
     );
   }
 
-  /// @notice Calls the connector to wrap the base asset, send the wrapped assets to `set_`, and then
+  /// @notice Calls the connector to wrap the base asset, send the wrapped assets to `safetyModule_`, and then
   /// `stakeWithoutTransfer`.
   /// @dev This will revert if the router is not approved for at least `baseAssetAmount_` of the base asset.
   function wrapBaseAssetViaConnectorAndStake(
@@ -388,10 +386,9 @@ contract CozyRouter {
   // --------------------------------------
 
   /// @notice Removes assets from a `safetyModule_` reserve pool. Burns `depositTokenAmount_` from owner and sends
-  /// exactly
-  /// `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and reverts if more than
-  /// `maxSharesBurned_` are burned. If the safety module is PAUSED, withdrawal can be completed immediately, otherwise
-  /// this queues a redemption which can be completed once sufficient delay has elapsed.
+  /// exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and reverts if
+  /// more than `maxSharesBurned_` are burned. If the safety module is PAUSED, withdrawal can be completed immediately,
+  /// otherwise this queues a redemption which can be completed once sufficient delay has elapsed.
   function withdrawReservePoolAssets(
     ISafetyModule safetyModule_,
     uint16 reservePoolId_,
@@ -407,10 +404,9 @@ contract CozyRouter {
   }
 
   /// @notice Removes assets from a `safetyModule_` reserve pool. Burns `depositTokenAmount_` from owner and sends
-  /// exactly
-  /// `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and reverts if less than
-  /// `minAssetsReceived_` would be received. If the safety module is PAUSED, withdrawal can be completed immediately,
-  ///  otherwise this queues a redemption which can be completed once sufficient delay has elapsed.
+  /// exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and reverts if less
+  /// than `minAssetsReceived_` would be received. If the safety module is PAUSED, withdrawal can be completed
+  /// immediately, otherwise this queues a redemption which can be completed once sufficient delay has elapsed.
   function redeemReservePoolDepositTokens(
     ISafetyModule safetyModule_,
     uint16 reservePoolId_,
@@ -426,7 +422,7 @@ contract CozyRouter {
 
   /// @notice Removes assets from a `safetyModule_` undripped reward pool. Burns `depositTokenAmount_` from owner and
   /// sends exactly `rewardAssetAmount_` of the reward pool's underlying tokens to the `receiver_`, and reverts if
-  /// more than  `maxSharesBurned_` are burned. Withdrawal of assets from undripped reward pools can be completed
+  /// more than `maxSharesBurned_` are burned. Withdrawal of assets from undripped reward pools can be completed
   /// instantly.
   function withdrawRewardPoolAssets(
     ISafetyModule safetyModule_,
@@ -444,7 +440,7 @@ contract CozyRouter {
 
   // @notice Removes assets from a `safetyModule_` undripped reward pool. Burns `depositTokenAmount_` from owner and
   /// sends exactly `rewardAssetAmount_` of the reward pool's underlying tokens to the `receiver_`, and reverts if
-  /// less than  `minAssetsReceived_` would be received. Withdrawal of assets from undripped reward pools can be
+  /// less than `minAssetsReceived_` would be received. Withdrawal of assets from undripped reward pools can be
   /// completed instantly.
   function redeemRewardPoolDepositTokens(
     ISafetyModule safetyModule_,
@@ -459,34 +455,29 @@ contract CozyRouter {
     if (assetsReceived_ < minAssetsReceived_) revert SlippageExceeded();
   }
 
-  /// @notice Unstakes exactly `stakeTokenAmount` from a `safetyModule_` reserve pool. Burns `depositTokenAmount_` from
+  /// @notice Unstakes exactly `stakeTokenAmount` from a `safetyModule_` reserve pool. Burns `stkTokenAmount_` from
   /// owner and sends exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and
-  /// reverts
-  /// if less than `minAssetsReceived_` of the reserve pool asset would be received. If the safety module is PAUSED,
-  /// unstake
-  /// can be completed immediately, otherwise this queues a redemption which can be completed once sufficient delay has
-  /// elapsed. This also claims any outstanding rewards that the user is entitled to.
+  /// reverts if less than `minAssetsReceived_` of the reserve pool asset would be received. If the safety module is
+  /// PAUSED, unstake can be completed immediately, otherwise this queues a redemption which can be completed once
+  /// sufficient delay has elapsed. This also claims any outstanding rewards that the user is entitled to.
   function unstake(
     ISafetyModule safetyModule_,
     uint16 reservePoolId_,
-    uint256 stakeTokenAmount_,
+    uint256 stkTokenAmount_,
     address receiver_,
     uint256 minAssetsReceived_
   ) external payable returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
     _assertAddressNotZero(receiver_);
     // Caller must first approve the CozyRouter to spend the stake tokens.
-    (redemptionId_, reserveAssetAmount_) =
-      safetyModule_.unstake(reservePoolId_, stakeTokenAmount_, receiver_, msg.sender);
+    (redemptionId_, reserveAssetAmount_) = safetyModule_.unstake(reservePoolId_, stkTokenAmount_, receiver_, msg.sender);
     if (reserveAssetAmount_ < minAssetsReceived_) revert SlippageExceeded();
   }
 
-  /// @notice Unstakes exactly `reserveAssetAmount_` from a `safetyModule_` reserve pool. Burns `depositTokenAmount_`
-  /// from
-  /// owner and sends exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and
-  /// reverts
-  /// if more than `maxSharesBurned_` are burned. If the safety module is PAUSED, unstake can be completed immediately,
-  /// otherwise this queues a redemption which can be completed once sufficient delay has elapsed. This also claims any
-  /// outstanding rewards that the user is entitled to.
+  /// @notice Unstakes exactly `reserveAssetAmount_` from a `safetyModule_` reserve pool. Burns `stkTokenAmount_`
+  /// from owner and sends exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`,
+  /// and reverts if more than `maxSharesBurned_` are burned. If the safety module is PAUSED, unstake can be completed
+  /// immediately, otherwise this queues a redemption which can be completed once sufficient delay has elapsed. This
+  /// also claims any outstanding rewards that the user is entitled to.
   function unstakeAssetAmount(
     ISafetyModule safetyModule_,
     uint16 reservePoolId_,
@@ -501,7 +492,7 @@ contract CozyRouter {
     (redemptionId_,) = safetyModule_.unstake(reservePoolId_, stkTokenAmount_, receiver_, msg.sender);
   }
 
-  // /// @notice Completes the redemption corresponding to `id_` in `safetyModule_`.
+  /// @notice Completes the redemption corresponding to `id_` in `safetyModule_`.
   function completeWithdraw(ISafetyModule safetyModule_, uint64 id_) external payable {
     safetyModule_.completeRedemption(id_);
   }
@@ -511,12 +502,17 @@ contract CozyRouter {
     safetyModule_.completeRedemption(id_);
   }
 
+  /// @notice Completes the unstake corresponding to redemption id `id_` in `safetyModule_`.
+  function completeUnstake(ISafetyModule safetyModule_, uint64 id_) external payable {
+    safetyModule_.completeRedemption(id_);
+  }
+
   /// @notice Calls the connector to unwrap the wrapped assets and transfer base assets back to `receiver_`.
   /// @dev This assumes that all assets that need to be withdrawn are sitting in the connector. It expects the
-  /// integrator has called `CozyRouter.withdraw/redeem` with `receiver == address(connector_)`.
-  /// @dev This function should be `aggregate` called with `completeWithdraw/Redeem`, or `withdraw/redeem`. It can
-  /// be called with `withdraw/redeem` in the case that instant withdrawals can occur due to the safety module being
-  /// PAUSED.
+  /// integrator has called `CozyRouter.withdraw/redeem/unstake` with `receiver_ == address(connector_)`.
+  /// @dev This function should be `aggregate` called with `completeWithdraw/Redeem/Unstake`, or
+  /// `withdraw/redeem/unstake`. It can be called with withdraw/redeem/unstake in the case that instant
+  /// withdrawals can occur due to the safety module being PAUSED.
   function unwrapWrappedAssetViaConnectorForWithdraw(IConnector connector_, address receiver_) external payable {
     uint256 assets_ = connector_.balanceOf(address(connector_));
     if (assets_ > 0) connector_.unwrapWrappedAsset(receiver_, assets_);
@@ -524,7 +520,7 @@ contract CozyRouter {
 
   /// @notice Calls the connector to unwrap the wrapped assets and transfer base assets back to `receiver_`.
   /// @dev This assumes that `assets_` amount of the wrapped assets are sitting in the connector. So, it expects
-  /// the integrator has called a safety module operation such as `CozyRouter.withdraw` with `receiver ==
+  /// the integrator has called a safety module operation such as withdraw with `receiver_ ==
   /// address(connector_)`.
   function unwrapWrappedAssetViaConnector(IConnector connector_, uint256 assets_, address receiver_) external payable {
     if (assets_ > 0) connector_.unwrapWrappedAsset(receiver_, assets_);
