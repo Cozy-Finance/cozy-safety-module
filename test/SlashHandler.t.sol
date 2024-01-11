@@ -44,7 +44,7 @@ contract TriggerHandlerTest is TestBase {
     component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
   }
 
-  function _getScalingFactor(uint256 oldPoolAmount_, uint256 slashAmount_) internal returns (uint256) {
+  function _getScalingFactor(uint256 oldPoolAmount_, uint256 slashAmount_) internal pure returns (uint256) {
     if (slashAmount_ > oldPoolAmount_) return 0;
     if (oldPoolAmount_ == 0) return 0;
     return MathConstants.WAD - slashAmount_.divWadDown(oldPoolAmount_);
@@ -213,7 +213,7 @@ contract TriggerHandlerTest is TestBase {
     assertEq(reservePool_.stakeAmount, stakeAmount_ - (slashAmountA_ - depositAmount_));
     assertEq(
       reservePool_.pendingUnstakesAmount,
-      uint256(pendingUnstakesAmount_).mulWadUp(
+      uint256(pendingUnstakesAmount_).mulWadDown(
         _getScalingFactor(stakeAmount_, stakeAmount_ - (slashAmountA_ - depositAmount_))
       )
     );
@@ -226,7 +226,7 @@ contract TriggerHandlerTest is TestBase {
     assertEq(reservePool_.pendingUnstakesAmount, pendingUnstakesAmount_);
     assertEq(
       reservePool_.pendingWithdrawalsAmount,
-      uint256(pendingWithdrawalsAmount_).mulWadUp(_getScalingFactor(depositAmount_, slashAmountB_))
+      uint256(pendingWithdrawalsAmount_).mulWadDown(_getScalingFactor(depositAmount_, slashAmountB_))
     );
 
     // Reserve pool 2 - no assets are slashed.
