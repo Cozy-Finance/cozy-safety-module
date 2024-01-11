@@ -809,8 +809,6 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
         assertEq(uint256(redemptionId_), i, "redemption id");
         assertEq(assetsRedeemed_, uint256(assetsToRedeem_), "assets redeemed");
       }
-      // This component doesn't handle collateral accounting, so manually update it.
-      // component.mockSetTotalCollateralAvailable(totalAssets_);
       assertEq(
         _getReceiptToken(0).balanceOf(user_.owner),
         user_.receiptTokenAmount - receiptTokensToRedeem_,
