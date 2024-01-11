@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {OwnableTriggerFactory} from "cozy-safety-module-triggers/OwnableTriggerFactory.sol";
+import {OptimisticOracleV2Interface} from "cozy-safety-module-triggers/interfaces/OptimisticOracleV2Interface.sol";
+import {UMATriggerFactory} from "cozy-safety-module-triggers/UMATriggerFactory.sol";
 import {CozyRouter} from "../src/CozyRouter.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
@@ -14,6 +17,7 @@ import {
 } from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {TriggerMetadata} from "../src/lib/structs/Trigger.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";
@@ -28,14 +32,16 @@ import {MockERC20} from "./utils/MockERC20.sol";
 import {MockDeployProtocol} from "./utils/MockDeployProtocol.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
+import {MockUMAOracle} from "./utils/MockUMAOracle.sol";
 
 abstract contract CozyRouterTestSetup is MockDeployProtocol {
   CozyRouter router;
   ISafetyModule safetyModule;
   IStETH stEth;
   IWstETH wstEth;
-  IOwnableTriggerFactory ownableTriggerFactory;
-  IUMATriggerFactory umaTriggerFactory;
+  IOwnableTriggerFactory ownableTriggerFactory = IOwnableTriggerFactory(address(new OwnableTriggerFactory()));
+  OptimisticOracleV2Interface umaOracle = OptimisticOracleV2Interface(address(new MockUMAOracle())); // Mock for tests.
+  IUMATriggerFactory umaTriggerFactory = IUMATriggerFactory(address(new UMATriggerFactory(umaOracle)));
 
   IERC20 reserveAssetA = IERC20(address(new MockERC20("Mock Reserve Asset", "MOCKRES", 6)));
   IERC20 rewardAssetA = IERC20(address(new MockERC20("Mock Reward Asset", "MOCKREW", 6)));
@@ -120,39 +126,42 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
   }
 }
 
-// TODO Why does this test hang?
-// contract CozyRouterAggregateTest is CozyRouterTestSetup {
-//   // TODO This just a single example of how the router might be used. We should have more tests of this behavior.
-//   function testFuzz_BatchesCalls(uint88 amount_) public {
-//     vm.assume(amount_ > 100);
-//     uint256 ethAmount_ = uint256(amount_);
-//     deal(address(this), ethAmount_);
+contract CozyRouterAggregateTest is CozyRouterTestSetup {
+  // TODO This just a single example of how the router might be used. We should have more tests of this behavior.
+  function testFuzz_BatchesCalls(uint88 amount_) public {
+    vm.assume(amount_ > 100);
+    uint256 ethAmount_ = uint256(amount_);
+    deal(address(this), ethAmount_);
 
-//     bytes[] memory calls_ = new bytes[](2);
-//     uint256 reservePoolId_ = 1; // The weth reserve pool ID.
+    bytes[] memory calls_ = new bytes[](2);
+    uint256 reservePoolId_ = 1; // The weth reserve pool ID.
 
-//     calls_[0] = abi.encodeWithSelector(bytes4(keccak256(bytes("wrapWeth(address)"))), (address(safetyModule)));
-//     calls_[1] = abi.encodeWithSelector(
-//       router.depositReserveAssetsWithoutTransfer.selector, address(safetyModule), reservePoolId_, ethAmount_,
-// address(this), ethAmount_
-//     );
+    calls_[0] = abi.encodeWithSelector(bytes4(keccak256(bytes("wrapWeth(address)"))), (address(safetyModule)));
+    calls_[1] = abi.encodeWithSelector(
+      router.depositReserveAssetsWithoutTransfer.selector,
+      address(safetyModule),
+      reservePoolId_,
+      ethAmount_,
+      address(this),
+      ethAmount_
+    );
 
-//     router.aggregate{value: ethAmount_}(calls_);
+    router.aggregate{value: ethAmount_}(calls_);
 
-//     ReservePool memory reservePoolB_ = getReservePool(safetyModule, reservePoolId_);
+    ReservePool memory reservePoolB_ = getReservePool(safetyModule, reservePoolId_);
 
-//     assertEq(reservePoolB_.depositToken.balanceOf(address(this)), ethAmount_);
-//     assertEq(weth.balanceOf(address(safetyModule)), ethAmount_);
-//     assertEq(weth.balanceOf(address(router)), 0);
-//     assertEq(address(router).balance, 0);
-//     assertEq(address(this).balance, 0);
-//   }
+    assertEq(reservePoolB_.depositToken.balanceOf(address(this)), ethAmount_);
+    assertEq(weth.balanceOf(address(safetyModule)), ethAmount_);
+    assertEq(weth.balanceOf(address(router)), 0);
+    assertEq(address(router).balance, 0);
+    assertEq(address(this).balance, 0);
+  }
 
-//   function test_RevertsWithFailureData() public {}
-//   function test_SweepEthUsingAggregate() public {
-//     // Sweep ETH out by wrapping ETH and sending to router then unwrapping to recipient.
-//   }
-// }
+  function test_RevertsWithFailureData() public {}
+  function test_SweepEthUsingAggregate() public {
+    // Sweep ETH out by wrapping ETH and sending to router then unwrapping to recipient.
+  }
+}
 
 // Abstract test contract base with some helpers for
 // manipulating WEth token balance in the Router.
@@ -1010,5 +1019,154 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
 
   function test_excessAssetsCanBeSplitAmongstRewardDeposits() public {
     _testExcessAssetsCanBeSplitAmongstDeposits(false);
+  }
+}
+
+contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
+  IERC20 mockToken = IERC20(address(new MockERC20("Mock UMA Reward Token", "MOCK", 6)));
+
+  struct OwnableTriggerParams {
+    address owner;
+    bytes32 salt;
+  }
+
+  struct UMATriggerParams {
+    string query;
+    IERC20 rewardToken;
+    uint256 rewardAmount;
+    address refundRecipient;
+    uint256 bondAmount;
+    uint256 proposalDisputeWindow;
+  }
+
+  function test_deployOwnableTrigger() public {
+    address owner_ = _randomAddress();
+    bytes32 salt_ = _randomBytes32();
+    address expectedTriggerAddress_ = ownableTriggerFactory.computeTriggerAddress(owner_, salt_);
+    ITrigger trigger_ = router.deployOwnableTrigger(
+      owner_,
+      TriggerMetadata(
+        "Trigger Name",
+        "Protocol",
+        "A trigger that will toggle if Protocol is hacked",
+        "https://via.placeholder.com/150"
+      ),
+      salt_
+    );
+    assertEq(address(trigger_), expectedTriggerAddress_);
+    assertEq(Ownable(address(trigger_)).owner(), owner_);
+  }
+
+  function test_deployUMATrigger() public {
+    string memory query = "Has Protocol been hacked?";
+    uint256 rewardAmount_ = 10e6; // $10 USDC
+    address refundRecipient_ = _randomAddress();
+    uint256 bondAmount_ = 100e6; // $100 USDC
+    uint256 proposalDisputeWindow_ = 604_800; // 1 week
+
+    bytes32 configId_ = umaTriggerFactory.triggerConfigId(
+      query, mockToken, rewardAmount_, refundRecipient_, bondAmount_, proposalDisputeWindow_
+    );
+    address expectedTriggerAddress_ = umaTriggerFactory.computeTriggerAddress(
+      query, mockToken, rewardAmount_, refundRecipient_, bondAmount_, proposalDisputeWindow_
+    );
+
+    // Deal reward amount required for the UMA oracle and approve the router to spend it.
+    deal(address(mockToken), address(this), 10e6);
+    mockToken.approve(address(router), 10e6);
+
+    ITrigger trigger_ = router.deployUMATrigger(
+      query,
+      mockToken,
+      rewardAmount_,
+      refundRecipient_,
+      bondAmount_,
+      proposalDisputeWindow_,
+      TriggerMetadata(
+        "Trigger Name",
+        "Protocol",
+        "A trigger that will toggle if Protocol is hacked",
+        "https://via.placeholder.com/150"
+      )
+    );
+
+    assertEq(address(trigger_), expectedTriggerAddress_);
+    assertEq(umaTriggerFactory.exists(configId_), true);
+  }
+
+  function test_aggregateDeployTriggersAndSafetyModule() public {
+    OwnableTriggerParams memory ownableTriggerParams_ = OwnableTriggerParams(_randomAddress(), _randomBytes32());
+    address triggerA_ =
+      ownableTriggerFactory.computeTriggerAddress(ownableTriggerParams_.owner, ownableTriggerParams_.salt);
+
+    UMATriggerParams memory umaTriggerParams_ =
+      UMATriggerParams("Has Protocol been hacked?", mockToken, 10e6, _randomAddress(), 100e6, 604_800);
+    address triggerB_ = umaTriggerFactory.computeTriggerAddress(
+      umaTriggerParams_.query,
+      umaTriggerParams_.rewardToken,
+      umaTriggerParams_.rewardAmount,
+      umaTriggerParams_.refundRecipient,
+      umaTriggerParams_.bondAmount,
+      umaTriggerParams_.proposalDisputeWindow
+    );
+    deal(address(mockToken), address(this), 10e6);
+    mockToken.approve(address(router), 10e6);
+
+    address safetyModuleOwner_ = _randomAddress();
+    address safetyModulePauser_ = _randomAddress();
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
+    reservePoolConfigs_[0] =
+      ReservePoolConfig({maxSlashPercentage: 0, asset: reserveAssetA, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
+    undrippedRewardPoolConfigs_[0] = UndrippedRewardPoolConfig({
+      asset: rewardAssetA,
+      dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))
+    });
+    Delays memory delaysConfig_ =
+      Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
+    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](2);
+    triggerConfig_[0] = TriggerConfig({trigger: ITrigger(triggerA_), payoutHandler: _randomAddress(), exists: true});
+    triggerConfig_[1] = TriggerConfig({trigger: ITrigger(triggerB_), payoutHandler: _randomAddress(), exists: true});
+
+    UpdateConfigsCalldataParams memory updateConfigsParams_ =
+      UpdateConfigsCalldataParams(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfig_, delaysConfig_);
+
+    bytes[] memory calls_ = new bytes[](3);
+    calls_[0] = abi.encodeWithSelector(
+      router.deployOwnableTrigger.selector,
+      ownableTriggerParams_.owner,
+      TriggerMetadata(
+        "Trigger Name A",
+        "Protocol A",
+        "A triggerA that will toggle if Protocol is hacked",
+        "https://via.placeholder.com/150A"
+      ),
+      ownableTriggerParams_.salt
+    );
+    calls_[1] = abi.encodeWithSelector(
+      router.deployUMATrigger.selector,
+      umaTriggerParams_.query,
+      umaTriggerParams_.rewardToken,
+      umaTriggerParams_.rewardAmount,
+      umaTriggerParams_.refundRecipient,
+      umaTriggerParams_.bondAmount,
+      umaTriggerParams_.proposalDisputeWindow,
+      TriggerMetadata(
+        "Trigger NameB",
+        "ProtocolB",
+        "A triggerB that will toggle if Protocol is hacked",
+        "https://via.placeholder.com/150B"
+      )
+    );
+    calls_[2] = abi.encodeWithSelector(
+      router.deploySafetyModule.selector,
+      safetyModuleOwner_,
+      safetyModulePauser_,
+      updateConfigsParams_,
+      _randomBytes32()
+    );
+
+    deal(address(this), 1e18);
+    router.aggregate(calls_);
   }
 }

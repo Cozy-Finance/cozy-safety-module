@@ -91,7 +91,7 @@ contract CozyRouter {
   function aggregate(bytes[] calldata calls_) external payable returns (bytes[] memory returnData_) {
     returnData_ = new bytes[](calls_.length);
 
-    for (uint256 i = 0; i < calls_.length; i = i++) {
+    for (uint256 i = 0; i < calls_.length; i++) {
       (bool success_, bytes memory response_) = address(this).delegatecall(calls_[i]);
       if (!success_) revert CallFailed(i, response_);
       returnData_[i] = response_;
