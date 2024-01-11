@@ -1055,17 +1055,19 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
 
   function _updateUnstakesAfterTrigger(
     uint16, /* reservePoolId_ */
+    ReservePool storage, /* reservePool_ */
     uint256, /* oldStakeAmount_ */
     uint256 /* slashAmount_ */
-  ) internal view override {
+  ) internal view override returns (uint256) {
     __readStub__();
   }
 
   function _updateWithdrawalsAfterTrigger(
     uint16, /* reservePoolId_ */
+    ReservePool storage, /* reservePool_ */
     uint256, /* oldStakeAmount_ */
     uint256 /* slashAmount_ */
-  ) internal view override {
+  ) internal view override returns (uint256) {
     __readStub__();
   }
 }

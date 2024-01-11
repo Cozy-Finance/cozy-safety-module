@@ -626,14 +626,14 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
 
     // Trigger, taking 10% of the reserve pool.
     _updateRedemptionsAfterTrigger(0, oldReservePoolAmount_, slashAmount_);
-    _assertReservePoolAccounting(0, reserveAssetAmount_, queueResultReserveAssetAmount_);
 
     skip(_getRedemptionDelay());
     uint256 resultReserveAssetAmount_ = _completeRedeem(nextRedemptionId_);
     // receiptTokens are now worth 90% of what they were before the trigger.
     assertEq(resultReserveAssetAmount_, queueResultReserveAssetAmount_ * 9 / 10 - 1, "reserve assets received");
     assertEq(testReceiptToken.balanceOf(owner_), 0, "receiptToken balanceOf");
-    // This is wrong.
+    // These values should both be 0, but the accounting updates due to the slash taking out assets gets updated in
+    // `SlashHandler.slash` not the `Redeemer` contract.
     _assertReservePoolAccounting(0, reserveAssetAmount_ * 1 / 10 + 1, queueResultReserveAssetAmount_ * 1 / 10 + 1);
   }
 
@@ -778,6 +778,7 @@ contract UnstakeUnitTest is RedeemerUnitTest {
     assertEq(testReceiptToken.balanceOf(owner_), receiptTokenAmount_ - receiptTokenAmountToRedeem_, "shares balanceOf");
     // Only rewards assets are received at the first step of redemption.
     assertEq(mockAsset.balanceOf(receiver_), rewardsClaimAmountToReceive_, "reserve assets balanceOf");
+    _assertReservePoolAccounting(0, reserveAssetAmount_, resultReserveAssetAmount_);
   }
 }
 
@@ -1166,11 +1167,11 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
   // -------- Exposed internals --------
 
   function updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint256 oldAmount_, uint256 slashAmount_) external {
-    _updateWithdrawalsAfterTrigger(reservePoolId_, oldAmount_, slashAmount_);
+    _updateWithdrawalsAfterTrigger(reservePoolId_, reservePools[reservePoolId_], oldAmount_, slashAmount_);
   }
 
   function updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 oldStakeAmount_, uint256 slashAmount_) external {
-    _updateUnstakesAfterTrigger(reservePoolId_, oldStakeAmount_, slashAmount_);
+    _updateUnstakesAfterTrigger(reservePoolId_, reservePools[reservePoolId_], oldStakeAmount_, slashAmount_);
   }
 
   // -------- Overridden common abstract functions --------

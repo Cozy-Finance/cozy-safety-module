@@ -6,6 +6,7 @@ import {SafetyModuleBaseStorage} from "./SafetyModuleBaseStorage.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
 import {UserRewardsData} from "./structs/Rewards.sol";
+import {ReservePool} from "./structs/Pools.sol";
 
 abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   /// @notice Claim staking rewards for a given reserve pool.
@@ -42,14 +43,20 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     returns (uint256);
 
   /// @dev Prepares pending unstakes to have their exchange rates adjusted after a trigger. Defined in `Redeemer`.
-  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 stakeAmount_, uint256 slashAmount_)
-    internal
-    virtual;
+  function _updateUnstakesAfterTrigger(
+    uint16 reservePoolId_,
+    ReservePool storage reservePool_,
+    uint256 stakeAmount_,
+    uint256 slashAmount_
+  ) internal virtual returns (uint256 newUnstakesPendingRedemption);
 
   /// @dev Prepares pending withdrawals to have their exchange rates adjusted after a trigger. Defined in `Redeemer`.
-  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint256 stakeAmount_, uint256 slashAmount_)
-    internal
-    virtual;
+  function _updateWithdrawalsAfterTrigger(
+    uint16 reservePoolId_,
+    ReservePool storage reservePool_,
+    uint256 stakeAmount_,
+    uint256 slashAmount_
+  ) internal virtual returns (uint256 newWithdrawalsPendingRedemption);
 
   function _updateUserRewards(
     uint256 userStkTokenBalance_,

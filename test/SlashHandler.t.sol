@@ -375,19 +375,21 @@ contract TestableSlashHandler is SlashHandler {
     __readStub__();
   }
 
-  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 stakeAmount_, uint256 slashAmount_)
-    internal
-    virtual
-    override
-  {
+  function _updateUnstakesAfterTrigger(
+    uint16 reservePoolId_,
+    ReservePool storage, /* reservePool_ */
+    uint256 stakeAmount_,
+    uint256 slashAmount_
+  ) internal virtual override returns (uint256) {
     emit UnstakesUpdated(reservePoolId_, stakeAmount_, slashAmount_);
   }
 
-  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint256 depositAmount_, uint256 slashAmount_)
-    internal
-    virtual
-    override
-  {
+  function _updateWithdrawalsAfterTrigger(
+    uint16 reservePoolId_,
+    ReservePool storage, /* reservePool_ */
+    uint256 depositAmount_,
+    uint256 slashAmount_
+  ) internal virtual override returns (uint256) {
     emit WithdrawalsUpdated(reservePoolId_, depositAmount_, slashAmount_);
   }
 

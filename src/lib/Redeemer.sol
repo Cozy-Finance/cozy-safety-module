@@ -360,21 +360,29 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   }
 
   /// @inheritdoc SafetyModuleCommon
-  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint256 oldDepositAmount_, uint256 slashAmount_)
-    internal
-    override
-  {
+  function _updateWithdrawalsAfterTrigger(
+    uint16 reservePoolId_,
+    ReservePool storage reservePool_,
+    uint256 oldDepositAmount_,
+    uint256 slashAmount_
+  ) internal override returns (uint256 newWithdrawalsPendingRedemption) {
     uint256[] storage reservePoolPendingRedemptionsAccISFs = pendingRedemptionAccISFs[reservePoolId_].withdrawals;
-    RedemptionLib.updateRedemptionsAfterTrigger(oldDepositAmount_, slashAmount_, reservePoolPendingRedemptionsAccISFs);
+    newWithdrawalsPendingRedemption = RedemptionLib.updateRedemptionsAfterTrigger(
+      reservePool_, oldDepositAmount_, slashAmount_, reservePoolPendingRedemptionsAccISFs, false
+    );
   }
 
   /// @inheritdoc SafetyModuleCommon
-  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 oldStakeAmount_, uint256 slashAmount_)
-    internal
-    override
-  {
+  function _updateUnstakesAfterTrigger(
+    uint16 reservePoolId_,
+    ReservePool storage reservePool_,
+    uint256 oldStakeAmount_,
+    uint256 slashAmount_
+  ) internal override returns (uint256 newUnstakesPendingRedemption) {
     uint256[] storage reservePoolPendingUnstakesAccISFs = pendingRedemptionAccISFs[reservePoolId_].unstakes;
-    RedemptionLib.updateRedemptionsAfterTrigger(oldStakeAmount_, slashAmount_, reservePoolPendingUnstakesAccISFs);
+    newUnstakesPendingRedemption = RedemptionLib.updateRedemptionsAfterTrigger(
+      reservePool_, oldStakeAmount_, slashAmount_, reservePoolPendingUnstakesAccISFs, true
+    );
   }
 
   /// @dev Returns the amount of time remaining before a queued redemption can be completed.
