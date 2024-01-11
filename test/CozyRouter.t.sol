@@ -948,3 +948,67 @@ contract CozyRouterCompleteWithdrawRedeemTest is CozyRouterTestSetup {
     completeWithdrawRedeem(false);
   }
 }
+
+contract CozyRouterExcessPayment is CozyRouterTestSetup {
+  uint256 constant START_ASSETS = 200 ether;
+  address immutable receiverA = _randomAddress();
+  address immutable receiverB = _randomAddress();
+
+  function setUp() public override {
+    super.setUp();
+
+    // Mint some WETH and approve the router to move it.
+    vm.deal(alice, START_ASSETS);
+    vm.deal(bob, START_ASSETS);
+
+    vm.prank(alice);
+    weth.deposit{value: START_ASSETS - 1 ether}();
+    vm.prank(bob);
+    weth.deposit{value: START_ASSETS - 1 ether}();
+  }
+
+  function _testExcessAssetsCanBeSplitAmongstDeposits(bool isReserveDeposit_) public {
+    vm.prank(alice);
+    weth.transfer(address(safetyModule), 3 ether);
+
+    uint16 poolId_ = isReserveDeposit_ ? wethReservePoolId : wethRewardPoolId;
+    IERC20 depositToken_ = isReserveDeposit_
+      ? getReservePool(safetyModule, poolId_).depositToken
+      : getUndrippedRewardPool(safetyModule, poolId_).depositToken;
+
+    // Anyone can do arbitrary deposit operations with the excess ether.
+    if (isReserveDeposit_) {
+      router.depositReserveAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverA, 0);
+      assertEq(depositToken_.balanceOf(receiverA), 1 ether);
+      router.depositReserveAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverB, 0);
+      assertEq(depositToken_.balanceOf(receiverB), 1 ether);
+      router.depositReserveAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, bob, 0);
+      assertEq(depositToken_.balanceOf(bob), 1 ether);
+    } else {
+      router.depositRewardAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverA, 0);
+      assertEq(depositToken_.balanceOf(receiverA), 1 ether);
+      router.depositRewardAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverB, 0);
+      assertEq(depositToken_.balanceOf(receiverB), 1 ether);
+      router.depositRewardAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, bob, 0);
+      assertEq(depositToken_.balanceOf(bob), 1 ether);
+    }
+
+    uint256 poolAmount_ = isReserveDeposit_
+      ? getReservePool(safetyModule, poolId_).depositAmount
+      : getUndrippedRewardPool(safetyModule, poolId_).amount;
+
+    assertEq(weth.balanceOf(address(safetyModule)) - poolAmount_, 0);
+
+    // Once the arbitrary assets are depleted, any deposit without excess assets should fail.
+    vm.expectRevert();
+    router.depositReserveAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, bob, 0);
+  }
+
+  function test_excessAssetsCanBeSplitAmongstReserveDeposits() public {
+    _testExcessAssetsCanBeSplitAmongstDeposits(true);
+  }
+
+  function test_excessAssetsCanBeSplitAmongstRewardDeposits() public {
+    _testExcessAssetsCanBeSplitAmongstDeposits(false);
+  }
+}
