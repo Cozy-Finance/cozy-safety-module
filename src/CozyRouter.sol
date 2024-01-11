@@ -304,6 +304,7 @@ contract CozyRouter {
     address receiver_,
     uint256 minSharesReceived_ // The minimum amount of shares the user expects to receive.
   ) external payable returns (uint256 stakeTokenAmount_) {
+    _assertAddressNotZero(receiver_);
     // Caller must first approve this router to spend the set's asset.
     (,,,,,, IERC20 asset_,,,) = safetyModule_.reservePools(reservePoolId_);
     asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);

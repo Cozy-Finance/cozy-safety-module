@@ -590,6 +590,48 @@ contract CozyRouterDepositTest is CozyRouterTestSetup {
   }
 }
 
+contract CozyRouterStakeTest is CozyRouterTestSetup {
+  function testFuzz_Stake(address user_, uint256 assets_) public {
+    vm.assume(user_ != address(0));
+    vm.assume(user_ != address(safetyModule));
+    assets_ = bound(assets_, 1, type(uint96).max);
+
+    vm.startPrank(user_);
+
+    // Mint some WETH.
+    vm.deal(user_, assets_);
+    weth.deposit{value: assets_}();
+    weth.approve(address(router), assets_);
+
+    // Deposit WETH via the router.
+    uint256 shares = router.stake(safetyModule, wethReservePoolId, assets_, user_, assets_);
+
+    vm.stopPrank();
+
+    assertEq(weth.balanceOf(address(safetyModule)), assets_);
+    ReservePool memory reservePool_ = getReservePool(safetyModule, wethReservePoolId);
+    assertEq(reservePool_.stkToken.balanceOf(user_), shares);
+    assertEq(reservePool_.stakeAmount, assets_);
+  }
+
+  function test_StakeIfRecipientIsZeroAddress() public {
+    vm.startPrank(address(0xBEEF));
+
+    // Deal some weth
+    vm.deal(address(0xBEEF), 10);
+    weth.deposit{value: 10}();
+    weth.approve(address(router), 10);
+
+    vm.expectRevert(Ownable.InvalidAddress.selector);
+    router.stake(safetyModule, wethReservePoolId, 10, address(0), 10);
+
+    vm.stopPrank();
+
+    vm.expectRevert(Ownable.InvalidAddress.selector);
+    router.stakeWithoutTransfer(safetyModule, wethReservePoolId, 10, address(0), 10);
+  }
+}
+
 contract CozyRouterConnectorSetup is CozyRouterTestSetup {
   MockConnector mockConnector;
   // MockERC20 wrappedAsset;
