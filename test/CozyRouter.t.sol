@@ -836,3 +836,67 @@ contract CozyRouterWithdrawTest is CozyRouterTestSetup {
     router.withdrawRewardPoolAssets(safetyModule, wethRewardPoolId, 10, address(0), 10);
   }
 }
+
+contract CozyRouterRedeemTest is CozyRouterTestSetup {
+  address testRedeemer = address(this);
+  uint256 shares;
+
+  function _setUpWethBalances(
+    bool isReserveDeposit_,
+    ISafetyModule safetyModule_,
+    uint16 poolId_,
+    uint256 initialAmount_
+  ) internal {
+    vm.startPrank(testRedeemer);
+    // Mint some WETH and approve the router to move it.
+    vm.deal(testRedeemer, initialAmount_);
+    weth.deposit{value: initialAmount_}();
+    // Grant full approval to the router.
+    weth.approve(address(router), type(uint256).max);
+    // Deposit assets.
+    uint256 depositTokenAmount_ = isReserveDeposit_
+      ? router.depositReserveAssets(safetyModule_, poolId_, initialAmount_, testRedeemer, initialAmount_)
+      : router.depositRewardAssets(safetyModule_, poolId_, initialAmount_, testRedeemer, initialAmount_);
+    // Approve for test redemptions.
+    IERC20 depositToken_ = isReserveDeposit_
+      ? getReservePool(safetyModule_, poolId_).depositToken
+      : getUndrippedRewardPool(safetyModule_, poolId_).depositToken;
+    depositToken_.approve(address(router), depositTokenAmount_);
+    vm.stopPrank();
+  }
+
+  function testFuzz_RedeemFromReservePool(uint256 assets_) public {
+    vm.assume(assets_ > 0 && assets_ <= type(uint128).max);
+    _setUpWethBalances(true, safetyModule, wethReservePoolId, assets_);
+    (uint64 redemptionId_, uint256 actualAssets_) =
+      router.redeemReservePoolDepositTokens(safetyModule, wethReservePoolId, assets_, testRedeemer, assets_);
+    assertEq(actualAssets_, assets_);
+    assertEq(redemptionId_, 0);
+  }
+
+  function testFuzz_RedeemFromRewardPool(uint256 assets_) public {
+    vm.assume(assets_ > 0 && assets_ <= type(uint128).max);
+    _setUpWethBalances(false, safetyModule, wethRewardPoolId, assets_);
+    uint256 actualAssets_ =
+      router.redeemRewardPoolDepositTokens(safetyModule, wethRewardPoolId, assets_, testRedeemer, assets_);
+    assertEq(actualAssets_, assets_);
+  }
+
+  function test_RedeemRespectsMinAssetsOut() public {
+    _setUpWethBalances(true, safetyModule, wethReservePoolId, 100);
+    vm.expectRevert(CozyRouter.SlippageExceeded.selector);
+    router.redeemReservePoolDepositTokens(safetyModule, wethReservePoolId, 100, testRedeemer, 101);
+
+    _setUpWethBalances(false, safetyModule, wethRewardPoolId, 100);
+    vm.expectRevert(CozyRouter.SlippageExceeded.selector);
+    router.redeemRewardPoolDepositTokens(safetyModule, wethRewardPoolId, 100, testRedeemer, 101);
+  }
+
+  function test_RedeemRevertsIfReceiverIsZeroAddress() public {
+    vm.expectRevert(CozyRouter.InvalidAddress.selector);
+    router.redeemReservePoolDepositTokens(safetyModule, wethReservePoolId, 100, address(0), 101);
+
+    vm.expectRevert(CozyRouter.InvalidAddress.selector);
+    router.redeemRewardPoolDepositTokens(safetyModule, wethReservePoolId, 100, address(0), 101);
+  }
+}
