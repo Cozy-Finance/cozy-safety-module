@@ -648,7 +648,7 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     uint256 baseAssetsNeeded_,
     address owner_
   ) internal {
-    // Deal owner sufficient base assets to make purchase.
+    // Deal owner sufficient base assets to deposit.
     deal(address(mockConnector.baseAsset()), owner_, baseAssetsNeeded_, true);
 
     vm.startPrank(owner_);
@@ -670,8 +670,8 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
 
     // Owner should have proper number of deposit tokens.
     IERC20 depositToken_ = isReserveDeposit_
-      ? getReservePool(safetyModule, poolId_).depositToken
-      : getUndrippedRewardPool(safetyModule, poolId_).depositToken;
+      ? getReservePool(safetyModule_, poolId_).depositToken
+      : getUndrippedRewardPool(safetyModule_, poolId_).depositToken;
     assertEq(depositToken_.balanceOf(owner_), ownerShares_);
     assertEq(depositToken_.balanceOf(owner_), wrappedAssetDepositAmount_); // 1:1 exchange rate for initial deposit.
   }
@@ -685,7 +685,7 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     uint256 baseAssetsNeeded_,
     address owner_
   ) internal {
-    // Deal owner sufficient base assets to make purchase.
+    // Deal owner sufficient base assets to deposit.
     deal(address(mockConnector.baseAsset()), owner_, baseAssetsNeeded_, true);
 
     vm.startPrank(owner_);
@@ -740,6 +740,54 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     _testWrapBaseAssetViaConnectorForDepositSlippage(
       false, mockConnector, safetyModule, 0, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
     );
+  }
+}
+
+contract CozyRouterWrapBaseAssetViaConnectorAndStakeTest is CozyRouterConnectorSetup {
+  function test_wrapBaseAssetViaConnectorForStake() public {
+    mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(reserveAssetA)));
+    uint256 wrappedAssetStakeAmount_ = 500;
+    uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
+
+    // Deal owner sufficient base assets to stake.
+    deal(address(mockConnector.baseAsset()), alice, baseAssetsNeeded_, true);
+
+    vm.startPrank(alice);
+    // Owner has to approve the router to transfer the base assets.
+    mockConnector.baseAsset().approve(address(router), baseAssetsNeeded_);
+    uint256 ownerShares_ =
+      router.wrapBaseAssetViaConnectorAndStake(mockConnector, safetyModule, 0, baseAssetsNeeded_, alice, 0);
+    vm.stopPrank();
+
+    // All base assets needed should have been transferred away from Owner.
+    assertEq(mockConnector.baseAsset().balanceOf(alice), 0);
+    // Wrapped assets should have been transferred to safety module.
+    assertEq(mockConnector.wrappedAsset().balanceOf(address(safetyModule)), wrappedAssetStakeAmount_);
+
+    // Owner should have proper number of deposit tokens.
+    IERC20 stkToken_ = getReservePool(safetyModule, 0).stkToken;
+    assertEq(stkToken_.balanceOf(alice), ownerShares_);
+    assertEq(stkToken_.balanceOf(alice), wrappedAssetStakeAmount_); // 1:1 exchange rate for initial deposit.
+  }
+
+  function test_WrapBaseAssetViaConnectorForStakeSharesLowerThanMinSharesReceived() public {
+    mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(reserveAssetA)));
+    uint256 wrappedAssetStakeAmount_ = 500;
+    uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
+
+    // Deal owner sufficient base assets to stake.
+    deal(address(mockConnector.baseAsset()), alice, baseAssetsNeeded_, true);
+
+    vm.startPrank(alice);
+    // Owner has to approve the router to transfer the base assets.
+    mockConnector.baseAsset().approve(address(router), baseAssetsNeeded_);
+    // Should revert because assets_ < minSharesReceived_.
+    vm.expectRevert(CozyRouter.SlippageExceeded.selector);
+    uint256 minSharesReceived_ = wrappedAssetStakeAmount_ + 1;
+    router.wrapBaseAssetViaConnectorAndStake(
+      mockConnector, safetyModule, 0, baseAssetsNeeded_, alice, minSharesReceived_
+    );
+    vm.stopPrank();
   }
 }
 
