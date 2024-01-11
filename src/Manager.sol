@@ -8,19 +8,26 @@ import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
 import {UndrippedRewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
-import {FeesConfig, DripModelLookup} from "./lib/structs/Manager.sol";
 import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
 import {Governable} from "./lib/Governable.sol";
 
 contract Manager is Governable, IManager {
+  struct DripModelLookup {
+    IDripModel dripModel;
+    bool exists;
+  }
+
   /// @notice Cozy protocol SafetyModuleFactory.
   ISafetyModuleFactory public immutable safetyModuleFactory;
 
   /// @notice For the specified set, returns whether it's a valid Cozy Safety Module.
   mapping(ISafetyModule => bool) public isSafetyModule;
 
-  /// @notice The fees configuration for the Cozy protocol.
-  FeesConfig public feesConfig;
+  /// @notice The default fee drip model.
+  IDripModel public feeDripModel;
+
+  /// @notice Override fee drip models for specific SafetyModules.
+  mapping(ISafetyModule => DripModelLookup) public overrideFeeDripModels;
 
   /// @dev Thrown when an safety module's configuration does not meet all requirements.
   error InvalidConfiguration();
@@ -114,9 +121,9 @@ contract Manager is Governable, IManager {
   }
 
   function getFeeDripModel(ISafetyModule safetyModule_) external view returns (IDripModel) {
-    DripModelLookup memory overrideFeeDripModel_ = feesConfig.overrideFeeDripModels[safetyModule_];
+    DripModelLookup memory overrideFeeDripModel_ = overrideFeeDripModels[safetyModule_];
     if (overrideFeeDripModel_.exists) return overrideFeeDripModel_.dripModel;
-    else return feesConfig.feeDripModel;
+    else return feeDripModel;
   }
 
   // ----------------------------------
@@ -125,13 +132,13 @@ contract Manager is Governable, IManager {
 
   /// @dev Executes the fee drip model update.
   function _updateFeeDripModel(IDripModel feeDripModel_) internal {
-    feesConfig.feeDripModel = feeDripModel_;
+    feeDripModel = feeDripModel_;
     emit FeeDripModelUpdated(feeDripModel_);
   }
 
   /// @dev Executes the override fee drip model update.
   function _updateOverrideFeeDripModel(ISafetyModule safetyModule_, IDripModel feeDripModel_) internal {
-    feesConfig.overrideFeeDripModels[safetyModule_] = DripModelLookup({exists: true, dripModel: feeDripModel_});
+    overrideFeeDripModels[safetyModule_] = DripModelLookup({exists: true, dripModel: feeDripModel_});
     emit OverrideFeeDripModelUpdated(safetyModule_, feeDripModel_);
   }
 }
