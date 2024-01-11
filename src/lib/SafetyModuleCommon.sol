@@ -48,7 +48,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     ReservePool storage reservePool_,
     uint256 stakeAmount_,
     uint256 slashAmount_
-  ) internal virtual returns (uint256 newUnstakesPendingRedemption);
+  ) internal virtual returns (uint256 newPendingUnstakesAmount_);
 
   /// @dev Prepares pending withdrawals to have their exchange rates adjusted after a trigger. Defined in `Redeemer`.
   function _updateWithdrawalsAfterTrigger(
@@ -56,7 +56,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     ReservePool storage reservePool_,
     uint256 stakeAmount_,
     uint256 slashAmount_
-  ) internal virtual returns (uint256 newWithdrawalsPendingRedemption);
+  ) internal virtual returns (uint256 newPendingWithdrawalsAmount_);
 
   function _updateUserRewards(
     uint256 userStkTokenBalance_,

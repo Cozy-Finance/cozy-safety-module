@@ -831,6 +831,11 @@ contract RedeemUndrippedRewards is TestBase {
     return component.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, owner_);
   }
 
+  function _assertRewardPoolAccounting(uint16 reservePoolId_, uint256 poolAssetAmount_) internal {
+    UndrippedRewardPool memory rewardPool_ = component.getUndrippedRewardPool(reservePoolId_);
+    assertEq(rewardPool_.amount, poolAssetAmount_, "rewardPool_.amount");
+  }
+
   function setUp() public {
     ReceiptToken receiptTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
     receiptTokenLogic_.initialize(ISafetyModule(address(0)), 0);
@@ -868,6 +873,7 @@ contract RedeemUndrippedRewards is TestBase {
     assertEq(resultRewardAssetAmount_, rewardAssetAmount_, "reward assets received");
     assertEq(depositToken.balanceOf(owner_), 0, "deposit tokens balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
+    _assertRewardPoolAccounting(0, 0);
   }
 
   function test_redeemUndrippedRewards_redeemPartial() public {
@@ -887,6 +893,7 @@ contract RedeemUndrippedRewards is TestBase {
     assertEq(resultRewardAssetAmount_, rewardAssetAmount_ / 2, "reward assets received");
     assertEq(depositToken.balanceOf(owner_), depositTokenAmount_ / 2, "deposit tokens balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
+    _assertRewardPoolAccounting(0, rewardAssetAmount_ / 2);
   }
 
   function test_redeemUndrippedRewards_withDrip() public {
@@ -909,6 +916,7 @@ contract RedeemUndrippedRewards is TestBase {
     assertEq(resultRewardAssetAmount_, rewardAssetAmount_ / 4, "reward assets received");
     assertEq(depositToken.balanceOf(owner_), depositTokenAmount_ / 2, "deposit tokens balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
+    _assertRewardPoolAccounting(0, rewardAssetAmount_ / 4);
   }
 
   function test_redeemUndrippedRewards_cannotRedeemIfRoundsDownToZeroAssets() external {
@@ -935,9 +943,9 @@ contract RedeemUndrippedRewards is TestBase {
 
     vm.prank(spender_);
     _redeem(0, depositTokenAmount_, receiver_, owner_);
-    assertEq(depositToken.allowance(owner_, spender_), 1, "depositToken allowance"); // Only 1 allowance left
-      // because
-      // of subtraction.
+    assertEq(depositToken.allowance(owner_, spender_), 1, "depositToken allowance"); // Only 1 allowance left because of
+      // subtraction.
+    _assertRewardPoolAccounting(0, 0);
   }
 
   function test_redeemUndrippedRewards_cannotRedeem_ThroughAllowance_WithInsufficientAllowance() external {
@@ -983,6 +991,7 @@ contract RedeemUndrippedRewards is TestBase {
     assertEq(previewRewardAssetAmount_, resultRewardAssetAmount_, "preview reward assets received");
     assertEq(resultRewardAssetAmount_, rewardAssetAmount_ / 2, "reward assets received");
     assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
+    _assertRewardPoolAccounting(0, rewardAssetAmount_ / 2 - resultRewardAssetAmount_);
   }
 
   function test_redeemUndrippedRewards_previewUndrippedRewardsRedemption_fullyDripped() external {
@@ -1146,6 +1155,10 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
   function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
     return reservePools[reservePoolId_];
+  }
+
+  function getUndrippedRewardPool(uint16 rewardPoolId_) external view returns (UndrippedRewardPool memory) {
+    return undrippedRewardPools[rewardPoolId_];
   }
 
   function getAssetPool(IERC20 asset_) external view returns (AssetPool memory) {

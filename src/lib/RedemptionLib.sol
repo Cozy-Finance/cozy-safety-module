@@ -92,19 +92,15 @@ library RedemptionLib {
 
   /// @dev Prepares pending redemptions to have their exchange rates adjusted after a trigger.
   function updateRedemptionsAfterTrigger(
-    ReservePool storage reservePool_,
+    uint256 pendingRedemptionsAmount_,
     uint256 redemptionAmount_,
     uint256 slashAmount_,
-    uint256[] storage pendingAccISFs_,
-    bool isUnstake_
+    uint256[] storage pendingAccISFs_
   ) external returns (uint256) {
     uint256 numScalingFactors_ = pendingAccISFs_.length;
     uint256 currAccISF_ = numScalingFactors_ == 0 ? MathConstants.WAD : pendingAccISFs_[numScalingFactors_ - 1];
     (uint256 newAssetsPendingRedemption_, uint256 accISF_) = computeNewPendingRedemptionsAccumulatedScalingFactor(
-      currAccISF_,
-      isUnstake_ ? reservePool_.pendingUnstakesAmount : reservePool_.pendingWithdrawalsAmount,
-      redemptionAmount_,
-      slashAmount_
+      currAccISF_, pendingRedemptionsAmount_, redemptionAmount_, slashAmount_
     );
     if (numScalingFactors_ == 0) {
       // First trigger for this safety module. Create an accumulator entry.

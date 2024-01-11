@@ -365,10 +365,10 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     ReservePool storage reservePool_,
     uint256 oldDepositAmount_,
     uint256 slashAmount_
-  ) internal override returns (uint256 newWithdrawalsPendingRedemption) {
+  ) internal override returns (uint256 newPendingWithdrawalsAmount_) {
     uint256[] storage reservePoolPendingRedemptionsAccISFs = pendingRedemptionAccISFs[reservePoolId_].withdrawals;
-    newWithdrawalsPendingRedemption = RedemptionLib.updateRedemptionsAfterTrigger(
-      reservePool_, oldDepositAmount_, slashAmount_, reservePoolPendingRedemptionsAccISFs, false
+    newPendingWithdrawalsAmount_ = RedemptionLib.updateRedemptionsAfterTrigger(
+      reservePool_.pendingWithdrawalsAmount, oldDepositAmount_, slashAmount_, reservePoolPendingRedemptionsAccISFs
     );
   }
 
@@ -378,10 +378,10 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     ReservePool storage reservePool_,
     uint256 oldStakeAmount_,
     uint256 slashAmount_
-  ) internal override returns (uint256 newUnstakesPendingRedemption) {
+  ) internal override returns (uint256 newPendingUnstakesAmount_) {
     uint256[] storage reservePoolPendingUnstakesAccISFs = pendingRedemptionAccISFs[reservePoolId_].unstakes;
-    newUnstakesPendingRedemption = RedemptionLib.updateRedemptionsAfterTrigger(
-      reservePool_, oldStakeAmount_, slashAmount_, reservePoolPendingUnstakesAccISFs, true
+    newPendingUnstakesAmount_ = RedemptionLib.updateRedemptionsAfterTrigger(
+      reservePool_.pendingUnstakesAmount, oldStakeAmount_, slashAmount_, reservePoolPendingUnstakesAccISFs
     );
   }
 
