@@ -242,7 +242,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
       receiptTokenAmount_,
       receiptToken_.totalSupply(),
-      isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount
+      isUnstake_
+        ? (reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount)
+        : (reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount)
     );
     if (reserveAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
 

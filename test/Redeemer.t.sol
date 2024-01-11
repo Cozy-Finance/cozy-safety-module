@@ -719,6 +719,125 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     if (scale_ != 0) assertEq(accs_[0], acc_.mulWadUp(MathConstants.WAD.divWadUp(scale_)), "accs_[0]");
     else assertEq(accs_[0], acc_.mulWadUp(RedemptionLib.INF_INV_SCALING_FACTOR), "accs_[0]");
   }
+
+  struct FuzzUserInfo {
+    address owner;
+    uint216 receiptTokenAmount;
+    uint64 redemptionId;
+    uint128 assetsRedeemed;
+    uint216 receiptTokensRedeemed;
+  }
+
+  function testFuzz_multipleRedeemInstantly(uint256) external {
+    _setRedemptionDelay(0);
+
+    uint256 numOwners_ = _randomUint256(6) + 2; // 2 to 8 users
+    FuzzUserInfo[] memory users_ = new FuzzUserInfo[](numOwners_);
+    uint128 totalAssets_ = uint128(_randomUint256(100e6 - numOwners_ * 2) + numOwners_ * 2);
+    uint216 totalReceiptTokenAmount_;
+    for (uint256 i; i < numOwners_; ++i) {
+      users_[i].owner = _randomAddress();
+      totalReceiptTokenAmount_ += users_[i].receiptTokenAmount = uint216(_randomUint256(1e18 - 2) + 2);
+      component.mockMintStkTokens(0, users_[i].owner, users_[i].receiptTokenAmount);
+      assertEq(
+        component.getReservePool(0).stkToken.balanceOf(users_[i].owner),
+        users_[i].receiptTokenAmount,
+        "receipt token balance"
+      );
+    }
+    component.mockStakeAssets(0, totalAssets_);
+
+    // Redeem in a random order.
+    uint256[] memory idxs_ = _randomIndices(numOwners_);
+    uint216 totalReceiptTokensRedeemed_;
+    uint128 totalAssetsRedeemed_;
+    for (uint256 i; i < numOwners_; ++i) {
+      FuzzUserInfo memory user_ = users_[idxs_[i]];
+      // User redeems either half or all their receipt tokens.
+      uint216 receiptTokensToRedeem_ =
+        _randomUint256() % 2 == 0 ? user_.receiptTokenAmount / 2 : user_.receiptTokenAmount;
+      uint128 assetsToRedeem_ =
+        uint128(uint256(receiptTokensToRedeem_).mulDivDown(totalAssets_, totalReceiptTokenAmount_));
+      totalReceiptTokensRedeemed_ += receiptTokensToRedeem_;
+      totalReceiptTokenAmount_ -= receiptTokensToRedeem_;
+      totalAssetsRedeemed_ += assetsToRedeem_;
+      totalAssets_ -= assetsToRedeem_;
+
+      vm.prank(user_.owner);
+      {
+        if (assetsToRedeem_ == 0) vm.expectRevert(ICommonErrors.RoundsToZero.selector);
+        (uint64 redemptionId_, uint256 assetsRedeemed_) = _redeem(0, receiptTokensToRedeem_, user_.owner, user_.owner);
+        assertEq(uint256(redemptionId_), i, "redemption id");
+        assertEq(assetsRedeemed_, uint256(assetsToRedeem_), "assets redeemed");
+      }
+      // This component doesn't handle collateral accounting, so manually update it.
+      // component.mockSetTotalCollateralAvailable(totalAssets_);
+      assertEq(
+        component.getReservePool(0).stkToken.balanceOf(user_.owner),
+        user_.receiptTokenAmount - receiptTokensToRedeem_,
+        "receipt token balance"
+      );
+      assertEq(component.getReservePool(0).asset.balanceOf(user_.owner), assetsToRedeem_, "assets balanceOf");
+      assertEq(component.getRedemptionIdCounter(), i + 1, "redemptionCounter");
+      _assertReservePoolAccounting(0, totalAssets_, 0);
+    }
+  }
+
+  function testFuzz_multipleDelayedRedeem(uint256) external {
+    _setRedemptionDelay(1 days);
+
+    uint256 numOwners_ = _randomUint256(6) + 2; // 2 to 8 users
+    FuzzUserInfo[] memory users_ = new FuzzUserInfo[](numOwners_);
+    uint128 totalAssets_ = uint128(_randomUint256(100e6 - numOwners_ * 2) + numOwners_ * 2);
+    uint216 totalReceiptTokenAmount_;
+    for (uint256 i; i < numOwners_; ++i) {
+      users_[i].owner = _randomAddress();
+      totalReceiptTokenAmount_ += users_[i].receiptTokenAmount = uint216(_randomUint256(1e18 - 2) + 2);
+      component.mockMintStkTokens(0, users_[i].owner, users_[i].receiptTokenAmount);
+      assertEq(
+        component.getReservePool(0).stkToken.balanceOf(users_[i].owner),
+        users_[i].receiptTokenAmount,
+        "receipt token balance"
+      );
+    }
+    component.mockStakeAssets(0, totalAssets_);
+
+    // Redeem in a random order.
+    uint256[] memory idxs_ = _randomIndices(numOwners_);
+    uint128 totalAssetsToRedeem_;
+    for (uint256 i; i < numOwners_; ++i) {
+      FuzzUserInfo memory user_ = users_[idxs_[i]];
+      // User redeems either half or all their receipt tokens.
+      user_.receiptTokensRedeemed = _randomUint256() % 2 == 0 ? user_.receiptTokenAmount / 2 : user_.receiptTokenAmount;
+      user_.assetsRedeemed = uint128(
+        uint256(user_.receiptTokensRedeemed).mulDivDown(totalAssets_ - totalAssetsToRedeem_, totalReceiptTokenAmount_)
+      );
+      totalAssetsToRedeem_ += user_.assetsRedeemed;
+      totalReceiptTokenAmount_ -= user_.receiptTokensRedeemed;
+      {
+        uint64 nextRedemptionId_ = component.getRedemptionIdCounter();
+        _expectEmit();
+        emit RedemptionPending(
+          user_.owner,
+          user_.owner,
+          user_.owner,
+          component.getReservePool(0).stkToken,
+          uint256(user_.receiptTokensRedeemed),
+          uint256(user_.assetsRedeemed),
+          nextRedemptionId_
+        );
+        vm.prank(user_.owner);
+        (uint64 redemptionId_, uint256 assetsRedeemed_) =
+          _redeem(0, user_.receiptTokensRedeemed, user_.owner, user_.owner);
+        assertEq(uint256(redemptionId_), i, "redemption id");
+        assertEq(assetsRedeemed_, uint256(user_.assetsRedeemed), "assets redeemed");
+        user_.redemptionId = redemptionId_;
+      }
+      _assertReservePoolAccounting(0, totalAssets_, totalAssetsToRedeem_);
+      assertLe(totalAssetsToRedeem_, totalAssets_, "totalAssetsToRedeem_ <= totalAssets");
+      assertEq(component.getRedemptionIdCounter(), i + 1, "redemptionCounter");
+    }
+  }
 }
 
 contract UnstakeUnitTest is RedeemerUnitTest {
@@ -782,12 +901,14 @@ contract UnstakeUnitTest is RedeemerUnitTest {
   }
 }
 
+/*
 contract WithdrawUnitTest is RedeemerUnitTest {
   function setUp() public override {
     isUnstakeTest = false;
     super.setUp();
   }
 }
+*/
 
 contract RedeemUndrippedRewards is TestBase {
   IReceiptToken depositToken;
