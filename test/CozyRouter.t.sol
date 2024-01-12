@@ -231,40 +231,6 @@ contract CozyRouterPermitTest is CozyRouterTestSetup {
   }
 }
 
-contract CozyRouterPullTokenTest is CozyRouterTestSetup {
-  error InvalidAddress();
-
-  function test_PullsTokensToRecipient() public {
-    deal(address(reserveAssetA), self, 100e6);
-    address recipient_ = makeAddr("recipient");
-    reserveAssetA.approve(address(router), type(uint256).max);
-
-    router.pullToken(reserveAssetA, recipient_, 25e6);
-    assertEq(reserveAssetA.balanceOf(self), 75e6);
-    assertEq(reserveAssetA.balanceOf(recipient_), 25e6);
-
-    router.pullToken(reserveAssetA, recipient_, 75e6);
-    assertEq(reserveAssetA.balanceOf(self), 0);
-    assertEq(reserveAssetA.balanceOf(recipient_), 100e6);
-  }
-
-  function testFuzz_PullsTokensToRecipient(uint128 amount_) public {
-    uint256 initBal_ = type(uint128).max;
-    deal(address(reserveAssetA), self, initBal_);
-    address recipient_ = makeAddr("recipient");
-    reserveAssetA.approve(address(router), type(uint256).max);
-
-    router.pullToken(reserveAssetA, recipient_, amount_);
-    assertEq(reserveAssetA.balanceOf(self), initBal_ - amount_);
-    assertEq(reserveAssetA.balanceOf(recipient_), amount_);
-  }
-
-  function test_RevertsWhenRecipientIsZeroAddress() public {
-    vm.expectRevert(InvalidAddress.selector);
-    router.pullToken(reserveAssetA, address(0), 1);
-  }
-}
-
 contract CozyRouterSweepTokenTest is CozyWEthHelperTest {
   function test_SweepToken() public {
     testFuzz_SweepToken(5, 10);
