@@ -18,4 +18,7 @@ interface IReceiptToken is IERC20 {
 
   /// @notice Burns `amount_` of tokens from `from`_.
   function burn(address caller_, address from_, uint256 amount_) external;
+
+  /// @notice Address of this token's safety module.
+  function safetyModule() external view returns (ISafetyModule);
 }
