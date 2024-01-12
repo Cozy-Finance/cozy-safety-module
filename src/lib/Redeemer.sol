@@ -74,10 +74,10 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 rewardAssetAmount_
   );
 
-  /// @notice Withdraws by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
+  /// @notice Redeems by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function withdraw(uint16 reservePoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeem(uint16 reservePoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
@@ -98,11 +98,11 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     claimRewards(reservePoolId_, receiver_);
   }
 
-  /// @notice Withdraw by burning `depositTokenAmount_` of `rewardPoolId_` reward pool deposit tokens and sending
+  /// @notice Redeem by burning `depositTokenAmount_` of `rewardPoolId_` reward pool deposit tokens and sending
   /// `rewardAssetAmount_` of `rewardPoolId_` reward pool assets to `receiver_`. Reward pool assets can only be redeemed
   /// if they have not been dripped yet.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function withdrawUnrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeemUnrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
     external
     returns (uint256 rewardAssetAmount_)
   {

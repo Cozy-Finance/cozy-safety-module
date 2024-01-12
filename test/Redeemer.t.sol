@@ -115,7 +115,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
     if (isUnstakeTest) return component.unstake(reservePoolId_, receiptTokenAmount_, receiver_, owner_);
-    else return component.withdraw(reservePoolId_, receiptTokenAmount_, receiver_, owner_);
+    else return component.redeem(reservePoolId_, receiptTokenAmount_, receiver_, owner_);
   }
 
   function _completeRedeem(uint64 redemptionId_) internal returns (uint256 reserveAssetAmount_) {
@@ -786,8 +786,6 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
 
     // Redeem in a random order.
     uint256[] memory idxs_ = _randomIndices(numOwners_);
-    uint216 totalReceiptTokensRedeemed_;
-    uint128 totalAssetsRedeemed_;
     for (uint256 i; i < numOwners_; ++i) {
       FuzzUserInfo memory user_ = users_[idxs_[i]];
       // User redeems either half or all their receipt tokens.
@@ -795,9 +793,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
         _randomUint256() % 2 == 0 ? user_.receiptTokenAmount / 2 : user_.receiptTokenAmount;
       uint128 assetsToRedeem_ =
         uint128(uint256(receiptTokensToRedeem_).mulDivDown(totalAssets_, totalReceiptTokenAmount_));
-      totalReceiptTokensRedeemed_ += receiptTokensToRedeem_;
       totalReceiptTokenAmount_ -= receiptTokensToRedeem_;
-      totalAssetsRedeemed_ += assetsToRedeem_;
       totalAssets_ -= assetsToRedeem_;
 
       vm.prank(user_.owner);
@@ -1075,7 +1071,7 @@ contract RedeemUndrippedRewards is TestBase {
     internal
     returns (uint256 rewardAssetAmount_)
   {
-    return component.withdrawUnrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, owner_);
+    return component.redeemUnrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, owner_);
   }
 
   function _assertRewardPoolAccounting(uint16 reservePoolId_, uint256 poolAssetAmount_) internal {
