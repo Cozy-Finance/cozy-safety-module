@@ -16,6 +16,15 @@ contract ReceiptTokenFactoryTest is TestBase {
 
   ISafetyModule mockSafetyModule = ISafetyModule(_randomAddress());
 
+  /// @dev Emitted when a new ReceiptToken is deployed.
+  event ReceiptTokenDeployed(
+    IReceiptToken receiptToken,
+    ISafetyModule indexed safetyModule,
+    uint16 indexed reservePoolId,
+    IReceiptTokenFactory.PoolType indexed poolType,
+    uint8 decimals_
+  );
+
   function setUp() public {
     depositTokenLogic = new ReceiptToken();
     stkTokenLogic = new StkToken();
@@ -45,11 +54,23 @@ contract ReceiptTokenFactoryTest is TestBase {
 
   function test_deployDepositToken() public {
     uint16 poolId_ = _randomUint16();
+    uint8 decimals_ = _randomUint8();
+
     address computedReserveDepositTokenAddress_ =
       receiptTokenFactory.computeAddress(mockSafetyModule, poolId_, IReceiptTokenFactory.PoolType.RESERVE);
+
+    _expectEmit();
+    emit ReceiptTokenDeployed(
+      IReceiptToken(computedReserveDepositTokenAddress_),
+      mockSafetyModule,
+      poolId_,
+      IReceiptTokenFactory.PoolType.RESERVE,
+      decimals_
+    );
     vm.prank(address(mockSafetyModule));
     IReceiptToken reserveDepositToken_ =
-      receiptTokenFactory.deployReceiptToken(poolId_, IReceiptTokenFactory.PoolType.RESERVE, _randomUint8());
+      receiptTokenFactory.deployReceiptToken(poolId_, IReceiptTokenFactory.PoolType.RESERVE, decimals_);
+
     assertEq(address(reserveDepositToken_), computedReserveDepositTokenAddress_);
     assertEq(address(reserveDepositToken_.safetyModule()), address(mockSafetyModule));
     assertEq(reserveDepositToken_.name(), "Cozy Reserve Deposit Token");
@@ -57,12 +78,36 @@ contract ReceiptTokenFactoryTest is TestBase {
 
     address computedRewardDepositTokenAddress_ =
       receiptTokenFactory.computeAddress(mockSafetyModule, poolId_, IReceiptTokenFactory.PoolType.REWARD);
+
+    emit ReceiptTokenDeployed(
+      IReceiptToken(computedRewardDepositTokenAddress_),
+      mockSafetyModule,
+      poolId_,
+      IReceiptTokenFactory.PoolType.REWARD,
+      decimals_
+    );
     vm.prank(address(mockSafetyModule));
     IReceiptToken rewardDepositToken_ =
-      receiptTokenFactory.deployReceiptToken(poolId_, IReceiptTokenFactory.PoolType.REWARD, _randomUint8());
+      receiptTokenFactory.deployReceiptToken(poolId_, IReceiptTokenFactory.PoolType.REWARD, decimals_);
+
     assertEq(address(rewardDepositToken_), computedRewardDepositTokenAddress_);
     assertEq(address(rewardDepositToken_.safetyModule()), address(mockSafetyModule));
     assertEq(rewardDepositToken_.name(), "Cozy Reward Deposit Token");
     assertEq(rewardDepositToken_.symbol(), "cozyDep");
+
+    address computedStkTokenAddress_ =
+      receiptTokenFactory.computeAddress(mockSafetyModule, poolId_, IReceiptTokenFactory.PoolType.STAKE);
+
+    emit ReceiptTokenDeployed(
+      IReceiptToken(computedStkTokenAddress_), mockSafetyModule, poolId_, IReceiptTokenFactory.PoolType.STAKE, decimals_
+    );
+    vm.prank(address(mockSafetyModule));
+    IReceiptToken stkToken_ =
+      receiptTokenFactory.deployReceiptToken(poolId_, IReceiptTokenFactory.PoolType.STAKE, decimals_);
+
+    assertEq(address(stkToken_), computedStkTokenAddress_);
+    assertEq(address(stkToken_.safetyModule()), address(mockSafetyModule));
+    assertEq(stkToken_.name(), "Cozy Stake Token");
+    assertEq(stkToken_.symbol(), "cozyStk");
   }
 }
