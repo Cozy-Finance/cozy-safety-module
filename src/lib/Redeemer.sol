@@ -102,7 +102,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   /// `rewardAssetAmount_` of `rewardPoolId_` reward pool assets to `receiver_`. Reward pool assets can only be redeemed
   /// if they have not been dripped yet.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeemUnrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeemUndrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
     external
     returns (uint256 rewardAssetAmount_)
   {

@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {IERC20} from "../../src/interfaces/IERC20.sol";
+import {IDripModel} from "../../src/interfaces/IDripModel.sol";
+import {IReceiptToken} from "../../src/interfaces/IReceiptToken.sol";
+import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
+import {Delays} from "../../src/lib/structs/Delays.sol";
 import {UndrippedRewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
 import {Test} from "forge-std/Test.sol";
 import {TestAssertions} from "./TestAssertions.sol";
@@ -75,6 +80,58 @@ contract TestBase is Test, TestAssertions {
 
   function _expectPanic(uint256 code_) internal {
     vm.expectRevert(abi.encodeWithSelector(PANIC_SELECTOR, code_));
+  }
+
+  function getDelays(ISafetyModule safetyModule_) internal view returns (Delays memory) {
+    (uint64 configUpdateDelay, uint64 configUpdateGracePeriod, uint64 unstakeDelay, uint64 withdrawDelay) =
+      safetyModule_.delays();
+    return Delays({
+      configUpdateDelay: configUpdateDelay,
+      configUpdateGracePeriod: configUpdateGracePeriod,
+      unstakeDelay: unstakeDelay,
+      withdrawDelay: withdrawDelay
+    });
+  }
+
+  function getReservePool(ISafetyModule safetyModule_, uint256 reservePoolId_)
+    internal
+    view
+    returns (ReservePool memory)
+  {
+    (
+      uint256 stakeAmount,
+      uint256 depositAmount,
+      uint256 pendingUnstakesAmount,
+      uint256 pendingWithdrawalsAmount,
+      uint256 feeAmount,
+      uint256 maxSlashPercentage,
+      IERC20 asset,
+      IReceiptToken stkToken,
+      IReceiptToken depositToken,
+      uint16 rewardsPoolsWeight
+    ) = safetyModule_.reservePools(reservePoolId_);
+    return ReservePool({
+      stakeAmount: stakeAmount,
+      depositAmount: depositAmount,
+      pendingUnstakesAmount: pendingUnstakesAmount,
+      pendingWithdrawalsAmount: pendingWithdrawalsAmount,
+      feeAmount: feeAmount,
+      maxSlashPercentage: maxSlashPercentage,
+      asset: asset,
+      stkToken: stkToken,
+      depositToken: depositToken,
+      rewardsPoolsWeight: rewardsPoolsWeight
+    });
+  }
+
+  function getUndrippedRewardPool(ISafetyModule safetyModule_, uint256 undrippedRewardPoolId_)
+    internal
+    view
+    returns (UndrippedRewardPool memory)
+  {
+    (uint256 amount, IERC20 asset, IDripModel dripModel, IReceiptToken depositToken) =
+      safetyModule_.undrippedRewardPools(undrippedRewardPoolId_);
+    return UndrippedRewardPool({amount: amount, asset: asset, dripModel: dripModel, depositToken: depositToken});
   }
 
   function copyReservePool(ReservePool memory original_) internal pure returns (ReservePool memory copied_) {

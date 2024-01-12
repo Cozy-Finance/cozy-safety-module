@@ -30,6 +30,9 @@ interface IERC20 {
   /// @notice Returns the name of the token.
   function name() external view returns (string memory);
 
+  /// @notice Returns the nonce of `owner_`.
+  function nonces(address owner_) external view returns (uint256);
+
   /// @notice Returns the symbol of the token.
   function symbol() external view returns (string memory);
 
