@@ -87,14 +87,14 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
 
     UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](2);
     undrippedRewardPoolConfigs_[0] = UndrippedRewardPoolConfig({
-      asset: rewardAssetA,
-      dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))
-    });
-    undrippedRewardPoolConfigs_[1] = UndrippedRewardPoolConfig({
       asset: IERC20(address(weth)),
       dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))
     });
-    wethRewardPoolId = 1;
+    undrippedRewardPoolConfigs_[1] = UndrippedRewardPoolConfig({
+      asset: rewardAssetA,
+      dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))
+    });
+    wethRewardPoolId = 0;
 
     Delays memory delaysConfig_ =
       Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
@@ -614,11 +614,11 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     address owner_
   ) internal {
     // Deal owner sufficient base assets to deposit.
-    deal(address(mockConnector.baseAsset()), owner_, baseAssetsNeeded_, true);
+    deal(address(connector_.baseAsset()), owner_, baseAssetsNeeded_, true);
 
     vm.startPrank(owner_);
     // Owner has to approve the router to transfer the base assets.
-    mockConnector.baseAsset().approve(address(router), baseAssetsNeeded_);
+    connector_.baseAsset().approve(address(router), baseAssetsNeeded_);
     uint256 ownerShares_ = isReserveDeposit_
       ? router.wrapBaseAssetViaConnectorAndDepositReserveAssets(
         connector_, safetyModule_, poolId_, baseAssetsNeeded_, owner_, 0
@@ -629,9 +629,9 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     vm.stopPrank();
 
     // All base assets needed should have been transferred away from Owner.
-    assertEq(mockConnector.baseAsset().balanceOf(owner_), 0);
+    assertEq(connector_.baseAsset().balanceOf(owner_), 0);
     // Wrapped assets should have been transferred to safety module.
-    assertEq(mockConnector.wrappedAsset().balanceOf(address(safetyModule_)), wrappedAssetDepositAmount_);
+    assertEq(connector_.wrappedAsset().balanceOf(address(safetyModule_)), wrappedAssetDepositAmount_);
 
     // Owner should have proper number of deposit tokens.
     IERC20 depositToken_ = isReserveDeposit_
@@ -651,11 +651,11 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     address owner_
   ) internal {
     // Deal owner sufficient base assets to deposit.
-    deal(address(mockConnector.baseAsset()), owner_, baseAssetsNeeded_, true);
+    deal(address(connector_.baseAsset()), owner_, baseAssetsNeeded_, true);
 
     vm.startPrank(owner_);
     // Owner has to approve the router to transfer the base assets.
-    mockConnector.baseAsset().approve(address(router), baseAssetsNeeded_);
+    connector_.baseAsset().approve(address(router), baseAssetsNeeded_);
     // Should revert because assets_ < minSharesReceived_.
     vm.expectRevert(CozyRouter.SlippageExceeded.selector);
     uint256 minSharesReceived_ = wrappedAssetDepositAmount_ + 1;
@@ -678,6 +678,8 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     _testWrapBaseAssetViaConnectorForDeposit(
       true, mockConnector, safetyModule, 0, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
     );
+    ReservePool memory reservePool_ = getReservePool(safetyModule, 0);
+    assertEq(reservePool_.depositAmount, wrappedAssetDepositAmount_);
   }
 
   function test_wrapBaseAssetViaConnectorForRewardDeposit() public {
@@ -685,8 +687,11 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     uint256 wrappedAssetDepositAmount_ = 500;
     uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
     _testWrapBaseAssetViaConnectorForDeposit(
-      false, mockConnector, safetyModule, 0, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
+      false, mockConnector, safetyModule, 1, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
     );
+
+    UndrippedRewardPool memory rewardPool_ = getUndrippedRewardPool(safetyModule, 1);
+    assertEq(rewardPool_.amount, wrappedAssetDepositAmount_);
   }
 
   function test_WrapBaseAssetViaConnectorForReserveDepositSharesLowerThanMinSharesReceived() public {
@@ -703,7 +708,7 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     uint256 wrappedAssetDepositAmount_ = 500;
     uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
     _testWrapBaseAssetViaConnectorForDepositSlippage(
-      false, mockConnector, safetyModule, 0, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
+      false, mockConnector, safetyModule, 1, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
     );
   }
 }
