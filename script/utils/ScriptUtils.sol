@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import {IERC20} from "../../src/interfaces/IERC20.sol";
 
 contract ScriptUtils is Script {
   using stdJson for string;
@@ -16,5 +17,20 @@ contract ScriptUtils is Script {
     string memory _inputFile = string.concat(_fileName, ".json");
     string memory _inputPath = string.concat(_root, _chainInputFolder, _inputFile);
     return vm.readFile(_inputPath);
+  }
+
+  // Use this to assert validity of a provided token contract.
+  function assertToken(IERC20 token, string memory name, uint256 decimals) internal view {
+    require(stringCompare(token.name(), name), string.concat("Provided ", name, " contract has an incorrect name."));
+    require(
+      token.decimals() == decimals, string.concat("Provided ", name, " contract has an incorrect amount of decimals.")
+    );
+
+    // Also loosely validate the token's interface by ensuring a totalSupply call don't revert.
+    token.totalSupply();
+  }
+
+  function stringCompare(string memory a, string memory b) internal pure returns (bool) {
+    return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
   }
 }
