@@ -46,9 +46,11 @@ contract ReceiptTokenFactory is IReceiptTokenFactory {
     // chain ID to prevent the same ReceiptToken address existing on multiple chains for different safety modules or
     // pools.
     address tokenLogicContract_ = poolType_ == PoolType.STAKE ? address(stkTokenLogic) : address(depositTokenLogic);
+    string memory name_ = poolType_ == PoolType.STAKE ? "Cozy Stake Token" : "Cozy Deposit Token";
+    string memory symbol_ = poolType_ == PoolType.STAKE ? "cozySTK" : "cozyDPT";
     receiptToken_ =
       IReceiptToken(address(tokenLogicContract_).cloneDeterministic(salt(safetyModule_, poolId_, poolType_)));
-    receiptToken_.initialize(safetyModule_, decimals_);
+    receiptToken_.initialize(safetyModule_, name_, symbol_, decimals_);
     emit ReceiptTokenDeployed(receiptToken_, safetyModule_, poolId_, poolType_, decimals_);
   }
 

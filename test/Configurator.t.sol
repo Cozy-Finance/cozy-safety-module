@@ -49,8 +49,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
   function setUp() public {
     mockManager.initGovernable(address(0xBEEF), address(0xABCD));
 
-    ReceiptToken receiptTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
-    receiptTokenLogic_.initialize(ISafetyModule(address(0)), 0);
+    ReceiptToken receiptTokenLogic_ = new ReceiptToken();
+    receiptTokenLogic_.initialize(ISafetyModule(address(0)), "", "", 0);
     ReceiptTokenFactory receiptTokenFactory =
       new ReceiptTokenFactory(IReceiptToken(address(receiptTokenLogic_)), IReceiptToken(address(receiptTokenLogic_)));
 

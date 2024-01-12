@@ -180,8 +180,8 @@ abstract contract ReedemerUnitTestBase is TestBase {
     component.mockSetUnstakeDelay(UNSTAKE_DELAY);
     component.mockSetWithdrawDelay(WITHDRAW_DELAY);
 
-    ReceiptToken receiptTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
-    receiptTokenLogic_.initialize(ISafetyModule(address(0)), 0);
+    ReceiptToken receiptTokenLogic_ = new ReceiptToken();
+    receiptTokenLogic_.initialize(ISafetyModule(address(0)), "", "", 0);
     ReceiptTokenFactory receiptTokenFactory =
       new ReceiptTokenFactory(IReceiptToken(address(receiptTokenLogic_)), IReceiptToken(address(receiptTokenLogic_)));
 
@@ -1083,8 +1083,8 @@ contract RedeemUndrippedRewards is TestBase {
   }
 
   function setUp() public {
-    ReceiptToken receiptTokenLogic_ = new ReceiptToken(IManager(address(mockManager)));
-    receiptTokenLogic_.initialize(ISafetyModule(address(0)), 0);
+    ReceiptToken receiptTokenLogic_ = new ReceiptToken();
+    receiptTokenLogic_.initialize(ISafetyModule(address(0)), "", "", 0);
     ReceiptTokenFactory receiptTokenFactory =
       new ReceiptTokenFactory(IReceiptToken(address(receiptTokenLogic_)), IReceiptToken(address(receiptTokenLogic_)));
 

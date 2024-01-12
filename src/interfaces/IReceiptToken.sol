@@ -6,7 +6,12 @@ import {ISafetyModule} from "./ISafetyModule.sol";
 
 interface IReceiptToken is IERC20 {
   /// @notice Replaces the constructor for minimal proxies.
-  function initialize(ISafetyModule safetyModule_, uint8 decimals_) external;
+  /// @param safetyModule_ The safety module for this ReceiptToken.
+  /// @param _name The name of the token.
+  /// @param _symbol The symbol of the token.
+  /// @param decimals_ The decimal places of the token.
+  function initialize(ISafetyModule safetyModule_, string memory _name, string memory _symbol, uint8 decimals_)
+    external;
 
   /// @notice Mints `amount_` of tokens to `to_`.
   function mint(address to_, uint256 amount_) external;
