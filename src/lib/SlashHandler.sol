@@ -38,7 +38,9 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
 
       // 1. Slash deposited assets
       uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
-      _updateWithdrawalsAfterTrigger(slash_.reservePoolId, reservePoolDepositAmount_, slashAmountRemaining_);
+      reservePool_.pendingWithdrawalsAmount = _updateWithdrawalsAfterTrigger(
+        slash_.reservePoolId, reservePool_, reservePoolDepositAmount_, slashAmountRemaining_
+      );
       if (reservePoolDepositAmount_ <= slashAmountRemaining_) {
         slashAmountRemaining_ -= reservePoolDepositAmount_;
         reservePool_.depositAmount = 0;
@@ -57,7 +59,9 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
           revert ExceedsMaxSlashPercentage(slash_.reservePoolId, slashPercentage_);
         }
 
-        _updateUnstakesAfterTrigger(slash_.reservePoolId, reservePoolStakeAmount_, slashAmountRemaining_);
+        reservePool_.pendingUnstakesAmount = _updateUnstakesAfterTrigger(
+          slash_.reservePoolId, reservePool_, reservePoolStakeAmount_, slashAmountRemaining_
+        );
         reservePool_.stakeAmount -= slashAmountRemaining_;
         assetPools[reserveAsset_].amount -= slashAmountRemaining_;
       }
