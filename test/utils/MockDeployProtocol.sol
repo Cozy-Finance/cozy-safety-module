@@ -57,8 +57,8 @@ contract MockDeployer is TestBase {
     safetyModuleLogic = ISafetyModule(address(new SafetyModule(computedAddrManager_, computedAddrReceiptTokenFactory_)));
     safetyModuleFactory = new SafetyModuleFactory(computedAddrManager_, computedAddrSafetyModuleLogic_);
 
-    depositTokenLogic = new ReceiptToken(computedAddrManager_);
-    stkTokenLogic = new StkToken(computedAddrManager_);
+    depositTokenLogic = new ReceiptToken();
+    stkTokenLogic = new StkToken();
     receiptTokenFactory = new ReceiptTokenFactory(depositTokenLogic_, stkTokenLogic_);
   }
 }

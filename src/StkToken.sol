@@ -5,7 +5,7 @@ import {IManager} from "./interfaces/IManager.sol";
 import {ReceiptToken} from "./ReceiptToken.sol";
 
 contract StkToken is ReceiptToken {
-  constructor(IManager manager_) ReceiptToken(manager_) {}
+  constructor() ReceiptToken() {}
 
   function transfer(address to_, uint256 amount_) public override returns (bool) {
     safetyModule.updateUserRewardsForStkTokenTransfer(msg.sender, to_);
