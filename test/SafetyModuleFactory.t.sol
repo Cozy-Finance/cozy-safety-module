@@ -35,6 +35,9 @@ contract SafetyModuleFactoryTest is TestBase {
 
   IManager mockManager = IManager(_randomAddress());
 
+  /// @dev Emitted when a new Safety Module is deployed.
+  event SafetyModuleDeployed(ISafetyModule safetyModule);
+
   function setUp() public {
     depositTokenLogic = new ReceiptToken();
     stkTokenLogic = new StkToken();
@@ -110,6 +113,8 @@ contract SafetyModuleFactoryTest is TestBase {
 
     address computedSafetyModuleAddress_ = safetyModuleFactory.computeAddress(baseSalt_);
 
+    _expectEmit();
+    emit SafetyModuleDeployed(ISafetyModule(computedSafetyModuleAddress_));
     vm.prank(address(mockManager));
     ISafetyModule safetyModule_ = safetyModuleFactory.deploySafetyModule(owner_, pauser_, configs_, baseSalt_);
     assertEq(address(safetyModule_), computedSafetyModuleAddress_);
@@ -126,5 +131,44 @@ contract SafetyModuleFactoryTest is TestBase {
     UndrippedRewardPool memory undrippedRewardPool_ = getUndrippedRewardPool(safetyModule_, 0);
     assertEq(address(undrippedRewardPool_.asset), address(asset_));
     assertEq(address(undrippedRewardPool_.dripModel), address(undrippedRewardPoolConfigs_[0].dripModel));
+  }
+
+  function test_revertDeploySafetyModuleNotManager() public {
+    address caller_ = _randomAddress();
+
+    address owner_ = _randomAddress();
+    address pauser_ = _randomAddress();
+    IERC20 asset_ = IERC20(address(new MockERC20("Mock Asset", "cozyMock", 6)));
+
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
+    reservePoolConfigs_[0] =
+      ReservePoolConfig({maxSlashPercentage: 0, asset: asset_, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
+
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
+    undrippedRewardPoolConfigs_[0] =
+      UndrippedRewardPoolConfig({asset: asset_, dripModel: IDripModel(address(_randomAddress()))});
+
+    Delays memory delaysConfig_ =
+      Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
+
+    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](1);
+    triggerConfig_[0] = TriggerConfig({
+      trigger: ITrigger(address(new MockTrigger(TriggerState.ACTIVE))),
+      payoutHandler: _randomAddress(),
+      exists: true
+    });
+
+    UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
+      reservePoolConfigs: reservePoolConfigs_,
+      undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+      triggerConfigUpdates: triggerConfig_,
+      delaysConfig: delaysConfig_
+    });
+
+    bytes32 baseSalt_ = _randomBytes32();
+
+    vm.expectRevert(SafetyModuleFactory.Unauthorized.selector);
+    vm.prank(caller_);
+    safetyModuleFactory.deploySafetyModule(owner_, pauser_, configs_, baseSalt_);
   }
 }
