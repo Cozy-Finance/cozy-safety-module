@@ -29,7 +29,13 @@ abstract contract DepositorUnitTest is TestBase {
   TestableDepositor component = new TestableDepositor();
 
   /// @dev Emitted when a user stakes.
-  event Deposited(address indexed caller_, address indexed receiver_, uint256 amount_, uint256 depositTokenAmount_);
+  event Deposited(
+    address indexed caller_,
+    address indexed receiver_,
+    IReceiptToken indexed depositToken_,
+    uint256 amount_,
+    uint256 depositTokenAmount_
+  );
 
   uint256 initialSafetyModuleBal = 200e18;
 
@@ -101,7 +107,9 @@ abstract contract DepositorUnitTest is TestBase {
     // `depositToken.totalSupply() == 0`, so should be minted 1-1 with reserve assets deposited.
     uint256 expectedDepositTokenAmount_ = 10e18;
     _expectEmit();
-    emit Deposited(depositor_, receiver_, amountToDeposit_, expectedDepositTokenAmount_);
+    emit Deposited(
+      depositor_, receiver_, IReceiptToken(address(mockDepositToken)), amountToDeposit_, expectedDepositTokenAmount_
+    );
 
     vm.prank(depositor_);
     uint256 depositTokenAmount_ = _deposit(depositType, false, 0, amountToDeposit_, receiver_, depositor_);
@@ -154,7 +162,9 @@ abstract contract DepositorUnitTest is TestBase {
     // `depositToken.totalSupply() == 50e18`, so we have (20e18 / 50e18) * 50e18 = 20e18.
     uint256 expectedDepositTokenAmount_ = 20e18;
     _expectEmit();
-    emit Deposited(depositor_, receiver_, amountToDeposit_, expectedDepositTokenAmount_);
+    emit Deposited(
+      depositor_, receiver_, IReceiptToken(address(mockDepositToken)), amountToDeposit_, expectedDepositTokenAmount_
+    );
 
     vm.prank(depositor_);
     uint256 depositTokenAmount_ = _deposit(depositType, false, 0, amountToDeposit_, receiver_, depositor_);
@@ -254,7 +264,9 @@ abstract contract DepositorUnitTest is TestBase {
     // `depositToken.totalSupply() == 0`, so should be minted 1-1 with reserve assets deposited.
     uint256 expectedDepositTokenAmount_ = 10e18;
     _expectEmit();
-    emit Deposited(depositor_, receiver_, amountToDeposit_, expectedDepositTokenAmount_);
+    emit Deposited(
+      depositor_, receiver_, IReceiptToken(address(mockDepositToken)), amountToDeposit_, expectedDepositTokenAmount_
+    );
 
     vm.prank(depositor_);
     uint256 depositTokenAmount_ = _deposit(depositType, true, 0, amountToDeposit_, receiver_, receiver_);
@@ -307,7 +319,9 @@ abstract contract DepositorUnitTest is TestBase {
     // `depositToken.totalSupply() == 50e18`, so we have (20e18 / 50e18) * 50e18 = 20e18.
     uint256 expectedDepositTokenAmount_ = 20e18;
     _expectEmit();
-    emit Deposited(depositor_, receiver_, amountToDeposit_, expectedDepositTokenAmount_);
+    emit Deposited(
+      depositor_, receiver_, IReceiptToken(address(mockDepositToken)), amountToDeposit_, expectedDepositTokenAmount_
+    );
 
     vm.prank(depositor_);
     uint256 depositTokenAmount_ = _deposit(depositType, true, 0, amountToDeposit_, receiver_, receiver_);

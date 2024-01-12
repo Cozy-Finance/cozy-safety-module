@@ -25,7 +25,13 @@ contract StakerUnitTest is TestBase {
   MockERC20 mockDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
   TestableStaker component = new TestableStaker();
 
-  event Staked(address indexed caller_, address indexed receiver_, uint256 amount_, uint256 stkTokenAmount_);
+  event Staked(
+    address indexed caller_,
+    address indexed receiver_,
+    IReceiptToken indexed stkToken_,
+    uint256 amount_,
+    uint256 stkTokenAmount_
+  );
 
   function setUp() public {
     ReservePool memory initialReservePool_ = ReservePool({
@@ -64,7 +70,7 @@ contract StakerUnitTest is TestBase {
     // `stkToken.totalSupply() == 0`, so should be minted 1-1 with reserve assets staked.
     uint256 expectedStkTokenAmount_ = 20e18;
     _expectEmit();
-    emit Staked(staker_, receiver_, amountToStake_, expectedStkTokenAmount_);
+    emit Staked(staker_, receiver_, IReceiptToken(address(mockStkToken)), amountToStake_, expectedStkTokenAmount_);
 
     vm.prank(staker_);
     uint256 stkTokenAmount_ = component.stake(0, amountToStake_, receiver_, staker_);
@@ -106,7 +112,7 @@ contract StakerUnitTest is TestBase {
     // `stkToken.totalSupply() == 50e18`, so we have (20e18 / 100e18) * 50e18 = 10e18.
     uint256 expectedStkTokenAmount_ = 10e18;
     _expectEmit();
-    emit Staked(staker_, receiver_, amountToStake_, expectedStkTokenAmount_);
+    emit Staked(staker_, receiver_, IReceiptToken(address(mockStkToken)), amountToStake_, expectedStkTokenAmount_);
 
     vm.prank(staker_);
     uint256 stkTokenAmount_ = component.stake(0, amountToStake_, receiver_, staker_);
@@ -197,7 +203,7 @@ contract StakerUnitTest is TestBase {
     // `stkToken.totalSupply() == 0`, so should be minted 1-1 with reserve assets staked.
     uint256 expectedStkTokenAmount_ = 20e18;
     _expectEmit();
-    emit Staked(staker_, receiver_, amountToStake_, expectedStkTokenAmount_);
+    emit Staked(staker_, receiver_, IReceiptToken(address(mockStkToken)), amountToStake_, expectedStkTokenAmount_);
 
     vm.prank(staker_);
     uint256 stkTokenAmount_ = component.stakeWithoutTransfer(0, amountToStake_, receiver_);
@@ -239,7 +245,7 @@ contract StakerUnitTest is TestBase {
     // `stkToken.totalSupply() == 50e18`, so we have (20e18 / 100e18) * 50e18 = 10e18.
     uint256 expectedStkTokenAmount_ = 10e18;
     _expectEmit();
-    emit Staked(staker_, receiver_, amountToStake_, expectedStkTokenAmount_);
+    emit Staked(staker_, receiver_, IReceiptToken(address(mockStkToken)), amountToStake_, expectedStkTokenAmount_);
 
     vm.prank(staker_);
     uint256 stkTokenAmount_ = component.stakeWithoutTransfer(0, amountToStake_, receiver_);
