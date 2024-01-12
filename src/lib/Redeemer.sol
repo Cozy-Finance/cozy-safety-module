@@ -74,7 +74,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 rewardAssetAmount_
   );
 
-  /// @notice Redeem by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
+  /// @notice Redeems by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
   function redeem(uint16 reservePoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
@@ -85,7 +85,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, false, depositTokenAmount_, receiver_, owner_);
   }
 
-  /// @notice Redeem by burning `stkTokenAmount_` of `reservePoolId_` reserve pool stake tokens and sending
+  /// @notice Unstakes by burning `stkTokenAmount_` of `reservePoolId_` reserve pool stake tokens and sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`. Also claims any outstanding rewards
   /// and sends them to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its stake tokens.
@@ -102,7 +102,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   /// `rewardAssetAmount_` of `rewardPoolId_` reward pool assets to `receiver_`. Reward pool assets can only be redeemed
   /// if they have not been dripped yet.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeemUndrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeemUnrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
     external
     returns (uint256 rewardAssetAmount_)
   {
@@ -129,21 +129,37 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   }
 
   /// @notice Completes the redemption request for the specified redemption ID.
-  function completeRedemption(uint64 redemptionId_) public returns (uint256 reserveAssetAmount_) {
+  function completeRedemption(uint64 redemptionId_) external returns (uint256 reserveAssetAmount_) {
     Redemption memory redemption_ = redemptions[redemptionId_];
     delete redemptions[redemptionId_];
     return _completeRedemption(redemptionId_, redemption_);
   }
 
-  /// @notice Completes the unstake request for the specified redemption ID.
-  function completeUnstake(uint64 redemptionId_) external returns (uint256 reserveAssetAmount_) {
-    return completeRedemption(redemptionId_);
-  }
-
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their redemption (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
+  function previewRedemption(uint16 rewardPoolId_, uint256 receiptTokenAmount_, bool isUnstake_)
+    external
+    view
+    returns (uint256 reserveAssetAmount_)
+  {
+    ReservePool storage reservePool_ = reservePools[rewardPoolId_];
+    IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
+    uint256 lastDripTime_ = dripTimes.lastFeesDripTime;
+
+    reserveAssetAmount_ = _previewRedemption(
+      isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken,
+      receiptTokenAmount_,
+      feeDripModel_,
+      isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount,
+      lastDripTime_,
+      block.timestamp - lastDripTime_
+    );
+  }
+
+  /// @notice Allows an on-chain or off-chain user to simulate the effects of their queued redemption (i.e. view the
+  /// number of reserve assets received) at the current block, given current on-chain conditions.
   function previewQueuedRedemption(uint64 redemptionId_)
-    public
+    external
     view
     returns (RedemptionPreview memory redemptionPreview_)
   {
@@ -164,26 +180,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     });
   }
 
-  function previewReserveAssetsRedemption(uint16 rewardPoolId_, uint256 receiptTokenAmount_, bool isUnstake_)
-    external
-    view
-    returns (uint256 reserveAssetAmount_)
-  {
-    ReservePool storage reservePool_ = reservePools[rewardPoolId_];
-    IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
-    uint256 lastDripTime_ = dripTimes.lastFeesDripTime;
-
-    reserveAssetAmount_ = _previewRedemption(
-      isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken,
-      receiptTokenAmount_,
-      feeDripModel_,
-      isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount,
-      lastDripTime_,
-      block.timestamp - lastDripTime_
-    );
-  }
-
-  function previewUndrippedRewardsRedemption(uint16 rewardPoolId_, uint256 depositTokenAmount_)
+  function previewUndrippedRewardsWithdrawal(uint16 rewardPoolId_, uint256 depositTokenAmount_)
     external
     view
     returns (uint256 rewardAssetAmount_)
@@ -220,12 +217,6 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     if (assetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
   }
 
-  /// @notice Allows an on-chain or off-chain user to simulate the effects of their unstake (i.e. view the number
-  /// of reserve assets received) at the current block, given current on-chain conditions.
-  function previewQueuedUnstake(uint64 unstakeId_) external view returns (RedemptionPreview memory unstakePreview_) {
-    return previewQueuedRedemption(unstakeId_);
-  }
-
   /// @notice Redeem by burning `receiptTokenAmount_` of `receiptToken_` and sending `reserveAssetAmount_` to
   /// `receiver_`. `receiptToken` can be the token received from either staking or depositing into the Safety Module.
   /// @dev Assumes that user has approved the SafetyModule to spend its receipt tokens.
@@ -242,7 +233,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
       receiptTokenAmount_,
       receiptToken_.totalSupply(),
-      isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount
+      isUnstake_
+        ? (reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount)
+        : (reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount)
     );
     if (reserveAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
 
@@ -360,21 +353,29 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   }
 
   /// @inheritdoc SafetyModuleCommon
-  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint256 oldDepositAmount_, uint256 slashAmount_)
-    internal
-    override
-  {
+  function _updateWithdrawalsAfterTrigger(
+    uint16 reservePoolId_,
+    ReservePool storage reservePool_,
+    uint256 oldDepositAmount_,
+    uint256 slashAmount_
+  ) internal override returns (uint256 newPendingWithdrawalsAmount_) {
     uint256[] storage reservePoolPendingRedemptionsAccISFs = pendingRedemptionAccISFs[reservePoolId_].withdrawals;
-    RedemptionLib.updateRedemptionsAfterTrigger(oldDepositAmount_, slashAmount_, reservePoolPendingRedemptionsAccISFs);
+    newPendingWithdrawalsAmount_ = RedemptionLib.updateRedemptionsAfterTrigger(
+      reservePool_.pendingWithdrawalsAmount, oldDepositAmount_, slashAmount_, reservePoolPendingRedemptionsAccISFs
+    );
   }
 
   /// @inheritdoc SafetyModuleCommon
-  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 oldStakeAmount_, uint256 slashAmount_)
-    internal
-    override
-  {
+  function _updateUnstakesAfterTrigger(
+    uint16 reservePoolId_,
+    ReservePool storage reservePool_,
+    uint256 oldStakeAmount_,
+    uint256 slashAmount_
+  ) internal override returns (uint256 newPendingUnstakesAmount_) {
     uint256[] storage reservePoolPendingUnstakesAccISFs = pendingRedemptionAccISFs[reservePoolId_].unstakes;
-    RedemptionLib.updateRedemptionsAfterTrigger(oldStakeAmount_, slashAmount_, reservePoolPendingUnstakesAccISFs);
+    newPendingUnstakesAmount_ = RedemptionLib.updateRedemptionsAfterTrigger(
+      reservePool_.pendingUnstakesAmount, oldStakeAmount_, slashAmount_, reservePoolPendingUnstakesAccISFs
+    );
   }
 
   /// @dev Returns the amount of time remaining before a queued redemption can be completed.

@@ -14,6 +14,7 @@ import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ISlashHandlerErrors} from "../src/interfaces/ISlashHandlerErrors.sol";
 import {SlashHandler} from "../src/lib/SlashHandler.sol";
+import {Redeemer} from "../src/lib/Redeemer.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
@@ -43,8 +44,16 @@ contract TriggerHandlerTest is TestBase {
     component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
   }
 
+  function _getScalingFactor(uint256 oldPoolAmount_, uint256 slashAmount_) internal pure returns (uint256) {
+    if (slashAmount_ > oldPoolAmount_) return 0;
+    if (oldPoolAmount_ == 0) return 0;
+    return MathConstants.WAD - slashAmount_.divWadDown(oldPoolAmount_);
+  }
+
   function _testSingleSlashSuccess(uint128 stakeAmount_, uint128 depositAmount_, uint128 slashAmount_) internal {
     address receiver_ = _randomAddress();
+    uint256 pendingUnstakesAmount_ = bound(_randomUint256(), 0, stakeAmount_);
+    uint256 pendingWithdrawalsAmount_ = bound(_randomUint256(), 0, depositAmount_);
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
@@ -52,8 +61,8 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
-        pendingUnstakesAmount: _randomUint256(),
-        pendingWithdrawalsAmount: _randomUint256(),
+        pendingUnstakesAmount: pendingUnstakesAmount_,
+        pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 1e4,
         maxSlashPercentage: MathConstants.WAD
@@ -67,26 +76,32 @@ contract TriggerHandlerTest is TestBase {
 
     if (slashAmount_ > 0) {
       _expectEmit();
-      emit TestableSlashHandler.WithdrawalsUpdated(0, depositAmount_, slashAmount_);
-    }
-    // The staked assets are slashed after the deposited assets.
-    if (slashAmount_ > depositAmount_) {
-      _expectEmit();
-      emit TestableSlashHandler.UnstakesUpdated(0, stakeAmount_, slashAmount_ - depositAmount_);
-    }
-    if (slashAmount_ > 0) {
-      _expectEmit();
       emit IERC20.Transfer(address(component), receiver_, slashAmount_);
     }
     vm.prank(mockPayoutHandler);
     component.slash(slashes_, receiver_);
 
     ReservePool memory reservePool_ = component.getReservePool(0);
-    assertEq(reservePool_.depositAmount, slashAmount_ >= depositAmount_ ? 0 : depositAmount_ - slashAmount_);
-    assertEq(
-      reservePool_.stakeAmount,
-      slashAmount_ >= depositAmount_ ? stakeAmount_ - (slashAmount_ - depositAmount_) : stakeAmount_
-    );
+    if (slashAmount_ >= depositAmount_) {
+      uint256 remainingSlashAmount_ = slashAmount_ - depositAmount_;
+      assertEq(reservePool_.depositAmount, 0, "depositAmount");
+      assertEq(reservePool_.stakeAmount, stakeAmount_ - remainingSlashAmount_, "stakeAmount");
+      assertEq(reservePool_.pendingWithdrawalsAmount, 0, "pendingWithdrawalsAmount");
+      assertEq(
+        reservePool_.pendingUnstakesAmount,
+        pendingUnstakesAmount_.mulWadDown(_getScalingFactor(stakeAmount_, remainingSlashAmount_)),
+        "pendingUnstakesAmount"
+      );
+    } else {
+      assertEq(reservePool_.depositAmount, depositAmount_ - slashAmount_, "depositAmount");
+      assertEq(reservePool_.stakeAmount, stakeAmount_, "stakeAmount");
+      assertEq(
+        reservePool_.pendingWithdrawalsAmount,
+        pendingWithdrawalsAmount_.mulWadDown(_getScalingFactor(depositAmount_, slashAmount_)),
+        "pendingWithdrawalsAmount"
+      );
+      assertEq(reservePool_.pendingUnstakesAmount, pendingUnstakesAmount_, "pendingUnstakesAmount");
+    }
     assertEq(component.assetPools(IERC20(address(mockAsset))), stakeAmount_ + depositAmount_ - slashAmount_);
     assertEq(mockAsset.balanceOf(receiver_), slashAmount_);
     assertEq(component.numPendingSlashes(), 0);
@@ -117,6 +132,8 @@ contract TriggerHandlerTest is TestBase {
 
     uint128 stakeAmount_ = 100e6;
     uint128 depositAmount_ = 200e6;
+    uint128 pendingUnstakesAmount_ = 50e6;
+    uint128 pendingWithdrawalsAmount_ = 100e6;
     // Slash all deposited assets and some staked assets from pool 0.
     uint128 slashAmountA_ = 250e6;
     // Slash some deposited assets and no staked assets from pool 1.
@@ -133,8 +150,8 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
-        pendingUnstakesAmount: _randomUint256(),
-        pendingWithdrawalsAmount: _randomUint256(),
+        pendingUnstakesAmount: pendingUnstakesAmount_,
+        pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.25e4,
         maxSlashPercentage: MathConstants.WAD
@@ -148,8 +165,8 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
-        pendingUnstakesAmount: _randomUint256(),
-        pendingWithdrawalsAmount: _randomUint256(),
+        pendingUnstakesAmount: pendingUnstakesAmount_,
+        pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.25e4,
         maxSlashPercentage: MathConstants.WAD
@@ -163,8 +180,8 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
-        pendingUnstakesAmount: _randomUint256(),
-        pendingWithdrawalsAmount: _randomUint256(),
+        pendingUnstakesAmount: pendingUnstakesAmount_,
+        pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4,
         maxSlashPercentage: MathConstants.WAD
@@ -181,15 +198,9 @@ contract TriggerHandlerTest is TestBase {
 
     // Reserve pool 0 slash events. The staked assets are slashed after the deposited assets.
     _expectEmit();
-    emit TestableSlashHandler.WithdrawalsUpdated(0, depositAmount_, slashAmountA_);
-    _expectEmit();
-    emit TestableSlashHandler.UnstakesUpdated(0, stakeAmount_, slashAmountA_ - depositAmount_);
-    _expectEmit();
     emit IERC20.Transfer(address(component), receiver_, slashAmountA_);
 
     // Reserve pool 1 slash events. The staked assets are not slashed because the deposit amount is sufficient.
-    _expectEmit();
-    emit TestableSlashHandler.WithdrawalsUpdated(1, depositAmount_, slashAmountB_);
     _expectEmit();
     emit IERC20.Transfer(address(component), receiver_, slashAmountB_);
 
@@ -200,16 +211,30 @@ contract TriggerHandlerTest is TestBase {
     ReservePool memory reservePool_ = component.getReservePool(0);
     assertEq(reservePool_.depositAmount, 0);
     assertEq(reservePool_.stakeAmount, stakeAmount_ - (slashAmountA_ - depositAmount_));
+    assertEq(
+      reservePool_.pendingUnstakesAmount,
+      uint256(pendingUnstakesAmount_).mulWadDown(
+        _getScalingFactor(stakeAmount_, stakeAmount_ - (slashAmountA_ - depositAmount_))
+      )
+    );
+    assertEq(reservePool_.pendingWithdrawalsAmount, 0);
 
     // Reserve pool 1 - some deposited assets and no staked assets are slashed.
     reservePool_ = component.getReservePool(1);
     assertEq(reservePool_.depositAmount, depositAmount_ - slashAmountB_);
     assertEq(reservePool_.stakeAmount, stakeAmount_);
+    assertEq(reservePool_.pendingUnstakesAmount, pendingUnstakesAmount_);
+    assertEq(
+      reservePool_.pendingWithdrawalsAmount,
+      uint256(pendingWithdrawalsAmount_).mulWadDown(_getScalingFactor(depositAmount_, slashAmountB_))
+    );
 
     // Reserve pool 2 - no assets are slashed.
     reservePool_ = component.getReservePool(2);
     assertEq(reservePool_.depositAmount, depositAmount_);
     assertEq(reservePool_.stakeAmount, stakeAmount_);
+    assertEq(reservePool_.pendingUnstakesAmount, pendingUnstakesAmount_);
+    assertEq(reservePool_.pendingWithdrawalsAmount, pendingWithdrawalsAmount_);
 
     // Aggregate balance and safety module state.
     assertEq(
@@ -248,6 +273,8 @@ contract TriggerHandlerTest is TestBase {
   function test_slash_revert_insufficientReserveAssets() public {
     uint128 stakeAmount_ = 100e6;
     uint128 depositAmount_ = 200e6;
+    uint128 pendingUnstakesAmount_ = 50e6;
+    uint128 pendingWithdrawalsAmount_ = 100e6;
     uint128 slashAmountA_ = 250e6;
     uint128 slashAmountB_ = 251e6;
 
@@ -259,8 +286,8 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
-        pendingUnstakesAmount: _randomUint256(),
-        pendingWithdrawalsAmount: _randomUint256(),
+        pendingUnstakesAmount: pendingUnstakesAmount_,
+        pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4,
         maxSlashPercentage: 0.5e18
@@ -273,8 +300,8 @@ contract TriggerHandlerTest is TestBase {
         depositToken: IReceiptToken(address(0)),
         stakeAmount: stakeAmount_,
         depositAmount: depositAmount_,
-        pendingUnstakesAmount: _randomUint256(),
-        pendingWithdrawalsAmount: _randomUint256(),
+        pendingUnstakesAmount: pendingUnstakesAmount_,
+        pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4,
         maxSlashPercentage: 0.49e18
@@ -295,10 +322,7 @@ contract TriggerHandlerTest is TestBase {
   }
 }
 
-contract TestableSlashHandler is SlashHandler {
-  event WithdrawalsUpdated(uint16 reservePoolId_, uint256 depositAmount_, uint256 slashAmount_);
-  event UnstakesUpdated(uint16 reservePoolId_, uint256 stakeAmount_, uint256 slashAmount_);
-
+contract TestableSlashHandler is SlashHandler, Redeemer {
   // -------- Getters --------
 
   function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
@@ -373,22 +397,6 @@ contract TestableSlashHandler is SlashHandler {
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {
     __readStub__();
-  }
-
-  function _updateUnstakesAfterTrigger(uint16 reservePoolId_, uint256 stakeAmount_, uint256 slashAmount_)
-    internal
-    virtual
-    override
-  {
-    emit UnstakesUpdated(reservePoolId_, stakeAmount_, slashAmount_);
-  }
-
-  function _updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint256 depositAmount_, uint256 slashAmount_)
-    internal
-    virtual
-    override
-  {
-    emit WithdrawalsUpdated(reservePoolId_, depositAmount_, slashAmount_);
   }
 
   function _updateUserRewards(

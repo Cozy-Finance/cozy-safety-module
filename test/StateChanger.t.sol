@@ -11,6 +11,7 @@ import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {StateChanger} from "../src/lib/StateChanger.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
@@ -442,17 +443,19 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
 
   function _updateUnstakesAfterTrigger(
     uint16, /* reservePoolId_ */
+    ReservePool storage, /* reservePool_ */
     uint256, /* oldStakeAmount_ */
     uint256 /* slashAmount_ */
-  ) internal view override {
+  ) internal view override returns (uint256) {
     __readStub__();
   }
 
   function _updateWithdrawalsAfterTrigger(
     uint16, /* reservePoolId_ */
+    ReservePool storage, /* reservePool_ */
     uint256, /* oldStakeAmount_ */
     uint256 /* slashAmount_ */
-  ) internal view override {
+  ) internal view override returns (uint256) {
     __readStub__();
   }
 
