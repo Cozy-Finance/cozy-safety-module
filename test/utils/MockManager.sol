@@ -6,7 +6,6 @@ import {IManager} from "../../src/interfaces/IManager.sol";
 import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
 import {IDripModel} from "../../src/interfaces/IDripModel.sol";
 import {Governable} from "../../src/lib/Governable.sol";
-import {FeesConfig, DripModelLookup} from "../../src/lib/structs/Manager.sol";
 
 contract MockManager is Governable {
   IDripModel public feeDripModel;
