@@ -1074,7 +1074,7 @@ contract RedeemUndrippedRewards is TestBase {
     internal
     returns (uint256 rewardAssetAmount_)
   {
-    return component.redeemUnrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, owner_);
+    return component.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, owner_);
   }
 
   function _assertRewardPoolAccounting(uint16 reservePoolId_, uint256 poolAssetAmount_) internal {
@@ -1256,7 +1256,7 @@ contract RedeemUndrippedRewards is TestBase {
     _redeem(0, depositTokenAmount_, receiver_, owner_);
   }
 
-  function test_redeemUnrippedRewards_previewUndrippedRewardsRedemption_roundsDownToZero() external {
+  function test_redeemUndrippedRewards_previewUndrippedRewardsRedemption_roundsDownToZero() external {
     address owner_ = _randomAddress();
     uint256 reserveAssetAmount_ = 1;
     uint256 receiptTokenAmount_ = 3;
