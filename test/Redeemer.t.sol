@@ -653,7 +653,6 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     ) = _setupDefaultSingleUserFixture(0);
     uint256 receiptTokensToRedeem_ = receiptTokenAmount_; // Withdraw/unstake 1/4 of all receipt tokens.
     uint256 oldReservePoolAmount_ = reserveAssetAmount_;
-    uint256 slashAmount_ = oldReservePoolAmount_ / 10; // Slash 1/10 of the reserve pool.
 
     // Queue.
     vm.prank(owner_);
@@ -665,17 +664,19 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     );
     _assertReservePoolAccounting(0, reserveAssetAmount_, queueResultReserveAssetAmount_);
 
-    // Trigger, taking 10% of the reserve pool.
-    _updateRedemptionsAfterTrigger(0, oldReservePoolAmount_, slashAmount_);
+    // Trigger, taking 50% of the reserve pool.
+    _updateRedemptionsAfterTrigger(0, oldReservePoolAmount_, oldReservePoolAmount_ / 2);
+    // Trigger, taking another 50% of the reserve pool.
+    _updateRedemptionsAfterTrigger(0, oldReservePoolAmount_ / 2, oldReservePoolAmount_ / 4);
 
     skip(_getRedemptionDelay());
     uint256 resultReserveAssetAmount_ = _completeRedeem(nextRedemptionId_);
-    // receiptTokens are now worth 90% of what they were before the trigger.
-    assertEq(resultReserveAssetAmount_, queueResultReserveAssetAmount_ * 9 / 10 - 1, "reserve assets received");
+    // receiptTokens are now worth 25% of what they were before the triggers.
+    assertEq(resultReserveAssetAmount_, queueResultReserveAssetAmount_ * 1 / 4, "reserve assets received");
     assertEq(testReceiptToken.balanceOf(owner_), 0, "receiptToken balanceOf");
     // These values should both be 0, but the accounting updates due to the slash taking out assets gets updated in
     // `SlashHandler.slash` not the `Redeemer` contract.
-    _assertReservePoolAccounting(0, reserveAssetAmount_ * 1 / 10 + 1, queueResultReserveAssetAmount_ * 1 / 10 + 1);
+    _assertReservePoolAccounting(0, reserveAssetAmount_ * 3 / 4, queueResultReserveAssetAmount_ * 3 / 4);
   }
 
   function test_redeem_triggerWhileNoneBeingRedeemed() external {
@@ -951,13 +952,15 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     assertEq(redemptionPreview_.receiver, receiver_, "receiver");
 
     skip(_getRedemptionDelay() / 2);
-    // Trigger, taking 10% of the reserve pool.
-    _updateRedemptionsAfterTrigger(0, reserveAssetAmount_, reserveAssetAmount_ / 10);
+    // Trigger, taking 50% of the reserve pool.
+    _updateRedemptionsAfterTrigger(0, reserveAssetAmount_, reserveAssetAmount_ / 2);
+    // Trigger, another 50% of the reserve pool.
+    _updateRedemptionsAfterTrigger(0, reserveAssetAmount_ / 2, reserveAssetAmount_ / 4);
 
     (redemptionPreview_) = component.previewQueuedRedemption(resultRedemptionId_);
     assertEq(redemptionPreview_.delayRemaining, _getRedemptionDelay() / 2, "delayRemaining");
     assertEq(redemptionPreview_.receiptTokenAmount, receiptTokenAmount_, "receiptTokenAmount");
-    assertEq(redemptionPreview_.reserveAssetAmount, reserveAssetAmount_ * 9 / 10 - 1, "reserveAssetAmount");
+    assertEq(redemptionPreview_.reserveAssetAmount, reserveAssetAmount_ * 1 / 4, "reserveAssetAmount");
     assertEq(address(_getReceiptToken(0)), address(redemptionPreview_.receiptToken), "receiptToken");
     assertEq(redemptionPreview_.owner, owner_, "owner");
     assertEq(redemptionPreview_.receiver, receiver_, "receiver");
