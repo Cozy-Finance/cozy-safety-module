@@ -31,7 +31,6 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
     if (numPendingSlashes == 0) safetyModuleState = SafetyModuleState.ACTIVE;
 
     for (uint16 i = 0; i < slashes_.length; i++) {
-      // TODO: We need to validate that each slash is a unique slash id or something similar.
       Slash memory slash_ = slashes_[i];
       ReservePool storage reservePool_ = reservePools[slash_.reservePoolId];
       IERC20 reserveAsset_ = reservePool_.asset;
