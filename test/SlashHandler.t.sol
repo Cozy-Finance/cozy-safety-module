@@ -320,6 +320,56 @@ contract TriggerHandlerTest is TestBase {
     vm.prank(mockPayoutHandler);
     component.slash(slashes_, receiver_);
   }
+
+  function test_slash_revert_alreadySlashed() public {
+    uint128 stakeAmount_ = 100e6;
+    uint128 depositAmount_ = 200e6;
+    uint128 pendingUnstakesAmount_ = 50e6;
+    uint128 pendingWithdrawalsAmount_ = 100e6;
+    uint128 slashAmount_ = 1e6;
+
+    address receiver_ = _randomAddress();
+    component.mockAddReservePool(
+      ReservePool({
+        asset: IERC20(address(mockAsset)),
+        stkToken: IReceiptToken(address(0)),
+        depositToken: IReceiptToken(address(0)),
+        stakeAmount: stakeAmount_,
+        depositAmount: depositAmount_,
+        pendingUnstakesAmount: pendingUnstakesAmount_,
+        pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
+        feeAmount: _randomUint256(),
+        rewardsPoolsWeight: 0.5e4,
+        maxSlashPercentage: MathConstants.WAD
+      })
+    );
+    component.mockAddReservePool(
+      ReservePool({
+        asset: IERC20(address(mockAsset)),
+        stkToken: IReceiptToken(address(0)),
+        depositToken: IReceiptToken(address(0)),
+        stakeAmount: stakeAmount_,
+        depositAmount: depositAmount_,
+        pendingUnstakesAmount: pendingUnstakesAmount_,
+        pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
+        feeAmount: _randomUint256(),
+        rewardsPoolsWeight: 0.5e4,
+        maxSlashPercentage: MathConstants.WAD
+      })
+    );
+    component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: (stakeAmount_ + depositAmount_) * 2}));
+    // Mint safety module reserve assets.
+    mockAsset.mint(address(component), (stakeAmount_ + depositAmount_) * 2);
+
+    Slash[] memory slashes_ = new Slash[](3);
+    slashes_[0] = Slash({reservePoolId: 1, amount: slashAmount_});
+    slashes_[1] = Slash({reservePoolId: 0, amount: slashAmount_});
+    slashes_[2] = Slash({reservePoolId: 1, amount: slashAmount_});
+
+    vm.expectRevert(abi.encodeWithSelector(ISlashHandlerErrors.AlreadySlashed.selector, 1));
+    vm.prank(mockPayoutHandler);
+    component.slash(slashes_, receiver_);
+  }
 }
 
 contract TestableSlashHandler is SlashHandler, Redeemer {

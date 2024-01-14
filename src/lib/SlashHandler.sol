@@ -30,7 +30,12 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
     payoutHandlerNumPendingSlashes[msg.sender] -= 1;
     if (numPendingSlashes == 0) safetyModuleState = SafetyModuleState.ACTIVE;
 
+    // Create a bitmap to track which reserve pools have already been slashed.
+    uint256 alreadySlashed_ = 0;
+
     for (uint16 i = 0; i < slashes_.length; i++) {
+      alreadySlashed_ = _updateAlreadySlashed(alreadySlashed_, slashes_[i].reservePoolId);
+
       Slash memory slash_ = slashes_[i];
       ReservePool storage reservePool_ = reservePools[slash_.reservePoolId];
       IERC20 reserveAsset_ = reservePool_.asset;
@@ -78,5 +83,10 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
   {
     // Round up, in favor of stakers and depositors.
     return slashAmount_.divWadUp(totalReservePoolAmount_);
+  }
+
+  function _updateAlreadySlashed(uint256 alreadySlashed_, uint16 poolId_) internal pure returns (uint256) {
+    if ((alreadySlashed_ & (1 << poolId_)) != 0) revert AlreadySlashed(poolId_);
+    return alreadySlashed_ | (1 << poolId_);
   }
 }
