@@ -42,13 +42,18 @@ contract ReceiptTokenFactory is IReceiptTokenFactory {
     // The caller is the safety module.
     ISafetyModule safetyModule_ = ISafetyModule(msg.sender);
 
+    address tokenLogicContract_ = poolType_ == PoolType.STAKE ? address(stkTokenLogic) : address(depositTokenLogic);
+    string memory name_ = poolType_ == PoolType.STAKE
+      ? "Cozy Stake Token"
+      : (poolType_ == PoolType.RESERVE ? "Cozy Reserve Deposit Token" : "Cozy Reward Deposit Token");
+    string memory symbol_ = poolType_ == PoolType.STAKE ? "cozyStk" : "cozyDep";
+
     // We generate the salt from the safety module-pool id-pool type, which must be unique, and concatenate it with the
     // chain ID to prevent the same ReceiptToken address existing on multiple chains for different safety modules or
     // pools.
-    address tokenLogicContract_ = poolType_ == PoolType.STAKE ? address(stkTokenLogic) : address(depositTokenLogic);
     receiptToken_ =
       IReceiptToken(address(tokenLogicContract_).cloneDeterministic(salt(safetyModule_, poolId_, poolType_)));
-    receiptToken_.initialize(safetyModule_, decimals_);
+    receiptToken_.initialize(safetyModule_, name_, symbol_, decimals_);
     emit ReceiptTokenDeployed(receiptToken_, safetyModule_, poolId_, poolType_, decimals_);
   }
 

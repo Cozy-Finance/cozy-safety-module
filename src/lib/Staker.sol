@@ -20,7 +20,11 @@ abstract contract Staker is SafetyModuleCommon {
 
   /// @dev Emitted when a user stakes.
   event Staked(
-    address indexed caller_, address indexed receiver_, uint256 reserveAssetAmount_, uint256 stkTokenAmount_
+    address indexed caller_,
+    address indexed receiver_,
+    IReceiptToken indexed stkToken_,
+    uint256 reserveAssetAmount_,
+    uint256 stkTokenAmount_
   );
 
   /// @notice Stake by minting `stkTokenAmount_` stkTokens to `receiver_` after depositing exactly `reserveAssetAmount_`
@@ -83,6 +87,6 @@ abstract contract Staker is SafetyModuleCommon {
     );
 
     stkToken_.mint(receiver_, stkTokenAmount_);
-    emit Staked(msg.sender, receiver_, reserveAssetAmount_, stkTokenAmount_);
+    emit Staked(msg.sender, receiver_, stkToken_, reserveAssetAmount_, stkTokenAmount_);
   }
 }

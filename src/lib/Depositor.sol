@@ -15,7 +15,11 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
 
   /// @dev Emitted when a user deposits.
   event Deposited(
-    address indexed caller_, address indexed receiver_, uint256 assetAmount_, uint256 depositTokenAmount_
+    address indexed caller_,
+    address indexed receiver_,
+    IReceiptToken indexed depositToken_,
+    uint256 assetAmount_,
+    uint256 depositTokenAmount_
   );
 
   /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
@@ -102,7 +106,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     assetPool_.amount += reserveAssetAmount_;
 
     depositToken_.mint(receiver_, depositTokenAmount_);
-    emit Deposited(msg.sender, receiver_, reserveAssetAmount_, depositTokenAmount_);
+    emit Deposited(msg.sender, receiver_, depositToken_, reserveAssetAmount_, depositTokenAmount_);
   }
 
   function _executeRewardDeposit(
@@ -125,7 +129,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     assetPool_.amount += rewardAssetAmount_;
 
     depositToken_.mint(receiver_, depositTokenAmount_);
-    emit Deposited(msg.sender, receiver_, rewardAssetAmount_, depositTokenAmount_);
+    emit Deposited(msg.sender, receiver_, depositToken_, rewardAssetAmount_, depositTokenAmount_);
   }
 
   function _assertValidDepositBalance(IERC20 token_, uint256 assetPoolBalance_, uint256 depositAmount_)

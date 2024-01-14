@@ -4,7 +4,9 @@ pragma solidity ^0.8.0;
 import {IERC20} from "./IERC20.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
 import {IDripModel} from "./IDripModel.sol";
+import {IManager} from "./IManager.sol";
 import {IReceiptToken} from "./IReceiptToken.sol";
+import {IReceiptTokenFactory} from "./IReceiptTokenFactory.sol";
 import {UndrippedRewardPoolConfig, ReservePoolConfig} from "../lib/structs/Configs.sol";
 
 interface ISafetyModule {
@@ -45,6 +47,9 @@ interface ISafetyModule {
     view
     returns (uint256 rewardAssetAmount_);
 
+  /// @notice Address of the Cozy protocol manager.
+  function cozyManager() external view returns (IManager);
+
   function delays()
     external
     view
@@ -76,8 +81,17 @@ interface ISafetyModule {
   /// @notice Updates the safety module's user rewards data prior to a stkToken transfer.
   function updateUserRewardsForStkTokenTransfer(address from_, address to_) external;
 
+  /// @notice Returns the address of the SafetyModule owner.
+  function owner() external view returns (address);
+
   /// @notice Pauses the safety module.
   function pause() external;
+
+  /// @notice Address of the SafetyModule pauser.
+  function pauser() external view returns (address);
+
+  /// @notice Address of the Cozy protocol ReceiptTokenFactory.
+  function receiptTokenFactory() external view returns (IReceiptTokenFactory);
 
   /// @notice Redeem by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.

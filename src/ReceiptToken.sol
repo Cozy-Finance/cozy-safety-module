@@ -6,9 +6,6 @@ import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ERC20} from "./lib/ERC20.sol";
 
 contract ReceiptToken is ERC20 {
-  /// @notice Address of the Cozy protocol manager.
-  IManager public immutable cozyManager;
-
   /// @notice Address of this token's safety module.
   ISafetyModule public safetyModule;
 
@@ -21,18 +18,15 @@ contract ReceiptToken is ERC20 {
   /// @dev Thrown when the caller is not authorized to perform the action.
   error Unauthorized();
 
-  /// @param manager_ Cozy protocol Manager.
-  constructor(IManager manager_) {
-    if (address(manager_) == address(0)) revert InvalidAddress();
-    cozyManager = manager_;
-  }
-
   /// @notice Replaces the constructor for minimal proxies.
   /// @param safetyModule_ The safety module for this ReceiptToken.
+  /// @param name_ The name of the token.
+  /// @param symbol_ The symbol of the token.
   /// @param decimals_ The decimal places of the token.
-  function initialize(ISafetyModule safetyModule_, uint8 decimals_) external {
-    // TODO: Name and symbol should come from params
-    __initERC20("Cozy Stake Token", "cozyStk", decimals_);
+  function initialize(ISafetyModule safetyModule_, string memory name_, string memory symbol_, uint8 decimals_)
+    external
+  {
+    __initERC20(name_, symbol_, decimals_);
     safetyModule = safetyModule_;
   }
 
