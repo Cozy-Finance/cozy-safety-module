@@ -73,6 +73,7 @@ library ConfiguratorLib {
     Delays storage delays_,
     UpdateConfigsCalldataParams calldata configUpdates_
   ) external {
+    // TODO: Validate owner address.
     if (!isValidUpdate(reservePools_, undrippedRewardPools_, triggerData_, configUpdates_)) {
       revert IConfiguratorErrors.InvalidConfiguration();
     }

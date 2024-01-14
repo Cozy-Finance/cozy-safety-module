@@ -87,6 +87,26 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     }
   }
 
+  /// @notice stkTokens are expected to call this before the actual underlying ERC-20 transfer (e.g.
+  /// `super.transfer(address to, uint256 amount_)`). Otherwise, the `from_` user will not accrue less historical
+  /// rewards they are entitled to as their new balance is smaller after the transfer. Also, the `to_` user will accure
+  /// more historical rewards than they are entitled to as their new balance is larger after the transfer.
+  function updateUserRewardsForStkTokenTransfer(address from_, address to_) external {
+    // Check that only a registered stkToken can call this function.
+    IdLookup memory idLookup_ = stkTokenToReservePoolIds[IReceiptToken(msg.sender)];
+    if (!idLookup_.exists) revert Ownable.Unauthorized();
+
+    uint16 reservePoolId_ = idLookup_.index;
+    IReceiptToken stkToken_ = reservePools[reservePoolId_].stkToken;
+    mapping(uint16 => uint256) storage claimableRewardsIndices_ = claimableRewardsIndices[reservePoolId_];
+
+    // Fully accure historical rewards for both users given their current stkToken balances. Moving forward all rewards
+    // will accrue based on: (1) the stkToken balances of the `from_` and `to_` address after the transfer, (2) the
+    // current claimable reward index snapshots.
+    _updateUserRewards(stkToken_.balanceOf(from_), claimableRewardsIndices_, userRewards[reservePoolId_][from_]);
+    _updateUserRewards(stkToken_.balanceOf(to_), claimableRewardsIndices_, userRewards[reservePoolId_][to_]);
+  }
+
   function _previewClaimableRewards(uint16 reservePoolId_, address owner_, RewardDrip[] memory nextRewardDrips_)
     internal
     view
@@ -117,26 +137,6 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     }
 
     return PreviewClaimableRewards({reservePoolId: reservePoolId_, claimableRewardsData: claimableRewardsData_});
-  }
-
-  /// @notice stkTokens are expected to call this before the actual underlying ERC-20 transfer (e.g.
-  /// `super.transfer(address to, uint256 amount_)`). Otherwise, the `from_` user will not accrue less historical
-  /// rewards they are entitled to as their new balance is smaller after the transfer. Also, the `to_` user will accure
-  /// more historical rewards than they are entitled to as their new balance is larger after the transfer.
-  function updateUserRewardsForStkTokenTransfer(address from_, address to_) external {
-    // Check that only a registered stkToken can call this function.
-    IdLookup memory idLookup_ = stkTokenToReservePoolIds[IReceiptToken(msg.sender)];
-    if (!idLookup_.exists) revert Ownable.Unauthorized();
-
-    uint16 reservePoolId_ = idLookup_.index;
-    IReceiptToken stkToken_ = reservePools[reservePoolId_].stkToken;
-    mapping(uint16 => uint256) storage claimableRewardsIndices_ = claimableRewardsIndices[reservePoolId_];
-
-    // Fully accure historical rewards for both users given their current stkToken balances. Moving forward all rewards
-    // will accrue based on: (1) the stkToken balances of the `from_` and `to_` address after the transfer, (2) the
-    // current claimable reward index snapshots.
-    _updateUserRewards(stkToken_.balanceOf(from_), claimableRewardsIndices_, userRewards[reservePoolId_][from_]);
-    _updateUserRewards(stkToken_.balanceOf(to_), claimableRewardsIndices_, userRewards[reservePoolId_][to_]);
   }
 
   function _dripRewards(uint256 deltaT_) internal {
@@ -239,12 +239,11 @@ abstract contract RewardsHandler is SafetyModuleCommon {
       userRewardsData_.accruedRewards = oldUserRewardsData_.accruedRewards
         + _getUserAccruedRewards(userStkTokenBalance_, newIndexSnapshot_, oldUserRewardsData_.indexSnapshot).safeCastTo128(
         );
-      userRewardsData_.indexSnapshot = newIndexSnapshot_.safeCastTo128();
     } else {
       userRewardsData_.accruedRewards =
         _getUserAccruedRewards(userStkTokenBalance_, newIndexSnapshot_, 0).safeCastTo128();
-      userRewardsData_.indexSnapshot = newIndexSnapshot_.safeCastTo128();
     }
+    userRewardsData_.indexSnapshot = newIndexSnapshot_.safeCastTo128();
   }
 
   function _getUserAccruedRewards(uint256 stkTokenAmount_, uint256 newRewardPoolIndex, uint256 oldRewardPoolIndex)
