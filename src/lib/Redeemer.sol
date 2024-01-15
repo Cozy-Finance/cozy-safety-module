@@ -113,12 +113,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 lastDripTime_ = dripTimes.lastRewardsDripTime;
 
     rewardAssetAmount_ = _previewRedemption(
-      depositToken_,
-      depositTokenAmount_,
-      undrippedRewardPool_.dripModel,
-      undrippedRewardPool_.amount,
-      lastDripTime_,
-      block.timestamp - lastDripTime_
+      depositToken_, depositTokenAmount_, undrippedRewardPool_.dripModel, undrippedRewardPool_.amount, lastDripTime_, 0
     );
 
     depositToken_.burn(msg.sender, owner_, depositTokenAmount_);

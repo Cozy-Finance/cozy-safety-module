@@ -17,6 +17,12 @@ contract Manager is Governable, IManager {
     bool exists;
   }
 
+  /// @notice The max number of reserve pools allowed per safety module.
+  uint256 public immutable allowedReservePools;
+
+  /// @notice The max number of reward pools allowed per safety module.
+  uint256 public immutable allowedRewardPools;
+
   /// @notice Cozy protocol SafetyModuleFactory.
   ISafetyModuleFactory public immutable safetyModuleFactory;
 
@@ -36,16 +42,22 @@ contract Manager is Governable, IManager {
   /// @param pauser_ The Cozy protocol pauser.
   /// @param safetyModuleFactory_ The Cozy protocol SafetyModuleFactory.
   /// @param feeDripModel_ The default fee drip model for all fees.
-  constructor(address owner_, address pauser_, ISafetyModuleFactory safetyModuleFactory_, IDripModel feeDripModel_) {
+  constructor(
+    address owner_,
+    address pauser_,
+    ISafetyModuleFactory safetyModuleFactory_,
+    IDripModel feeDripModel_,
+    uint256 allowedReservePools_,
+    uint256 allowedRewardPools_
+  ) {
     _assertAddressNotZero(owner_);
     _assertAddressNotZero(address(safetyModuleFactory_));
     _assertAddressNotZero(address(feeDripModel_));
     __initGovernable(owner_, pauser_);
 
     safetyModuleFactory = safetyModuleFactory_;
-
-    // TODO: Allowed reserve and reward pools per set
-    // allowedMarketsPerSet = allowedMarketsPerSet_;
+    allowedReservePools = allowedReservePools_;
+    allowedRewardPools = allowedRewardPools_;
 
     _updateFeeDripModel(feeDripModel_);
   }
@@ -120,9 +132,15 @@ contract Manager is Governable, IManager {
     _assertAddressNotZero(owner_);
     _assertAddressNotZero(pauser_);
 
-    if (!ConfiguratorLib.isValidConfiguration(configs_.reservePoolConfigs, configs_.delaysConfig)) {
-      revert InvalidConfiguration();
-    }
+    if (
+      !ConfiguratorLib.isValidConfiguration(
+        configs_.reservePoolConfigs,
+        configs_.undrippedRewardPoolConfigs,
+        configs_.delaysConfig,
+        allowedReservePools,
+        allowedRewardPools
+      )
+    ) revert InvalidConfiguration();
 
     isSafetyModule[ISafetyModule(safetyModuleFactory.computeAddress(salt_))] = true;
     safetyModule_ = safetyModuleFactory.deploySafetyModule(owner_, pauser_, configs_, salt_);

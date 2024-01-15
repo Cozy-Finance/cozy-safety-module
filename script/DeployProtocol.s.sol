@@ -77,6 +77,10 @@ contract DeployProtocol is ScriptUtils {
   address owner;
   address pauser;
 
+  // Global restrictions on the number of reserve and reward pools.
+  uint256 allowedReservePools;
+  uint256 allowedRewardPools;
+
   // Contracts to define per-network.
   IERC20 asset;
   IStETH stEth;
@@ -132,6 +136,10 @@ contract DeployProtocol is ScriptUtils {
     // -------- Fee Drip Model --------
     feeDripModel = IDripModel(json_.readAddress(".feeDripModel"));
 
+    // -------- Reserve Pool Limits --------
+    allowedReservePools = json_.readUint(".allowedReservePools");
+    allowedRewardPools = json_.readUint(".allowedRewardPools");
+
     // -------------------------------------
     // -------- Address Computation --------
     // -------------------------------------
@@ -155,7 +163,9 @@ contract DeployProtocol is ScriptUtils {
 
     // -------- Deploy: Manager --------
     vm.broadcast();
-    manager = new Manager(owner, pauser, computedAddrSafetyModuleFactory_, feeDripModel);
+    manager = new Manager(
+      owner, pauser, computedAddrSafetyModuleFactory_, feeDripModel, allowedReservePools, allowedRewardPools
+    );
     console2.log("Manager deployed:", address(manager));
     require(address(manager) == address(computedAddrManager_), "Manager address mismatch");
 

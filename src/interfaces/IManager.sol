@@ -22,4 +22,10 @@ interface IManager is IManagerEvents {
   function isSafetyModule(ISafetyModule safetyModule_) external view returns (bool);
 
   function getFeeDripModel(ISafetyModule safetyModule_) external view returns (IDripModel);
+
+  /// @notice Number of reserve pools allowed per safety module.
+  function allowedReservePools() external view returns (uint256);
+
+  /// @notice Number of reward pools allowed per safety module.
+  function allowedRewardPools() external view returns (uint256);
 }

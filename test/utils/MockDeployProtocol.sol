@@ -31,6 +31,8 @@ contract MockDeployer is TestBase {
   address pauser = address(0xBEEF);
 
   uint256 constant DEFAULT_FEE_DRIP_MODEL_CONSTANT = 0.5e18;
+  uint256 constant ALLOWED_RESERVE_POOLS = 1000;
+  uint256 constant ALLOWED_REWARD_POOLS = 1000;
 
   function deployMockProtocol() public virtual {
     // WETH bytecode obtained using `cast code 0x42000.006 -c optimism`.
@@ -52,7 +54,14 @@ contract MockDeployer is TestBase {
       IReceiptTokenFactory(vm.computeCreateAddress(address(this), nonce_ + 6));
 
     feeDripModel = new MockDripModel(DEFAULT_FEE_DRIP_MODEL_CONSTANT);
-    manager = new Manager(owner, pauser, computedAddrSafetyModuleFactory_, computedAddrFeeDripModel_);
+    manager = new Manager(
+      owner,
+      pauser,
+      computedAddrSafetyModuleFactory_,
+      computedAddrFeeDripModel_,
+      ALLOWED_RESERVE_POOLS,
+      ALLOWED_REWARD_POOLS
+    );
 
     safetyModuleLogic = ISafetyModule(address(new SafetyModule(computedAddrManager_, computedAddrReceiptTokenFactory_)));
     safetyModuleFactory = new SafetyModuleFactory(computedAddrManager_, computedAddrSafetyModuleLogic_);

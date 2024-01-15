@@ -9,6 +9,8 @@ import {Governable} from "../../src/lib/Governable.sol";
 
 contract MockManager is Governable {
   IDripModel public feeDripModel;
+  uint256 public allowedReservePools;
+  uint256 public allowedRewardPools;
 
   function initGovernable(address owner_, address pauser_) external {
     __initGovernable(owner_, pauser_);
@@ -24,5 +26,13 @@ contract MockManager is Governable {
 
   function getFeeDripModel(ISafetyModule /* safetyModule_ */ ) external view returns (IDripModel) {
     return feeDripModel;
+  }
+
+  function setAllowedReservePools(uint256 allowedReservePools_) external {
+    allowedReservePools = allowedReservePools_;
+  }
+
+  function setAllowedRewardPools(uint256 allowedRewardPools_) external {
+    allowedRewardPools = allowedRewardPools_;
   }
 }
