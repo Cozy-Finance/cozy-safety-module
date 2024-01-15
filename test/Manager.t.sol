@@ -10,6 +10,7 @@ import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {Ownable} from "../src/lib/Ownable.sol";
 import {Manager} from "../src/Manager.sol";
+import {MathConstants} from "../src/lib/MathConstants.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManagerEvents} from "../src/interfaces/IManagerEvents.sol";
@@ -96,6 +97,40 @@ contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
     UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
     updateConfigsCalldataParams_.delaysConfig =
       Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 1 days, configUpdateGracePeriod: 1 days});
+
+    vm.expectRevert(Manager.InvalidConfiguration.selector);
+    manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
+  }
+
+  function test_createSafetyModule_revertTooManyReservePools() public {
+    UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
+
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](ALLOWED_RESERVE_POOLS + 1);
+    for (uint256 i = 0; i < ALLOWED_RESERVE_POOLS + 1; i++) {
+      reservePoolConfigs_[i] = ReservePoolConfig({
+        maxSlashPercentage: MathConstants.WAD,
+        asset: IERC20(address(new MockERC20("MockAsset", "MOCK", 18))),
+        rewardsPoolsWeight: i == 0 ? uint16(MathConstants.ZOC) : 0
+      });
+    }
+    updateConfigsCalldataParams_.reservePoolConfigs = reservePoolConfigs_;
+
+    vm.expectRevert(Manager.InvalidConfiguration.selector);
+    manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
+  }
+
+  function test_createSafetyModule_revertTooManyRewardPools() public {
+    UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
+
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ =
+      new UndrippedRewardPoolConfig[](ALLOWED_REWARD_POOLS + 1);
+    for (uint256 i = 0; i < ALLOWED_REWARD_POOLS + 1; i++) {
+      undrippedRewardPoolConfigs_[i] = UndrippedRewardPoolConfig({
+        asset: IERC20(address(new MockERC20("MockAsset", "MOCK", 18))),
+        dripModel: IDripModel(_randomAddress())
+      });
+    }
+    updateConfigsCalldataParams_.undrippedRewardPoolConfigs = undrippedRewardPoolConfigs_;
 
     vm.expectRevert(Manager.InvalidConfiguration.selector);
     manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
