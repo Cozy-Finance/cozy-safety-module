@@ -11,6 +11,7 @@ import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
+import {Ownable} from "../src/lib/Ownable.sol";
 import {ConfiguratorLib} from "../src/lib/ConfiguratorLib.sol";
 import {Configurator} from "../src/lib/Configurator.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
@@ -233,6 +234,27 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     );
     assertEq(result_.configUpdateTime, now_ + DEFAULT_CONFIG_UPDATE_DELAY);
     assertEq(result_.configUpdateDeadline, now_ + DEFAULT_CONFIG_UPDATE_DELAY + DEFAULT_CONFIG_UPDATE_GRACE_PERIOD);
+  }
+
+  function test_updateConfigs_revertNonOwner() external {
+    Delays memory delaysConfig_ = _generateValidDelays();
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
+    undrippedRewardPoolConfigs_[0] = _generateValidUndrippedRewardPoolConfig();
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC), MathConstants.WAD);
+    TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
+    triggerConfigUpdates_[0] = _generateValidTriggerConfig();
+
+    vm.expectRevert(Ownable.Unauthorized.selector);
+    vm.prank(_randomAddress());
+    component.updateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delaysConfig_
+      })
+    );
   }
 
   function test_isValidConfiguration_TrueValidConfig() external {

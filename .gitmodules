@@ -13,3 +13,6 @@
 [submodule "lib/cozy-safety-module-triggers"]
 	path = lib/cozy-safety-module-triggers
 	url = https://github.com/Cozy-Finance/cozy-safety-module-triggers
+[submodule "lib/chainlink"]
+	path = lib/chainlink
+	url = https://github.com/smartcontractkit/chainlink
