@@ -12,7 +12,7 @@ remappings = [
   "@chainlink/=lib/chainlink/",
   "solmate/=lib/solmate/src/",
   "cozy-safety-module-models/=lib/cozy-safety-module-models/src",
-  "cozy-safety-module-triggers/=lib/cozy-safety-module-triggers/src"
+  "cozy-safety-module-triggers/=lib/cozy-safety-module-triggers"
 ]
 fs_permissions = [{ access = "read", path = "./script/input"}]
 

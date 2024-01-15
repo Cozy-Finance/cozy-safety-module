@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {OwnableTriggerFactory} from "cozy-safety-module-triggers/OwnableTriggerFactory.sol";
-import {OptimisticOracleV2Interface} from "cozy-safety-module-triggers/interfaces/OptimisticOracleV2Interface.sol";
-import {UMATriggerFactory} from "cozy-safety-module-triggers/UMATriggerFactory.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {ChainlinkTriggerFactory} from "cozy-safety-module-triggers/src/ChainlinkTriggerFactory.sol";
+import {OwnableTriggerFactory} from "cozy-safety-module-triggers/src/OwnableTriggerFactory.sol";
+import {OptimisticOracleV2Interface} from "cozy-safety-module-triggers/src/interfaces/OptimisticOracleV2Interface.sol";
+import {UMATriggerFactory} from "cozy-safety-module-triggers/src/UMATriggerFactory.sol";
+import {MockChainlinkOracle} from "cozy-safety-module-triggers/test/utils/MockChainlinkOracle.sol";
 import {CozyRouter} from "../src/CozyRouter.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
@@ -40,7 +43,7 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
   ISafetyModule safetyModule;
   IStETH stEth;
   IWstETH wstEth;
-  IChainlinkTriggerFactory chainlinkTriggerFactory = IChainlinkTriggerFactory(address(0));
+  IChainlinkTriggerFactory chainlinkTriggerFactory = IChainlinkTriggerFactory(address(new ChainlinkTriggerFactory()));
   IOwnableTriggerFactory ownableTriggerFactory = IOwnableTriggerFactory(address(new OwnableTriggerFactory()));
   OptimisticOracleV2Interface umaOracle = OptimisticOracleV2Interface(address(new MockUMAOracle())); // Mock for tests.
   IUMATriggerFactory umaTriggerFactory = IUMATriggerFactory(address(new UMATriggerFactory(umaOracle)));
@@ -1173,6 +1176,14 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
 contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
   IERC20 mockToken = IERC20(address(new MockERC20("Mock UMA Reward Token", "MOCK", 6)));
 
+  struct ChainlinkTriggerParams {
+    AggregatorV3Interface truthOracle;
+    AggregatorV3Interface trackingOracle;
+    uint256 priceTolerance;
+    uint256 truthFrequencyTolerance;
+    uint256 trackingFrequencyTolerance;
+  }
+
   struct OwnableTriggerParams {
     address owner;
     bytes32 salt;
@@ -1185,6 +1196,77 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     address refundRecipient;
     uint256 bondAmount;
     uint256 proposalDisputeWindow;
+  }
+
+  function test_deployChainlinkTrigger() public {
+    AggregatorV3Interface truthOracle_ = AggregatorV3Interface(address(new MockChainlinkOracle(1e6, 6)));
+    AggregatorV3Interface trackingOracle_ = AggregatorV3Interface(address(new MockChainlinkOracle(1e6, 6)));
+    uint256 priceTolerance_ = 0.5e4;
+    uint256 truthFrequencyTolerance_ = 1200;
+    uint256 trackingFrequencyTolerance_ = 86_400;
+
+    bytes32 configId_ = chainlinkTriggerFactory.triggerConfigId(
+      truthOracle_, trackingOracle_, priceTolerance_, truthFrequencyTolerance_, trackingFrequencyTolerance_
+    );
+    uint256 triggerCount_ = chainlinkTriggerFactory.triggerCount(configId_);
+    address expectedTriggerAddress_ = chainlinkTriggerFactory.computeTriggerAddress(
+      truthOracle_,
+      trackingOracle_,
+      priceTolerance_,
+      truthFrequencyTolerance_,
+      trackingFrequencyTolerance_,
+      triggerCount_
+    );
+
+    ITrigger trigger_ = router.deployChainlinkTrigger(
+      truthOracle_,
+      trackingOracle_,
+      priceTolerance_, // priceTolerance.
+      truthFrequencyTolerance_, // truthFrequencyTolerance.
+      trackingFrequencyTolerance_, // trackingFrequencyTolerance
+      TriggerMetadata(
+        "Peg Protection Trigger",
+        "Peg",
+        "A trigger that protects from something depegging",
+        "https://via.placeholder.com/150"
+      )
+    );
+
+    assertEq(address(trigger_), expectedTriggerAddress_);
+  }
+
+  function test_deployChainlinkFixedPriceTrigger() public {
+    address expectedFixedPriceAggregatorAddress_ = chainlinkTriggerFactory.computeFixedPriceAggregatorAddress(1800e8, 8);
+    ChainlinkTriggerParams memory fixedPriceChainlinkTriggerParams_ = ChainlinkTriggerParams(
+      AggregatorV3Interface(expectedFixedPriceAggregatorAddress_),
+      AggregatorV3Interface(address(new MockChainlinkOracle(1801e8, 8))),
+      0.99e4,
+      0,
+      1200
+    );
+    address expectedFixedPriceChainlinkTriggerAddress_ = chainlinkTriggerFactory.computeTriggerAddress(
+      fixedPriceChainlinkTriggerParams_.truthOracle,
+      fixedPriceChainlinkTriggerParams_.trackingOracle,
+      fixedPriceChainlinkTriggerParams_.priceTolerance,
+      fixedPriceChainlinkTriggerParams_.truthFrequencyTolerance,
+      fixedPriceChainlinkTriggerParams_.trackingFrequencyTolerance,
+      0 // triggerCount - Zero triggers have been deployed with this exact config.
+    );
+
+    ITrigger fixedPriceTrigger = router.deployChainlinkFixedPriceTrigger(
+      1800e8,
+      8,
+      fixedPriceChainlinkTriggerParams_.trackingOracle,
+      fixedPriceChainlinkTriggerParams_.priceTolerance,
+      fixedPriceChainlinkTriggerParams_.trackingFrequencyTolerance,
+      TriggerMetadata(
+        "Fixed Price Protection Trigger",
+        "Peg",
+        "A trigger that protects from something depegging",
+        "https://via.placeholder.com/150"
+      )
+    );
+    assertEq(address(fixedPriceTrigger), address(expectedFixedPriceChainlinkTriggerAddress_));
   }
 
   function test_deployOwnableTrigger() public {
@@ -1260,8 +1342,22 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     deal(address(mockToken), address(this), 10e6);
     mockToken.approve(address(router), 10e6);
 
-    address safetyModuleOwner_ = _randomAddress();
-    address safetyModulePauser_ = _randomAddress();
+    ChainlinkTriggerParams memory chainlinkTriggerParams_ = ChainlinkTriggerParams(
+      AggregatorV3Interface(address(new MockChainlinkOracle(1e8, 8))),
+      AggregatorV3Interface(address(new MockChainlinkOracle(1e8, 8))),
+      0.25e4,
+      1200,
+      86_400
+    );
+    address triggerC_ = chainlinkTriggerFactory.computeTriggerAddress(
+      chainlinkTriggerParams_.truthOracle,
+      chainlinkTriggerParams_.trackingOracle,
+      chainlinkTriggerParams_.priceTolerance,
+      chainlinkTriggerParams_.truthFrequencyTolerance,
+      chainlinkTriggerParams_.trackingFrequencyTolerance,
+      0 // triggerCount - Zero triggers have been deployed with this exact config.
+    );
+
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] =
       ReservePoolConfig({maxSlashPercentage: 0, asset: reserveAssetA, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
@@ -1272,49 +1368,68 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     });
     Delays memory delaysConfig_ =
       Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
-    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](2);
+    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](3);
     triggerConfig_[0] = TriggerConfig({trigger: ITrigger(triggerA_), payoutHandler: _randomAddress(), exists: true});
     triggerConfig_[1] = TriggerConfig({trigger: ITrigger(triggerB_), payoutHandler: _randomAddress(), exists: true});
+    triggerConfig_[2] = TriggerConfig({trigger: ITrigger(triggerC_), payoutHandler: _randomAddress(), exists: true});
 
     UpdateConfigsCalldataParams memory updateConfigsParams_ =
       UpdateConfigsCalldataParams(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfig_, delaysConfig_);
 
-    bytes[] memory calls_ = new bytes[](3);
-    calls_[0] = abi.encodeWithSelector(
-      router.deployOwnableTrigger.selector,
-      ownableTriggerParams_.owner,
-      TriggerMetadata(
-        "Trigger Name A",
-        "Protocol A",
-        "A triggerA that will toggle if Protocol is hacked",
-        "https://via.placeholder.com/150A"
-      ),
-      ownableTriggerParams_.salt
-    );
-    calls_[1] = abi.encodeWithSelector(
-      router.deployUMATrigger.selector,
-      umaTriggerParams_.query,
-      umaTriggerParams_.rewardToken,
-      umaTriggerParams_.rewardAmount,
-      umaTriggerParams_.refundRecipient,
-      umaTriggerParams_.bondAmount,
-      umaTriggerParams_.proposalDisputeWindow,
-      TriggerMetadata(
-        "Trigger NameB",
-        "ProtocolB",
-        "A triggerB that will toggle if Protocol is hacked",
-        "https://via.placeholder.com/150B"
-      )
-    );
-    calls_[2] = abi.encodeWithSelector(
-      router.deploySafetyModule.selector,
-      safetyModuleOwner_,
-      safetyModulePauser_,
-      updateConfigsParams_,
-      _randomBytes32()
-    );
+    {
+      bytes[] memory calls_ = new bytes[](4);
+      calls_[0] = abi.encodeWithSelector(
+        router.deployOwnableTrigger.selector,
+        ownableTriggerParams_.owner,
+        TriggerMetadata(
+          "Trigger Name A",
+          "Protocol A",
+          "A triggerA that will toggle if Protocol is hacked",
+          "https://via.placeholder.com/150A"
+        ),
+        ownableTriggerParams_.salt
+      );
+      calls_[1] = abi.encodeWithSelector(
+        router.deployUMATrigger.selector,
+        umaTriggerParams_.query,
+        umaTriggerParams_.rewardToken,
+        umaTriggerParams_.rewardAmount,
+        umaTriggerParams_.refundRecipient,
+        umaTriggerParams_.bondAmount,
+        umaTriggerParams_.proposalDisputeWindow,
+        TriggerMetadata(
+          "Trigger NameB",
+          "ProtocolB",
+          "A triggerB that will toggle if Protocol is hacked",
+          "https://via.placeholder.com/150B"
+        )
+      );
+      calls_[2] = abi.encodeWithSelector(
+        router.deployChainlinkTrigger.selector,
+        chainlinkTriggerParams_.truthOracle,
+        chainlinkTriggerParams_.trackingOracle,
+        chainlinkTriggerParams_.priceTolerance,
+        chainlinkTriggerParams_.truthFrequencyTolerance,
+        chainlinkTriggerParams_.trackingFrequencyTolerance,
+        TriggerMetadata(
+          "Peg Protection Trigger",
+          "Peg",
+          "A trigger that protects from something depegging",
+          "https://via.placeholder.com/150"
+        )
+      );
+      calls_[3] = abi.encodeWithSelector(
+        router.deploySafetyModule.selector,
+        _randomAddress(), // Owner
+        _randomAddress(), // Pauser
+        updateConfigsParams_,
+        _randomBytes32() // Salt
+      );
 
-    deal(address(this), 1e18);
-    router.aggregate(calls_);
+      // If this doesn't revert, the batch of calls was successful.
+      // We also pass some ETH to ensure it doesn't revert for batches that require ETH to be sent.
+      deal(address(this), 1e18);
+      router.aggregate(calls_);
+    }
   }
 }
