@@ -7,6 +7,7 @@ import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IConfiguratorErrors} from "../interfaces/IConfiguratorErrors.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
+import {IManager} from "../interfaces/IManager.sol";
 import {ReservePool, UndrippedRewardPool, IdLookup} from "./structs/Pools.sol";
 import {Delays} from "./structs/Delays.sol";
 import {
@@ -71,9 +72,10 @@ library ConfiguratorLib {
     UndrippedRewardPool[] storage undrippedRewardPools_,
     mapping(ITrigger => Trigger) storage triggerData_,
     Delays storage delays_,
-    UpdateConfigsCalldataParams calldata configUpdates_
+    UpdateConfigsCalldataParams calldata configUpdates_,
+    IManager manager_
   ) external {
-    if (!isValidUpdate(reservePools_, undrippedRewardPools_, triggerData_, configUpdates_)) {
+    if (!isValidUpdate(reservePools_, undrippedRewardPools_, triggerData_, configUpdates_, manager_)) {
       revert IConfiguratorErrors.InvalidConfiguration();
     }
 
@@ -160,10 +162,19 @@ library ConfiguratorLib {
     ReservePool[] storage reservePools_,
     UndrippedRewardPool[] storage undrippedRewardPools_,
     mapping(ITrigger => Trigger) storage triggerData_,
-    UpdateConfigsCalldataParams calldata configUpdates_
+    UpdateConfigsCalldataParams calldata configUpdates_,
+    IManager manager_
   ) internal view returns (bool) {
     // Validate the configuration parameters.
-    if (!isValidConfiguration(configUpdates_.reservePoolConfigs, configUpdates_.delaysConfig)) return false;
+    if (
+      !isValidConfiguration(
+        configUpdates_.reservePoolConfigs,
+        configUpdates_.undrippedRewardPoolConfigs,
+        configUpdates_.delaysConfig,
+        manager_.allowedReservePools(),
+        manager_.allowedRewardPools()
+      )
+    ) return false;
 
     // Validate number of reserve and rewards pools. It is only possible to add new pools, not remove existing ones.
     uint256 numExistingReservePools_ = reservePools_.length;
@@ -193,11 +204,19 @@ library ConfiguratorLib {
 
   /// @notice Returns true if the provided configs are generically valid, false otherwise.
   /// @dev Does not include safety module-specific checks, e.g. checks based on existing reserve and reward pools.
-  function isValidConfiguration(ReservePoolConfig[] calldata reservePoolConfigs_, Delays calldata delaysConfig_)
-    internal
-    pure
-    returns (bool)
-  {
+  function isValidConfiguration(
+    ReservePoolConfig[] calldata reservePoolConfigs_,
+    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
+    Delays calldata delaysConfig_,
+    uint256 maxReservePools_,
+    uint256 maxUndrippedRewardPools_
+  ) internal pure returns (bool) {
+    // Validate number of reserve pools.
+    if (reservePoolConfigs_.length > maxReservePools_) return false;
+
+    // Validate number of undripped reward pools.
+    if (undrippedRewardPoolConfigs_.length > maxUndrippedRewardPools_) return false;
+
     // Validate delays.
     if (
       delaysConfig_.configUpdateDelay <= delaysConfig_.unstakeDelay

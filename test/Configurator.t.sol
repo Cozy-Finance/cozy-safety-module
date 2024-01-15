@@ -48,6 +48,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
   function setUp() public {
     mockManager.initGovernable(address(0xBEEF), address(0xABCD));
+    mockManager.setAllowedReservePools(30);
+    mockManager.setAllowedRewardPools(25);
 
     ReceiptToken receiptTokenLogic_ = new ReceiptToken();
     receiptTokenLogic_.initialize(ISafetyModule(address(0)), "", "", 0);
@@ -238,8 +240,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
     reservePoolConfigs_[0] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2, MathConstants.WAD);
     reservePoolConfigs_[1] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2, MathConstants.WAD);
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](0);
 
-    assertTrue(component.isValidConfiguration(reservePoolConfigs_, delayConfig_));
+    assertTrue(component.isValidConfiguration(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
   }
 
   function test_isValidConfiguration_FalseInvalidWeightSum() external {
@@ -251,8 +254,35 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
     reservePoolConfigs_[0] = _generateValidReservePoolConfig(weightA_, MathConstants.WAD);
     reservePoolConfigs_[1] = _generateValidReservePoolConfig(weightB_, MathConstants.WAD);
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](0);
 
-    assertFalse(component.isValidConfiguration(reservePoolConfigs_, delayConfig_));
+    assertFalse(component.isValidConfiguration(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
+  }
+
+  function test_isValidConfiguration_FalseTooManyReservePools() external {
+    Delays memory delayConfig_ = _generateValidDelays();
+
+    mockManager.setAllowedReservePools(1);
+
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2, MathConstants.WAD);
+    reservePoolConfigs_[1] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2, MathConstants.WAD);
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](0);
+
+    assertFalse(component.isValidConfiguration(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
+  }
+
+  function test_isValidConfiguration_FalseTooManyRewardPools() external {
+    Delays memory delayConfig_ = _generateValidDelays();
+
+    mockManager.setAllowedRewardPools(1);
+
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](0);
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](2);
+    undrippedRewardPoolConfigs_[0] = _generateValidUndrippedRewardPoolConfig();
+    undrippedRewardPoolConfigs_[1] = _generateValidUndrippedRewardPoolConfig();
+
+    assertFalse(component.isValidConfiguration(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
   }
 
   function test_isValidConfiguration_FalseInvalidConfigUpdateDelay() external {
@@ -269,7 +299,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     reservePoolConfigs_[0] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2, MathConstants.WAD);
     reservePoolConfigs_[1] = _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2, MathConstants.WAD);
 
-    assertFalse(component.isValidConfiguration(reservePoolConfigs_, delayConfig_));
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](0);
+
+    assertFalse(component.isValidConfiguration(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
   }
 
   function test_isValidConfiguration_FalseInvalidMaxSlashPercentage() external {
@@ -281,8 +313,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       _generateValidReservePoolConfig(uint16(MathConstants.ZOC) / 2, MathConstants.WAD);
     reservePoolConfig2_.maxSlashPercentage = MathConstants.WAD + 1;
     reservePoolConfigs_[1] = reservePoolConfig2_;
+    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](0);
 
-    assertFalse(component.isValidConfiguration(reservePoolConfigs_, delayConfig_));
+    assertFalse(component.isValidConfiguration(reservePoolConfigs_, undrippedRewardPoolConfigs_, delayConfig_));
   }
 
   function test_isValidUpdate_IsValidConfiguration() external {
@@ -958,16 +991,22 @@ contract TestableConfigurator is Configurator {
   }
 
   // -------- Internal function wrappers for testing --------
-  function isValidConfiguration(ReservePoolConfig[] calldata reservePoolConfigs_, Delays calldata delaysConfig_)
-    external
-    pure
-    returns (bool)
-  {
-    return ConfiguratorLib.isValidConfiguration(reservePoolConfigs_, delaysConfig_);
+  function isValidConfiguration(
+    ReservePoolConfig[] calldata reservePoolConfigs_,
+    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
+    Delays calldata delaysConfig_
+  ) external view returns (bool) {
+    return ConfiguratorLib.isValidConfiguration(
+      reservePoolConfigs_,
+      undrippedRewardPoolConfigs_,
+      delaysConfig_,
+      cozyManager.allowedReservePools(),
+      cozyManager.allowedRewardPools()
+    );
   }
 
   function isValidUpdate(UpdateConfigsCalldataParams calldata configUpdates_) external view returns (bool) {
-    return ConfiguratorLib.isValidUpdate(reservePools, undrippedRewardPools, triggerData, configUpdates_);
+    return ConfiguratorLib.isValidUpdate(reservePools, undrippedRewardPools, triggerData, configUpdates_, cozyManager);
   }
 
   function initializeReservePool(ReservePoolConfig calldata reservePoolConfig_) external {

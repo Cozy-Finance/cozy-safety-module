@@ -143,6 +143,14 @@ contract ManagerTestDeploy is MockDeployProtocol {
   function test_feeDripModel() public {
     assertEq(address(manager.feeDripModel()), address(feeDripModel));
   }
+
+  function test_allowedReservePools() public {
+    assertEq(manager.allowedReservePools(), ALLOWED_RESERVE_POOLS);
+  }
+
+  function test_allowedRewardPools() public {
+    assertEq(manager.allowedRewardPools(), ALLOWED_REWARD_POOLS);
+  }
 }
 
 contract ManagerUpdateFeeModels is MockDeployProtocol {

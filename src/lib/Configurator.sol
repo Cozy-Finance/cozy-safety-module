@@ -27,7 +27,7 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
   /// - delaysConfig: The new delays config.
   function updateConfigs(UpdateConfigsCalldataParams calldata configUpdates_) external onlyOwner {
     ConfiguratorLib.updateConfigs(
-      lastConfigUpdate, reservePools, undrippedRewardPools, triggerData, delays, configUpdates_
+      lastConfigUpdate, reservePools, undrippedRewardPools, triggerData, delays, configUpdates_, cozyManager
     );
   }
 
