@@ -362,6 +362,9 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     trigger.mockState(TriggerState.TRIGGERED);
     safetyModule.trigger(ITrigger(address(trigger)));
     Slash[] memory slashes_ = new Slash[](numReserveAssets);
+    for (uint256 i = 0; i < numReserveAssets; i++) {
+      slashes_[i] = Slash({reservePoolId: uint16(i), amount: 0});
+    }
 
     vm.startPrank(payoutHandler);
     uint256 gasInitial_ = gasleft();
