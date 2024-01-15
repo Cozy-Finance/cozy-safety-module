@@ -19,13 +19,14 @@ import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {MockDeployProtocol} from "./utils/MockDeployProtocol.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
+import {console2} from "forge-std/console2.sol";
 
 abstract contract BenchmarkMaxPools is MockDeployProtocol {
   uint256 internal constant DEFAULT_DRIP_RATE = 9_116_094_774; // 25% annually as a WAD
   uint256 internal constant DEFAULT_SKIP_DAYS = 10;
   Delays DEFAULT_DELAYS =
     Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
-  
+
   SafetyModule safetyModule;
   MockTrigger trigger;
   uint16 numRewardAssets;
@@ -107,172 +108,78 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     );
   }
 
-  function _depositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) internal {
+  function _setUpDepositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) internal {
     ReservePool memory reservePool_ = getReservePool(ISafetyModule(address(safetyModule)), reservePoolId_);
     deal(address(reservePool_.asset), address(safetyModule), type(uint256).max);
+  }
+
+  function _depositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) internal {
+    _setUpDepositReserveAssets(reservePoolId_, reserveAssetAmount_, receiver_);
     safetyModule.depositReserveAssetsWithoutTransfer(reservePoolId_, reserveAssetAmount_, receiver_);
   }
 
-  function _depositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_) internal {
+  function _setUpDepositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_) internal {
     UndrippedRewardPool memory rewardPool_ = getUndrippedRewardPool(ISafetyModule(address(safetyModule)), rewardPoolId_);
     deal(address(rewardPool_.asset), address(safetyModule), type(uint256).max);
+  }
+
+  function _depositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_) internal {
+    _setUpDepositRewardAssets(rewardPoolId_, rewardAssetAmount_, receiver_);
     safetyModule.depositRewardAssetsWithoutTransfer(rewardPoolId_, rewardAssetAmount_, receiver_);
   }
 
-  function _stake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) internal {
+  function _setUpStake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) internal {
     ReservePool memory reservePool_ = getReservePool(ISafetyModule(address(safetyModule)), reservePoolId_);
     deal(address(reservePool_.asset), address(safetyModule), type(uint256).max);
+  }
+
+  function _stake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) internal {
+    _setUpStake(reservePoolId_, reserveAssetAmount_, receiver_);
     safetyModule.stakeWithoutTransfer(reservePoolId_, reserveAssetAmount_, receiver_);
   }
 
-  function _redeem(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) internal {
+  function _setUpRedeem(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
+    internal
+    returns (uint256 depositTokenAmount_)
+  {
     _depositReserveAssets(reservePoolId_, reserveAssetAmount_, receiver_);
 
-    uint256 depositTokenAmount_ = safetyModule.convertToReserveDepositTokenAmount(reservePoolId_, reserveAssetAmount_);
+    depositTokenAmount_ = safetyModule.convertToReserveDepositTokenAmount(reservePoolId_, reserveAssetAmount_);
     vm.startPrank(receiver_);
     getReservePool(ISafetyModule(address(safetyModule)), reservePoolId_).depositToken.approve(
       address(safetyModule), depositTokenAmount_
     );
-    (uint64 redemptionId_,) = safetyModule.redeem(reservePoolId_, depositTokenAmount_, receiver_, receiver_);
     vm.stopPrank();
-
-    (,,, uint64 withdrawDelay_) = safetyModule.delays();
-    skip(withdrawDelay_);
-    safetyModule.completeRedemption(redemptionId_);
   }
 
-  function _unstake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) internal {
+  function _setUpUnstake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
+    internal
+    returns (uint256 stkTokenAmount_)
+  {
     _stake(reservePoolId_, reserveAssetAmount_, receiver_);
 
-    uint256 stkTokenAmount_ = safetyModule.convertToStakeTokenAmount(reservePoolId_, reserveAssetAmount_);
+    stkTokenAmount_ = safetyModule.convertToStakeTokenAmount(reservePoolId_, reserveAssetAmount_);
     vm.startPrank(receiver_);
     getReservePool(ISafetyModule(address(safetyModule)), reservePoolId_).stkToken.approve(
       address(safetyModule), stkTokenAmount_
     );
-    (uint64 redemptionId_,) = safetyModule.unstake(reservePoolId_, stkTokenAmount_, receiver_, receiver_);
     vm.stopPrank();
-
-    (,, uint64 unstakeDelay_,) = safetyModule.delays();
-    skip(unstakeDelay_);
-    safetyModule.completeRedemption(redemptionId_);
   }
 
-  function _redeemUndrippedRewards(uint16 rewardPoolId_, address receiver_) internal {
+  function _setUpRedeemUndrippedRewards(uint16 rewardPoolId_, address receiver_)
+    internal
+    returns (uint256 depositTokenAmount_)
+  {
     UndrippedRewardPool memory rewardPool_ = getUndrippedRewardPool(ISafetyModule(address(safetyModule)), rewardPoolId_);
     _depositRewardAssets(rewardPoolId_, rewardPool_.amount, receiver_);
 
-    uint256 depositTokenAmount_ = rewardPool_.depositToken.balanceOf(receiver_);
+    depositTokenAmount_ = rewardPool_.depositToken.balanceOf(receiver_);
     vm.startPrank(receiver_);
     rewardPool_.depositToken.approve(address(safetyModule), depositTokenAmount_);
-    safetyModule.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, receiver_);
     vm.stopPrank();
   }
 
-  function _trigger() internal {
-    trigger.mockState(TriggerState.TRIGGERED);
-    safetyModule.trigger(ITrigger(address(trigger)));
-  }
-
-  function test_createSafetyModule() public {
-    _createSafetyModule(
-      UpdateConfigsCalldataParams({
-        reservePoolConfigs: _createReservePools(numReserveAssets),
-        undrippedRewardPoolConfigs: _createUndrippedRewardPools(numRewardAssets),
-        triggerConfigUpdates: _createTriggerConfig(),
-        delaysConfig: DEFAULT_DELAYS
-      })
-    );
-  }
-
-  function test_depositReserveAssets() public {
-    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
-    _depositReserveAssets(reservePoolId_, reserveAssetAmount_, receiver_);
-  }
-
-  function test_depositRewardAssets() public {
-    (uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_) = _randomSingleActionFixture(false);
-    _depositRewardAssets(rewardPoolId_, rewardAssetAmount_, receiver_);
-  }
-
-  function test_stake() public {
-    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
-    _stake(reservePoolId_, reserveAssetAmount_, receiver_);
-  }
-
-  function test_redeem() public {
-    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
-    _redeem(reservePoolId_, reserveAssetAmount_, receiver_);
-  }
-
-  function test_redeemUndrippedRewards() public {
-    (uint16 rewardPoolId_,, address receiver_) = _randomSingleActionFixture(false);
-    _redeemUndrippedRewards(rewardPoolId_, receiver_);
-  }
-
-  function test_unstake() public {
-    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
-    _unstake(reservePoolId_, reserveAssetAmount_, receiver_);
-  }
-
-  function test_pause() public {
-    vm.prank(owner);
-    safetyModule.pause();
-  }
-
-  function test_unpause() public {
-    vm.startPrank(owner);
-    safetyModule.pause();
-    safetyModule.unpause();
-    vm.stopPrank();
-  }
-
-  function test_trigger() public {
-    _trigger();
-  }
-
-  function test_slash() public {
-    _trigger();
-
-    Slash[] memory slashes_ = new Slash[](numReserveAssets);
-    vm.prank(payoutHandler);
-    safetyModule.slash(slashes_, _randomAddress());
-  }
-
-  function test_dripRewards() public {
-    skip(_randomUint64());
-    safetyModule.dripRewards();
-  }
-
-  function test_claimRewards() public {
-    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
-    _stake(reservePoolId_, reserveAssetAmount_, receiver_);
-
-    skip(_randomUint64());
-
-    vm.prank(receiver_);
-    safetyModule.claimRewards(reservePoolId_, receiver_);
-  }
-
-  function test_dripFees() public {
-    skip(_randomUint64());
-    safetyModule.dripFees();
-  }
-
-  function test_stkTokenTransfer() public {
-    (uint16 reservePoolId_,, address receiver_) = _randomSingleActionFixture(true);
-
-    ReservePool memory reservePool_ = getReservePool(ISafetyModule(address(safetyModule)), reservePoolId_);
-    IERC20 stkToken_ = reservePool_.stkToken;
-    _stake(reservePoolId_, reservePool_.stakeAmount, receiver_);
-
-    skip(_randomUint64());
-
-    vm.startPrank(receiver_);
-    stkToken_.transfer(_randomAddress(), stkToken_.balanceOf(receiver_));
-    vm.stopPrank();
-  }
-
-  function test_configUpdate() public {
+  function _setUpConfigUpdate() internal returns (UpdateConfigsCalldataParams memory updateConfigs_) {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numReserveAssets + 1);
     UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ =
       new UndrippedRewardPoolConfig[](numRewardAssets + 1);
@@ -308,22 +215,225 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](0);
     Delays memory delaysConfig_ = getDelays(ISafetyModule(address(safetyModule)));
 
-    UpdateConfigsCalldataParams memory updateConfigs_ = UpdateConfigsCalldataParams({
+    updateConfigs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
       undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
       triggerConfigUpdates: triggerConfig_,
       delaysConfig: delaysConfig_
     });
+  }
+
+  function test_createSafetyModule() public {
+    UpdateConfigsCalldataParams memory updateConfigs_ = UpdateConfigsCalldataParams({
+      reservePoolConfigs: _createReservePools(numReserveAssets),
+      undrippedRewardPoolConfigs: _createUndrippedRewardPools(numRewardAssets),
+      triggerConfigUpdates: _createTriggerConfig(),
+      delaysConfig: DEFAULT_DELAYS
+    });
+
+    uint256 gasInitial_ = gasleft();
+    _createSafetyModule(updateConfigs_);
+    console2.log("Gas used for createSafetyModule: %s", gasInitial_ - gasleft());
+  }
+
+  function test_depositReserveAssets() public {
+    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
+    _setUpDepositReserveAssets(reservePoolId_, reserveAssetAmount_, receiver_);
+
+    uint256 gasInitial_ = gasleft();
+    safetyModule.depositReserveAssetsWithoutTransfer(reservePoolId_, reserveAssetAmount_, receiver_);
+    console2.log("Gas used for depositReserveAssetsWithoutTransfer: %s", gasInitial_ - gasleft());
+  }
+
+  function test_depositRewardAssets() public {
+    (uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_) = _randomSingleActionFixture(false);
+    _setUpDepositRewardAssets(rewardPoolId_, rewardAssetAmount_, receiver_);
+
+    uint256 gasInitial_ = gasleft();
+    safetyModule.depositRewardAssetsWithoutTransfer(rewardPoolId_, rewardAssetAmount_, receiver_);
+    console2.log("Gas used for depositRewardAssetsWithoutTransfer: %s", gasInitial_ - gasleft());
+  }
+
+  function test_stake() public {
+    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
+    _setUpStake(reservePoolId_, reserveAssetAmount_, receiver_);
+
+    uint256 gasInitial_ = gasleft();
+    safetyModule.stakeWithoutTransfer(reservePoolId_, reserveAssetAmount_, receiver_);
+    console2.log("Gas used for stakeWithoutTransfer: %s", gasInitial_ - gasleft());
+  }
+
+  function test_redeem() public {
+    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
+    uint256 depositTokenAmount_ = _setUpRedeem(reservePoolId_, reserveAssetAmount_, receiver_);
+
+    vm.startPrank(receiver_);
+    uint256 gasInitial_ = gasleft();
+    safetyModule.redeem(reservePoolId_, depositTokenAmount_, receiver_, receiver_);
+    console2.log("Gas used for redeem: %s", gasInitial_ - gasleft());
+    vm.stopPrank();
+  }
+
+  function test_completeRedemption() public {
+    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
+    uint256 depositTokenAmount_ = _setUpRedeem(reservePoolId_, reserveAssetAmount_, receiver_);
+
+    vm.startPrank(receiver_);
+    (uint64 redemptionId_,) = safetyModule.redeem(reservePoolId_, depositTokenAmount_, receiver_, receiver_);
+    vm.stopPrank();
+
+    (,, uint64 withdrawDelay_,) = safetyModule.delays();
+    skip(withdrawDelay_);
+
+    uint256 gasInitial_ = gasleft();
+    safetyModule.completeRedemption(redemptionId_);
+    console2.log("Gas used for completeRedemption: %s", gasInitial_ - gasleft());
+  }
+
+  function test_redeemUndrippedRewards() public {
+    (uint16 rewardPoolId_,, address receiver_) = _randomSingleActionFixture(false);
+    uint256 depositTokenAmount_ = _setUpRedeemUndrippedRewards(rewardPoolId_, receiver_);
+
+    vm.startPrank(receiver_);
+    uint256 gasInitial_ = gasleft();
+    safetyModule.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, receiver_);
+    console2.log("Gas used for redeemUndrippedRewards: %s", gasInitial_ - gasleft());
+    vm.stopPrank();
+  }
+
+  function test_unstake() public {
+    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
+    uint256 stkTokenAmount_ = _setUpUnstake(reservePoolId_, reserveAssetAmount_, receiver_);
+
+    vm.startPrank(receiver_);
+    uint256 gasInitial_ = gasleft();
+    safetyModule.unstake(reservePoolId_, stkTokenAmount_, receiver_, receiver_);
+    console2.log("Gas used for unstake: %s", gasInitial_ - gasleft());
+    vm.stopPrank();
+  }
+
+  function test_completeUnstake() public {
+    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
+    uint256 stkTokenAmount_ = _setUpUnstake(reservePoolId_, reserveAssetAmount_, receiver_);
+
+    vm.startPrank(receiver_);
+    (uint64 redemptionId_,) = safetyModule.unstake(reservePoolId_, stkTokenAmount_, receiver_, receiver_);
+    vm.stopPrank();
+
+    (,,, uint64 unstakeDelay_) = safetyModule.delays();
+    skip(unstakeDelay_);
+
+    uint256 gasInitial_ = gasleft();
+    safetyModule.completeRedemption(redemptionId_);
+    console2.log("Gas used for completeRedemption (unstake): %s", gasInitial_ - gasleft());
+  }
+
+  function test_pause() public {
+    vm.startPrank(owner);
+    uint256 gasInitial_ = gasleft();
+    safetyModule.pause();
+    console2.log("Gas used for pause: %s", gasInitial_ - gasleft());
+    vm.stopPrank();
+  }
+
+  function test_unpause() public {
+    vm.startPrank(owner);
+    safetyModule.pause();
+
+    uint256 gasInitial_ = gasleft();
+    safetyModule.unpause();
+    console2.log("Gas used for unpause: %s", gasInitial_ - gasleft());
+    vm.stopPrank();
+  }
+
+  function test_trigger() public {
+    trigger.mockState(TriggerState.TRIGGERED);
+
+    uint256 gasInitial_ = gasleft();
+    safetyModule.trigger(ITrigger(address(trigger)));
+    console2.log("Gas used for trigger: %s", gasInitial_ - gasleft());
+  }
+
+  function test_slash() public {
+    trigger.mockState(TriggerState.TRIGGERED);
+    safetyModule.trigger(ITrigger(address(trigger)));
+    Slash[] memory slashes_ = new Slash[](numReserveAssets);
+
+    vm.startPrank(payoutHandler);
+    uint256 gasInitial_ = gasleft();
+    safetyModule.slash(slashes_, _randomAddress());
+    console2.log("Gas used for slash: %s", gasInitial_ - gasleft());
+    vm.stopPrank();
+  }
+
+  function test_dripRewards() public {
+    skip(_randomUint64());
+
+    uint256 gasInitial_ = gasleft();
+    safetyModule.dripRewards();
+    console2.log("Gas used for dripRewards: %s", gasInitial_ - gasleft());
+  }
+
+  function test_claimRewards() public {
+    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture(true);
+    _stake(reservePoolId_, reserveAssetAmount_, receiver_);
+
+    skip(_randomUint64());
+
+    vm.startPrank(receiver_);
+    uint256 gasInitial_ = gasleft();
+    safetyModule.claimRewards(reservePoolId_, receiver_);
+    console2.log("Gas used for claimRewards: %s", gasInitial_ - gasleft());
+    vm.stopPrank();
+  }
+
+  function test_dripFees() public {
+    skip(_randomUint64());
+
+    uint256 gasInitial_ = gasleft();
+    safetyModule.dripFees();
+    console2.log("Gas used for dripFees: %s", gasInitial_ - gasleft());
+  }
+
+  function test_stkTokenTransfer() public {
+    (uint16 reservePoolId_,, address receiver_) = _randomSingleActionFixture(true);
+
+    ReservePool memory reservePool_ = getReservePool(ISafetyModule(address(safetyModule)), reservePoolId_);
+    IERC20 stkToken_ = reservePool_.stkToken;
+    _stake(reservePoolId_, reservePool_.stakeAmount, receiver_);
+
+    skip(_randomUint64());
+
+    vm.startPrank(receiver_);
+    uint256 gasInitial_ = gasleft();
+    stkToken_.transfer(_randomAddress(), stkToken_.balanceOf(receiver_));
+    console2.log("Gas used for stkToken_.transfer: %s", gasInitial_ - gasleft());
+    vm.stopPrank();
+  }
+
+  function test_configUpdate() public {
+    UpdateConfigsCalldataParams memory updateConfigs_ = _setUpConfigUpdate();
+
+    vm.startPrank(owner);
+    uint256 gasInitial_ = gasleft();
+    safetyModule.updateConfigs(updateConfigs_);
+    console2.log("Gas used for updateConfigs: %s", gasInitial_ - gasleft());
+    vm.stopPrank();
+  }
+
+  function test_finalizeConfigUpdate() public {
+    UpdateConfigsCalldataParams memory updateConfigs_ = _setUpConfigUpdate();
 
     vm.startPrank(owner);
     safetyModule.updateConfigs(updateConfigs_);
     vm.stopPrank();
 
-    skip(delaysConfig_.configUpdateDelay);
+    (uint64 configUpdateDelay_,,,) = safetyModule.delays();
+    skip(configUpdateDelay_);
 
-    vm.startPrank(owner);
+    uint256 gasInitial_ = gasleft();
     safetyModule.finalizeUpdateConfigs(updateConfigs_);
-    vm.stopPrank();
+    console2.log("Gas used for finalizeUpdateConfigs: %s", gasInitial_ - gasleft());
   }
 }
 
