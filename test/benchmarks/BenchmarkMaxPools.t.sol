@@ -4,21 +4,21 @@ pragma solidity 0.8.22;
 import {DripModelExponential} from "cozy-safety-module-models/DripModelExponential.sol";
 import {
   UndrippedRewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig
-} from "../src/lib/structs/Configs.sol";
-import {Delays} from "../src/lib/structs/Delays.sol";
-import {UndrippedRewardPool, ReservePool} from "../src/lib/structs/Pools.sol";
-import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
-import {Slash} from "../src/lib/structs/Slash.sol";
-import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
-import {SafetyModule} from "../src/SafetyModule.sol";
-import {MathConstants} from "../src/lib/MathConstants.sol";
-import {IDripModel} from "../src/interfaces/IDripModel.sol";
-import {IERC20} from "../src/interfaces/IERC20.sol";
-import {ITrigger} from "../src/interfaces/ITrigger.sol";
-import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
-import {MockDeployProtocol} from "./utils/MockDeployProtocol.sol";
-import {MockERC20} from "./utils/MockERC20.sol";
-import {MockTrigger} from "./utils/MockTrigger.sol";
+} from "../../src/lib/structs/Configs.sol";
+import {Delays} from "../../src/lib/structs/Delays.sol";
+import {UndrippedRewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
+import {TriggerConfig} from "../../src/lib/structs/Trigger.sol";
+import {Slash} from "../../src/lib/structs/Slash.sol";
+import {TriggerState} from "../../src/lib/SafetyModuleStates.sol";
+import {SafetyModule} from "../../src/SafetyModule.sol";
+import {MathConstants} from "../../src/lib/MathConstants.sol";
+import {IDripModel} from "../../src/interfaces/IDripModel.sol";
+import {IERC20} from "../../src/interfaces/IERC20.sol";
+import {ITrigger} from "../../src/interfaces/ITrigger.sol";
+import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
+import {MockDeployProtocol} from "../utils/MockDeployProtocol.sol";
+import {MockERC20} from "../utils/MockERC20.sol";
+import {MockTrigger} from "../utils/MockTrigger.sol";
 import {console2} from "forge-std/console2.sol";
 
 abstract contract BenchmarkMaxPools is MockDeployProtocol {
@@ -58,12 +58,16 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
 
   function _createReservePools(uint16 numPools) internal returns (ReservePoolConfig[] memory) {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numPools);
+    uint16 weightSum_ = 0;
     for (uint256 i = 0; i < numPools; i++) {
       reservePoolConfigs_[i] = ReservePoolConfig({
         maxSlashPercentage: MathConstants.WAD,
         asset: IERC20(address(new MockERC20("Mock Reserve Asset", "cozyRes", 18))),
-        rewardsPoolsWeight: uint16(MathConstants.ZOC / numPools)
+        rewardsPoolsWeight: i == numPools - 1
+          ? uint16(MathConstants.ZOC - weightSum_)
+          : uint16(MathConstants.ZOC / numPools)
       });
+      weightSum_ += reservePoolConfigs_[i].rewardsPoolsWeight;
     }
     return reservePoolConfigs_;
   }
@@ -411,7 +415,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     vm.stopPrank();
   }
 
-  function test_configUpdate() public {
+  function test_updateConfigs() public {
     UpdateConfigsCalldataParams memory updateConfigs_ = _setUpConfigUpdate();
 
     vm.startPrank(owner);
@@ -421,7 +425,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     vm.stopPrank();
   }
 
-  function test_finalizeConfigUpdate() public {
+  function test_finalizeUpdateConfigs() public {
     UpdateConfigsCalldataParams memory updateConfigs_ = _setUpConfigUpdate();
 
     vm.startPrank(owner);
@@ -437,34 +441,10 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
   }
 }
 
-contract BenchmarkMaxPools_1Reserve_1Reward is BenchmarkMaxPools {
+contract BenchmarkMaxPools_30Reserve_25Reward is BenchmarkMaxPools {
   function setUp() public override {
-    numReserveAssets = 1;
-    numRewardAssets = 1;
-    super.setUp();
-  }
-}
-
-contract BenchmarkMaxPools_10Reserve_1Reward is BenchmarkMaxPools {
-  function setUp() public override {
-    numReserveAssets = 10;
-    numRewardAssets = 1;
-    super.setUp();
-  }
-}
-
-contract BenchmarkMaxPools_1Reserve_10Reward is BenchmarkMaxPools {
-  function setUp() public override {
-    numReserveAssets = 1;
-    numRewardAssets = 10;
-    super.setUp();
-  }
-}
-
-contract BenchmarkMaxPools_10Reserve_10Reward is BenchmarkMaxPools {
-  function setUp() public override {
-    numRewardAssets = 10;
-    numReserveAssets = 10;
+    numReserveAssets = 30;
+    numRewardAssets = 25;
     super.setUp();
   }
 }
