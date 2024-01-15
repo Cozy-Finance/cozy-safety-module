@@ -118,7 +118,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       undrippedRewardPool_.dripModel,
       undrippedRewardPool_.amount,
       lastDripTime_,
-      block.timestamp - lastDripTime_ // This is always 0.
+      0
     );
 
     depositToken_.burn(msg.sender, owner_, depositTokenAmount_);
