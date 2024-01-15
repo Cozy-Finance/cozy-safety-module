@@ -18,6 +18,7 @@ import {
   UpdateConfigsCalldataParams
 } from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
+import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
@@ -81,6 +82,7 @@ contract DeployProtocol is ScriptUtils {
   IStETH stEth;
   IWstETH wstEth;
   IWeth weth;
+  IChainlinkTriggerFactory chainlinkTriggerFactory;
   IOwnableTriggerFactory ownableTriggerFactory;
   IUMATriggerFactory umaTriggerFactory;
   IDripModel feeDripModel;
@@ -123,6 +125,7 @@ contract DeployProtocol is ScriptUtils {
     console2.log("Using USDC at", address(asset));
 
     // -------- Trigger Factories --------
+    chainlinkTriggerFactory = IChainlinkTriggerFactory(json_.readAddress(".chainlinkTriggerFactory"));
     ownableTriggerFactory = IOwnableTriggerFactory(json_.readAddress(".ownableTriggerFactory"));
     umaTriggerFactory = IUMATriggerFactory(json_.readAddress(".umaTriggerFactory"));
 
@@ -218,7 +221,9 @@ contract DeployProtocol is ScriptUtils {
 
     // -------- Deploy: CozyRouter --------
     vm.broadcast();
-    router = new CozyRouter(computedAddrManager_, weth, stEth, wstEth, ownableTriggerFactory, umaTriggerFactory);
+    router = new CozyRouter(
+      computedAddrManager_, weth, stEth, wstEth, chainlinkTriggerFactory, ownableTriggerFactory, umaTriggerFactory
+    );
     console2.log("CozyRouter deployed", address(router));
   }
 }

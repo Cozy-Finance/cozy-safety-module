@@ -18,6 +18,7 @@ import {
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {TriggerMetadata} from "../src/lib/structs/Trigger.sol";
+import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";
@@ -39,6 +40,7 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
   ISafetyModule safetyModule;
   IStETH stEth;
   IWstETH wstEth;
+  IChainlinkTriggerFactory chainlinkTriggerFactory = IChainlinkTriggerFactory(address(0));
   IOwnableTriggerFactory ownableTriggerFactory = IOwnableTriggerFactory(address(new OwnableTriggerFactory()));
   OptimisticOracleV2Interface umaOracle = OptimisticOracleV2Interface(address(new MockUMAOracle())); // Mock for tests.
   IUMATriggerFactory umaTriggerFactory = IUMATriggerFactory(address(new UMATriggerFactory(umaOracle)));
@@ -122,7 +124,8 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
       )
     );
 
-    router = new CozyRouter(manager, weth, stEth, wstEth, ownableTriggerFactory, umaTriggerFactory);
+    router =
+      new CozyRouter(manager, weth, stEth, wstEth, chainlinkTriggerFactory, ownableTriggerFactory, umaTriggerFactory);
   }
 }
 
@@ -298,7 +301,8 @@ contract CozyRouterWrapStEthSetup is CozyRouterTestSetup {
     vm.label(address(wstEth), "wstETH");
 
     // We need to redeploy the router because it's not on mainnet.
-    router = new CozyRouter(manager, weth, stEth, wstEth, ownableTriggerFactory, umaTriggerFactory);
+    router =
+      new CozyRouter(manager, weth, stEth, wstEth, chainlinkTriggerFactory, ownableTriggerFactory, umaTriggerFactory);
 
     // Rather than redeploying *all* of Cozy Safety Module on mainnet for this fork test, we can get by with just this
     // mock safety module.
