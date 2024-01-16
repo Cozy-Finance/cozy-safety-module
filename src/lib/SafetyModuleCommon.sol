@@ -5,7 +5,7 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {SafetyModuleBaseStorage} from "./SafetyModuleBaseStorage.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
-import {UserRewardsData} from "./structs/Rewards.sol";
+import {UserRewardsData, ClaimableRewardsData} from "./structs/Rewards.sol";
 import {ReservePool} from "./structs/Pools.sol";
 
 abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
@@ -60,7 +60,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
 
   function _updateUserRewards(
     uint256 userStkTokenBalance_,
-    mapping(uint16 => uint256) storage claimableRewardsIndices_,
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
     UserRewardsData[] storage userRewards_
   ) internal virtual;
 }

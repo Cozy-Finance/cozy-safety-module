@@ -15,7 +15,7 @@ import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ISlashHandlerErrors} from "../src/interfaces/ISlashHandlerErrors.sol";
 import {SlashHandler} from "../src/lib/SlashHandler.sol";
 import {Redeemer} from "../src/lib/Redeemer.sol";
-import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
@@ -451,7 +451,7 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
 
   function _updateUserRewards(
     uint256, /* userStkTokenBalance_*/
-    mapping(uint16 => uint256) storage, /* claimableRewardsIndices_ */
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
     UserRewardsData[] storage /* userRewards_ */
   ) internal view virtual override {
     __readStub__();

@@ -340,7 +340,8 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
         asset: rewardAsset_,
         dripModel: IDripModel(address(new MockDripModel(1e18))),
         amount: 0,
-        depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6)))
+        depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6))),
+        cumulativeDrippedRewards: 0
       })
     );
   }

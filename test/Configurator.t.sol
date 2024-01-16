@@ -26,7 +26,7 @@ import {
   ConfigUpdateMetadata,
   UpdateConfigsCalldataParams
 } from "../src/lib/structs/Configs.sol";
-import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {TriggerConfig, Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
@@ -97,13 +97,15 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       asset: IERC20(_randomAddress()),
       dripModel: IDripModel(_randomAddress()),
       depositToken: IReceiptToken(_randomAddress()),
-      amount: _randomUint256()
+      amount: _randomUint256(),
+      cumulativeDrippedRewards: 0
     });
     rewardPool2 = UndrippedRewardPool({
       asset: IERC20(_randomAddress()),
       dripModel: IDripModel(_randomAddress()),
       depositToken: IReceiptToken(_randomAddress()),
-      amount: _randomUint256()
+      amount: _randomUint256(),
+      cumulativeDrippedRewards: 0
     });
   }
 
@@ -1101,7 +1103,7 @@ contract TestableConfigurator is Configurator {
 
   function _updateUserRewards(
     uint256 userStkTokenBalance_,
-    mapping(uint16 => uint256) storage claimableRewardsIndices_,
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
     UserRewardsData[] storage userRewards_
   ) internal override {
     __readStub__();

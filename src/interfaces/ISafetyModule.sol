@@ -138,7 +138,13 @@ interface ISafetyModule {
   function undrippedRewardPools(uint256 id_)
     external
     view
-    returns (uint256 amount, IERC20 asset, IDripModel dripModel, IReceiptToken depositToken);
+    returns (
+      uint256 amount,
+      uint256 cumulativeDrippedRewards,
+      IERC20 asset,
+      IDripModel dripModel,
+      IReceiptToken depositToken
+    );
 
   /// @notice Redeem by burning `stkTokenAmount_` of `reservePoolId_` reserve pool stake tokens and sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`. Also claims any outstanding rewards

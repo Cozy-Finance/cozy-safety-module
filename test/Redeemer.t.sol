@@ -18,7 +18,7 @@ import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
-import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {RedemptionPreview} from "../src/lib/structs/Redemptions.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
@@ -211,7 +211,8 @@ abstract contract ReedemerUnitTestBase is TestBase {
         asset: IERC20(address(mockAsset)),
         amount: 0,
         dripModel: IDripModel(address(0)),
-        depositToken: IReceiptToken(address(0))
+        depositToken: IReceiptToken(address(0)),
+        cumulativeDrippedRewards: 0
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
@@ -1098,7 +1099,8 @@ contract RedeemUndrippedRewards is TestBase {
         asset: IERC20(address(mockAsset)),
         amount: 0,
         dripModel: IDripModel(address(0)),
-        depositToken: IReceiptToken(address(depositToken))
+        depositToken: IReceiptToken(address(depositToken)),
+        cumulativeDrippedRewards: 0
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
@@ -1515,7 +1517,7 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
   function _updateUserRewards(
     uint256, /* userStkTokenBalance */
-    mapping(uint16 => uint256) storage, /* claimableRewardsIndices_ */
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
     UserRewardsData[] storage /* userRewards_ */
   ) internal view override {
     __readStub__();

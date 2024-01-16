@@ -352,6 +352,7 @@ library ConfiguratorLib {
       UndrippedRewardPool({
         asset: undrippedRewardPoolConfig_.asset,
         amount: 0,
+        cumulativeDrippedRewards: 0,
         dripModel: undrippedRewardPoolConfig_.dripModel,
         depositToken: rewardDepositToken_
       })

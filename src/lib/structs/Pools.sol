@@ -34,6 +34,7 @@ struct ReservePool {
 
 struct UndrippedRewardPool {
   uint256 amount;
+  uint256 cumulativeDrippedRewards;
   IERC20 asset;
   IDripModel dripModel;
   IReceiptToken depositToken;

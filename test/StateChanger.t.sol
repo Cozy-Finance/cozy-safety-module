@@ -10,7 +10,7 @@ import {IStateChangerErrors} from "../src/interfaces/IStateChangerErrors.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {StateChanger} from "../src/lib/StateChanger.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
-import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
@@ -469,7 +469,7 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
 
   function _updateUserRewards(
     uint256 userStkTokenBalance_,
-    mapping(uint16 => uint256) storage claimableRewardsIndices_,
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
     UserRewardsData[] storage userRewards_
   ) internal override {
     __readStub__();

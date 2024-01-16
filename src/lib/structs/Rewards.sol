@@ -8,6 +8,11 @@ struct UserRewardsData {
   uint128 indexSnapshot;
 }
 
+struct ClaimableRewardsData {
+  uint256 cumulativeDrippedRewards;
+  uint128 indexSnapshot;
+}
+
 struct PreviewClaimableRewards {
   uint16 reservePoolId;
   PreviewClaimableRewardsData[] claimableRewardsData;

@@ -129,9 +129,15 @@ contract TestBase is Test, TestAssertions {
     view
     returns (UndrippedRewardPool memory)
   {
-    (uint256 amount, IERC20 asset, IDripModel dripModel, IReceiptToken depositToken) =
+    (uint256 amount, uint256 cumulativeDrippedRewards, IERC20 asset, IDripModel dripModel, IReceiptToken depositToken) =
       safetyModule_.undrippedRewardPools(undrippedRewardPoolId_);
-    return UndrippedRewardPool({amount: amount, asset: asset, dripModel: dripModel, depositToken: depositToken});
+    return UndrippedRewardPool({
+      amount: amount,
+      asset: asset,
+      dripModel: dripModel,
+      depositToken: depositToken,
+      cumulativeDrippedRewards: cumulativeDrippedRewards
+    });
   }
 
   function copyReservePool(ReservePool memory original_) internal pure returns (ReservePool memory copied_) {
@@ -150,6 +156,7 @@ contract TestBase is Test, TestAssertions {
   {
     copied_.asset = original_.asset;
     copied_.amount = original_.amount;
+    copied_.cumulativeDrippedRewards = original_.cumulativeDrippedRewards;
     copied_.dripModel = original_.dripModel;
     copied_.depositToken = original_.depositToken;
   }
