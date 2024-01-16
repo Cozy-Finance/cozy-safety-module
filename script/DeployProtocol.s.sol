@@ -219,7 +219,7 @@ contract DeployProtocol is ScriptUtils {
 
     // -------- Deploy: ReceiptTokenFactory --------
     vm.broadcast();
-    receiptTokenFactory = new ReceiptTokenFactory(computedAddrDepositTokenLogic_, computedAddrDepositTokenLogic_);
+    receiptTokenFactory = new ReceiptTokenFactory(computedAddrDepositTokenLogic_, computedAddrStkTokenLogic_);
     console2.log("ReceiptTokenFactory deployed:", address(receiptTokenFactory));
     require(
       address(receiptTokenFactory) == address(computedAddrReceiptTokenFactory_), "ReceiptTokenFactory address mismatch"
