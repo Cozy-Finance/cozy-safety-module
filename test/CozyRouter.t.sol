@@ -1226,9 +1226,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
       trackingFrequencyTolerance_, // trackingFrequencyTolerance
       TriggerMetadata(
         "Peg Protection Trigger",
-        "Peg",
         "A trigger that protects from something depegging",
-        "https://via.placeholder.com/150"
+        "https://via.placeholder.com/150",
+        "$category: Peg"
       )
     );
 
@@ -1261,9 +1261,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
       fixedPriceChainlinkTriggerParams_.trackingFrequencyTolerance,
       TriggerMetadata(
         "Fixed Price Protection Trigger",
-        "Peg",
         "A trigger that protects from something depegging",
-        "https://via.placeholder.com/150"
+        "https://via.placeholder.com/150",
+        "$category: Peg"
       )
     );
     assertEq(address(fixedPriceTrigger), address(expectedFixedPriceChainlinkTriggerAddress_));
@@ -1277,9 +1277,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
       owner_,
       TriggerMetadata(
         "Trigger Name",
-        "Protocol",
         "A trigger that will toggle if Protocol is hacked",
-        "https://via.placeholder.com/150"
+        "https://via.placeholder.com/150",
+        "$category: Protocol"
       ),
       salt_
     );
@@ -1314,9 +1314,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
       proposalDisputeWindow_,
       TriggerMetadata(
         "Trigger Name",
-        "Protocol",
         "A trigger that will toggle if Protocol is hacked",
-        "https://via.placeholder.com/150"
+        "https://via.placeholder.com/150",
+        "$category: Protocol"
       )
     );
 
@@ -1383,9 +1383,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
         ownableTriggerParams_.owner,
         TriggerMetadata(
           "Trigger Name A",
-          "Protocol A",
           "A triggerA that will toggle if Protocol is hacked",
-          "https://via.placeholder.com/150A"
+          "https://via.placeholder.com/150A",
+          "$category: A"
         ),
         ownableTriggerParams_.salt
       );
@@ -1399,9 +1399,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
         umaTriggerParams_.proposalDisputeWindow,
         TriggerMetadata(
           "Trigger NameB",
-          "ProtocolB",
           "A triggerB that will toggle if Protocol is hacked",
-          "https://via.placeholder.com/150B"
+          "https://via.placeholder.com/150B",
+          "$category: B"
         )
       );
       calls_[2] = abi.encodeWithSelector(
@@ -1413,9 +1413,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
         chainlinkTriggerParams_.trackingFrequencyTolerance,
         TriggerMetadata(
           "Peg Protection Trigger",
-          "Peg",
           "A trigger that protects from something depegging",
-          "https://via.placeholder.com/150"
+          "https://via.placeholder.com/150",
+          "$category: Peg"
         )
       );
       calls_[3] = abi.encodeWithSelector(
