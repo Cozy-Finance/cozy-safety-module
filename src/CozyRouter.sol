@@ -223,7 +223,7 @@ contract CozyRouter {
     uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
   ) external payable returns (uint256 depositTokenAmount_) {
     // Caller must first approve this router to spend the reserve pool's asset.
-    (,,,,,, IERC20 asset_,,,) = safetyModule_.reservePools(reservePoolId_);
+    (,,,,,, IERC20 asset_,,,,) = safetyModule_.reservePools(reservePoolId_);
     asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);
 
     depositTokenAmount_ = depositReserveAssetsWithoutTransfer(
@@ -303,7 +303,7 @@ contract CozyRouter {
   ) external payable returns (uint256 stakeTokenAmount_) {
     _assertAddressNotZero(receiver_);
     // Caller must first approve this router to spend the reserve pool's asset.
-    (,,,,,, IERC20 asset_,,,) = safetyModule_.reservePools(reservePoolId_);
+    (,,,,,, IERC20 asset_,,,,) = safetyModule_.reservePools(reservePoolId_);
     asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);
 
     stakeTokenAmount_ =

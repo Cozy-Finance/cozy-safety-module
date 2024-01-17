@@ -81,8 +81,10 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
-    dripFees();
-    (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, false, depositTokenAmount_, receiver_, owner_);
+    ReservePool storage reservePool_ = reservePools[reservePoolId_];
+    _dripFeesFromReservePool(reservePool_, cozyManager.getFeeDripModel(ISafetyModule(address(this))));
+    (redemptionId_, reserveAssetAmount_) =
+      _redeem(reservePoolId_, reservePool_, false, depositTokenAmount_, receiver_, owner_);
   }
 
   /// @notice Unstakes by burning `stkTokenAmount_` of `reservePoolId_` reserve pool stake tokens and sending
@@ -93,9 +95,11 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
-    dripFees();
+    ReservePool storage reservePool_ = reservePools[reservePoolId_];
+    _dripFeesFromReservePool(reservePool_, cozyManager.getFeeDripModel(ISafetyModule(address(this))));
     claimRewards(reservePoolId_, receiver_);
-    (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, true, stkTokenAmount_, receiver_, owner_);
+    (redemptionId_, reserveAssetAmount_) =
+      _redeem(reservePoolId_, reservePool_, true, stkTokenAmount_, receiver_, owner_);
   }
 
   /// @notice Redeem by burning `depositTokenAmount_` of `rewardPoolId_` reward pool deposit tokens and sending
@@ -142,7 +146,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   {
     ReservePool storage reservePool_ = reservePools[rewardPoolId_];
     IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
-    uint256 lastDripTime_ = lastFeesDripTime;
+    uint256 lastDripTime_ = reservePool_.lastFeesDripTime;
 
     reserveAssetAmount_ = _previewRedemption(
       isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken,
@@ -220,12 +224,12 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   /// @dev Assumes that user has approved the SafetyModule to spend its receipt tokens.
   function _redeem(
     uint16 reservePoolId_,
+    ReservePool storage reservePool_,
     bool isUnstake_,
     uint256 receiptTokenAmount_,
     address receiver_,
     address owner_
   ) internal returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
-    ReservePool storage reservePool_ = reservePools[reservePoolId_];
     IReceiptToken receiptToken_ = isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken;
 
     reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(

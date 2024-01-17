@@ -326,7 +326,8 @@ library ConfiguratorLib {
         pendingWithdrawalsAmount: 0,
         feeAmount: 0,
         rewardsPoolsWeight: reservePoolConfig_.rewardsPoolsWeight,
-        maxSlashPercentage: reservePoolConfig_.maxSlashPercentage
+        maxSlashPercentage: reservePoolConfig_.maxSlashPercentage,
+        lastFeesDripTime: uint128(block.timestamp)
       })
     );
     stkTokenToReservePoolIds_[stkToken_] = IdLookup({index: reservePoolId_, exists: true});
@@ -355,7 +356,7 @@ library ConfiguratorLib {
         cumulativeDrippedRewards: 0,
         dripModel: undrippedRewardPoolConfig_.dripModel,
         depositToken: rewardDepositToken_,
-        lastDripTime: block.timestamp.safeCastTo128()
+        lastDripTime: uint128(block.timestamp)
       })
     );
 

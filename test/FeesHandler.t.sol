@@ -40,7 +40,6 @@ contract FeesHandlerUnitTest is TestBase {
   function setUp() public {
     mockFeesDripModel = new MockDripModel(DEFAULT_FEES_DRIP_RATE);
     mockManager.setFeeDripModel(IDripModel(address(mockFeesDripModel)));
-    component.mockSetLastDripTime(block.timestamp);
   }
 
   function _setUpReservePools(uint256 numReservePools_) internal {
@@ -64,7 +63,8 @@ contract FeesHandlerUnitTest is TestBase {
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: 0,
         rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16(),
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
       });
       component.mockAddReservePool(reservePool_);
       component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: stakeAmount_ + depositAmount_}));
@@ -91,7 +91,8 @@ contract FeesHandlerUnitTest is TestBase {
       pendingWithdrawalsAmount: 25e6,
       feeAmount: 0,
       rewardsPoolsWeight: 0.1e4, // 10% weight,
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: 0
     });
     component.mockAddReservePool(reservePool1_);
     component.mockAddAssetPool(IERC20(address(mockAsset1_)), AssetPool({amount: 150e6}));
@@ -108,7 +109,8 @@ contract FeesHandlerUnitTest is TestBase {
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 0.9e4, // 90% weight,
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: 0
     });
     component.mockAddReservePool(reservePool2_);
     component.mockAddAssetPool(IERC20(address(mockAsset2_)), AssetPool({amount: 220e6}));
@@ -126,7 +128,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
   function testFuzz_noDripIfSafetyModuleIsPaused(uint64 timeElapsed_) public {
     _setUpDefault();
     component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
-    timeElapsed_ = uint64(bound(timeElapsed_, 0, type(uint64).max - component.getLastDripTime()));
+    timeElapsed_ = uint64(bound(timeElapsed_, 0, type(uint64).max));
     skip(timeElapsed_);
 
     ReservePool[] memory initialReservePools_ = component.getReservePools();
@@ -137,7 +139,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
   function testFuzz_noDripIfSafetyModuleIsTriggered(uint64 timeElapsed_) public {
     _setUpDefault();
     component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
-    timeElapsed_ = uint64(bound(timeElapsed_, 0, type(uint64).max - component.getLastDripTime()));
+    timeElapsed_ = uint64(bound(timeElapsed_, 0, type(uint64).max));
     skip(timeElapsed_);
 
     ReservePool[] memory initialReservePools_ = component.getReservePools();
@@ -194,14 +196,13 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
 
     component.dripFees();
     assertEq(component.getReservePools(), expectedReservePools_);
-    assertEq(component.getLastDripTime(), block.timestamp);
   }
 
   function testFuzz_feesDrip(uint64 timeElapsed_) public {
     _setUpDefault();
 
     component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
-    timeElapsed_ = uint64(bound(timeElapsed_, 1, type(uint64).max - component.getLastDripTime()));
+    timeElapsed_ = uint64(bound(timeElapsed_, 1, type(uint64).max));
     skip(timeElapsed_);
 
     uint256 dripRate_ = _randomUint256() % MathConstants.WAD;
@@ -228,14 +229,13 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
 
     component.dripFees();
     assertEq(component.getReservePools(), expectedReservePools_);
-    assertEq(component.getLastDripTime(), block.timestamp);
   }
 
   function testFuzz_ZeroFeesDrip(uint64 timeElapsed_) public {
     _setUpDefault();
 
     component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
-    timeElapsed_ = uint64(bound(timeElapsed_, 1, type(uint64).max - component.getLastDripTime()));
+    timeElapsed_ = uint64(bound(timeElapsed_, 1, type(uint64).max));
     skip(timeElapsed_);
 
     // Set drip rate to 0.
@@ -246,7 +246,6 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     component.dripFees();
     // No fees should be dripped, so all accounting should be the same.
     assertEq(component.getReservePools(), expectedReservePools_);
-    assertEq(component.getLastDripTime(), block.timestamp);
   }
 
   function test_revertOnInvalidDripFactor() public {
@@ -266,6 +265,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
 
 contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
   using FixedPointMathLib for uint256;
+  using SafeCastLib for uint256;
 
   function test_claimFeesConcrete() public {
     _setUpConcrete();
@@ -371,7 +371,8 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
       pendingWithdrawalsAmount: 10_000,
       feeAmount: 50,
       rewardsPoolsWeight: 0,
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: 0
     });
     component.mockAddReservePool(reservePool_);
     component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: 10_000 + 10_000 + 50}));
@@ -441,10 +442,6 @@ contract TestableFeesHandler is RewardsHandler, Depositor, FeesHandler {
   }
 
   // -------- Mock setters --------
-  function mockSetLastDripTime(uint256 lastDripTime_) external {
-    lastFeesDripTime = uint128(lastDripTime_);
-  }
-
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;
   }
@@ -460,10 +457,6 @@ contract TestableFeesHandler is RewardsHandler, Depositor, FeesHandler {
   // -------- Mock getters --------
   function getReservePools() external view returns (ReservePool[] memory) {
     return reservePools;
-  }
-
-  function getLastDripTime() external view returns (uint256) {
-    return lastFeesDripTime;
   }
 
   function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {

@@ -19,7 +19,6 @@ import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol
 import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleBaseStorage} from "../src/lib/SafetyModuleBaseStorage.sol";
-import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {ReservePool, UndrippedRewardPool, AssetPool, IdLookup} from "../src/lib/structs/Pools.sol";
 import {
   ReservePoolConfig,
@@ -37,8 +36,6 @@ import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
 contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
-  using SafeCastLib for uint256;
-
   TestableConfigurator component;
   ReservePool reservePool1;
   ReservePool reservePool2;
@@ -81,7 +78,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       pendingWithdrawalsAmount: _randomUint256(),
       feeAmount: _randomUint256(),
       rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2,
-      maxSlashPercentage: 0.5e18
+      maxSlashPercentage: 0.5e18,
+      lastFeesDripTime: uint128(block.timestamp)
     });
     reservePool2 = ReservePool({
       asset: IERC20(_randomAddress()),
@@ -93,7 +91,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       pendingWithdrawalsAmount: _randomUint256(),
       feeAmount: _randomUint256(),
       rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2,
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: uint128(block.timestamp)
     });
 
     rewardPool1 = UndrippedRewardPool({
@@ -102,7 +101,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       depositToken: IReceiptToken(_randomAddress()),
       amount: _randomUint256(),
       cumulativeDrippedRewards: 0,
-      lastDripTime: block.timestamp.safeCastTo128()
+      lastDripTime: uint128(block.timestamp)
     });
     rewardPool2 = UndrippedRewardPool({
       asset: IERC20(_randomAddress()),
@@ -110,7 +109,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       depositToken: IReceiptToken(_randomAddress()),
       amount: _randomUint256(),
       cumulativeDrippedRewards: 0,
-      lastDripTime: block.timestamp.safeCastTo128()
+      lastDripTime: uint128(block.timestamp)
     });
   }
 
@@ -1118,10 +1117,14 @@ contract TestableConfigurator is Configurator {
     __readStub__();
   }
 
-  function _resetClaimableRewards(
+  function applyPendingDrippedRewards_(
     ReservePool storage reservePool_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal override {
+    __readStub__();
+  }
+
+  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
     __readStub__();
   }
 }

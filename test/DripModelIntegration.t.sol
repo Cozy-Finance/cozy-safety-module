@@ -186,7 +186,7 @@ contract FeesDripModelIntegration is DripModelIntegrationTestSetup {
     assertEq(reserveAsset.balanceOf(receiver_), expectedClaimedFees_);
 
     // Reset reserve pool.
-    (uint256 currentAmount_,,,,,,,,,) = safetyModule.reservePools(0);
+    (uint256 currentAmount_,,,,,,,,,,) = safetyModule.reservePools(0);
     stake(safetyModule, RESERVE_POOL_AMOUNT - currentAmount_, _randomAddress());
   }
 

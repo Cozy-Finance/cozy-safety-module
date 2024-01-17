@@ -62,7 +62,7 @@ contract RewardsHandlerUnitTest is TestBase {
         dripModel: IDripModel(mockRewardsDripModel),
         amount: amount_,
         cumulativeDrippedRewards: 0,
-        lastDripTime: block.timestamp.safeCastTo128()
+        lastDripTime: uint128(block.timestamp)
       });
       component.mockAddUndrippedRewardPool(rewardPool_);
 
@@ -89,7 +89,8 @@ contract RewardsHandlerUnitTest is TestBase {
         pendingWithdrawalsAmount: 0,
         feeAmount: 0,
         rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16(),
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
       });
       component.mockRegisterStkToken(i, stkToken_);
       component.mockAddReservePool(reservePool_);
@@ -135,7 +136,8 @@ contract RewardsHandlerUnitTest is TestBase {
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 0.1e4, // 10% weight
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: uint128(block.timestamp)
     });
     stkToken1_.mint(address(0), 0.1e18);
     component.mockAddReservePool(reservePool1_);
@@ -157,7 +159,8 @@ contract RewardsHandlerUnitTest is TestBase {
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 0.9e4, // 90% weight,
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: uint128(block.timestamp)
     });
     stkToken2_.mint(address(0), 10);
     component.mockAddReservePool(reservePool2_);
@@ -274,7 +277,7 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
       expectedPool1_.dripModel = concreteUndrippedRewardPools_[0].dripModel;
       expectedPool1_.amount = 99_000; // (1 - dripRate) * originalUndrippedPoolAmount = (1.0 - 0.01) * 100_000
       expectedPool1_.cumulativeDrippedRewards = 1000; // dripRate * originalUndrippedPoolAmount = 0.01 * 100_000
-      expectedPool1_.lastDripTime = block.timestamp.safeCastTo128();
+      expectedPool1_.lastDripTime = uint128(block.timestamp);
       expectedUndrippedRewardPools_[0] = expectedPool1_;
     }
     {
@@ -285,7 +288,7 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
         // 1_000_000_000
       expectedPool2_.cumulativeDrippedRewards = 250_000_000; // dripRate * originalUndrippedPoolAmount = 0.25 *
         // 1_000_000_000
-      expectedPool2_.lastDripTime = block.timestamp.safeCastTo128();
+      expectedPool2_.lastDripTime = uint128(block.timestamp);
       expectedUndrippedRewardPools_[1] = expectedPool2_;
     }
     {
@@ -294,7 +297,7 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
       expectedPool3_.dripModel = concreteUndrippedRewardPools_[2].dripModel;
       expectedPool3_.amount = 0; // (1 - dripRate) * originalUndrippedPoolAmount = (1.0 - 1.0) * 9999
       expectedPool3_.cumulativeDrippedRewards = 9999; // dripRate * originalUndrippedPoolAmount = 1.0 * 9999
-      expectedPool3_.lastDripTime = block.timestamp.safeCastTo128();
+      expectedPool3_.lastDripTime = uint128(block.timestamp);
       expectedUndrippedRewardPools_[2] = expectedPool3_;
     }
 
@@ -328,7 +331,7 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
         _calculateExpectedDripQuantity(expectedUndrippedRewardPool_.amount, expectedDripRate_);
       expectedUndrippedRewardPool_.amount -= totalDrippedAssets_;
       expectedUndrippedRewardPool_.cumulativeDrippedRewards += totalDrippedAssets_;
-      expectedUndrippedRewardPool_.lastDripTime = block.timestamp.safeCastTo128();
+      expectedUndrippedRewardPool_.lastDripTime = uint128(block.timestamp);
       expectedUndrippedRewardPools_[i] = expectedUndrippedRewardPool_;
     }
 
@@ -553,7 +556,7 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
         dripModel: IDripModel(mockRewardsDripModel),
         amount: newRewardPoolAmount_,
         cumulativeDrippedRewards: 0,
-        lastDripTime: block.timestamp.safeCastTo128()
+        lastDripTime: uint128(block.timestamp)
       });
       component.mockAddUndrippedRewardPool(rewardPool_);
       // Mint safety module undripped rewards.
@@ -652,7 +655,7 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
         dripModel: IDripModel(mockRewardsDripModel),
         amount: amount_,
         cumulativeDrippedRewards: 0,
-        lastDripTime: block.timestamp.safeCastTo128()
+        lastDripTime: uint128(block.timestamp)
       });
       component.mockAddUndrippedRewardPool(rewardPool_);
       mockAsset_.mint(address(component), amount_);
@@ -1061,6 +1064,10 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
     uint256, /* oldStakeAmount_ */
     uint256 /* slashAmount_ */
   ) internal view override returns (uint256) {
+    __readStub__();
+  }
+
+  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
     __readStub__();
   }
 }

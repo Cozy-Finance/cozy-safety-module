@@ -13,6 +13,7 @@ import {Staker} from "../src/lib/Staker.sol";
 import {RewardsHandler} from "../src/lib/RewardsHandler.sol";
 import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
+import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
@@ -22,6 +23,8 @@ import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
 contract StakerUnitTest is TestBase {
+  using SafeCastLib for uint256;
+
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
   MockERC20 mockStkToken = new MockERC20("Mock Cozy Stake Token", "cozyStk", 6);
   MockERC20 mockDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
@@ -46,7 +49,8 @@ contract StakerUnitTest is TestBase {
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 1e4,
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: uint128(block.timestamp)
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: 150e18});
     component.mockAddReservePool(initialReservePool_);
@@ -347,7 +351,7 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
         amount: 0,
         depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6))),
         cumulativeDrippedRewards: 0,
-        lastDripTime: block.timestamp.safeCastTo128()
+        lastDripTime: uint128(block.timestamp)
       })
     );
   }
@@ -390,6 +394,10 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     uint256, /* oldStakeAmount_ */
     uint256 /* slashAmount_ */
   ) internal view override returns (uint256) {
+    __readStub__();
+  }
+
+  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
     __readStub__();
   }
 }

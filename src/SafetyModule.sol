@@ -35,8 +35,6 @@ contract SafetyModule is
   FeesHandler,
   StateChanger
 {
-  using SafeCastLib for uint256;
-
   constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(manager_));
     _assertAddressNotZero(address(receiptTokenFactory_));
@@ -52,7 +50,5 @@ contract SafetyModule is
     ConfiguratorLib.applyConfigUpdates(
       reservePools, undrippedRewardPools, triggerData, delays, stkTokenToReservePoolIds, receiptTokenFactory, configs_
     );
-
-    lastFeesDripTime = block.timestamp.safeCastTo128();
   }
 }

@@ -20,15 +20,24 @@ import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 abstract contract FeesHandler is SafetyModuleCommon {
   using FixedPointMathLib for uint256;
   using SafeERC20 for IERC20;
-  using SafeCastLib for uint256;
 
   event ClaimedFees(IERC20 indexed reserveAsset_, uint256 feeAmount_, address indexed owner_);
 
   function dripFees() public override {
-    uint256 deltaT_ = block.timestamp - lastFeesDripTime;
-    if (deltaT_ == 0 || safetyModuleState != SafetyModuleState.ACTIVE) return;
+    if (safetyModuleState != SafetyModuleState.ACTIVE) return;
+    IDripModel dripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
 
-    _dripFees(deltaT_);
+    uint256 numReserveAssets_ = reservePools.length;
+    for (uint16 i = 0; i < numReserveAssets_; i++) {
+      _dripFeesFromReservePool(reservePools[i], dripModel_);
+    }
+  }
+
+  function dripFeesFromReservePool(uint16 reservePoolId_) external {
+    if (safetyModuleState != SafetyModuleState.ACTIVE) return;
+    IDripModel dripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
+
+    _dripFeesFromReservePool(reservePools[reservePoolId_], dripModel_);
   }
 
   /// @notice Transfers accrued fees to the `owner_` address.
@@ -56,30 +65,24 @@ abstract contract FeesHandler is SafetyModuleCommon {
     }
   }
 
-  function _dripFees(uint256 deltaT_) internal {
-    uint256 dripFactor_ =
-      cozyManager.getFeeDripModel(ISafetyModule(address(this))).dripFactor(lastFeesDripTime, deltaT_);
+  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
+    uint256 deltaT = block.timestamp - reservePool_.lastFeesDripTime;
+    if (deltaT == 0) return;
 
+    uint256 dripFactor_ = dripModel_.dripFactor(reservePool_.lastFeesDripTime, deltaT);
     if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
 
-    uint256 numReservePools_ = reservePools.length;
-    for (uint16 i = 0; i < numReservePools_; i++) {
-      ReservePool storage reservePool_ = reservePools[i];
-      uint256 stakeAmount_ = reservePool_.stakeAmount;
-      uint256 depositAmount_ = reservePool_.depositAmount;
+    uint256 drippedFromStakeAmount_ =
+      _computeNextDripAmount(reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount, dripFactor_);
+    uint256 drippedFromDepositAmount_ =
+      _computeNextDripAmount(reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount, dripFactor_);
 
-      uint256 drippedFromStakeAmount_ =
-        _computeNextDripAmount(stakeAmount_ - reservePool_.pendingUnstakesAmount, dripFactor_);
-      uint256 drippedFromDepositAmount_ =
-        _computeNextDripAmount(depositAmount_ - reservePool_.pendingWithdrawalsAmount, dripFactor_);
-
-      if (drippedFromStakeAmount_ > 0 || drippedFromDepositAmount_ > 0) {
-        reservePool_.feeAmount += drippedFromStakeAmount_ + drippedFromDepositAmount_;
-        reservePool_.stakeAmount -= drippedFromStakeAmount_;
-        reservePool_.depositAmount -= drippedFromDepositAmount_;
-      }
+    if (drippedFromStakeAmount_ > 0 || drippedFromDepositAmount_ > 0) {
+      reservePool_.feeAmount += drippedFromStakeAmount_ + drippedFromDepositAmount_;
+      reservePool_.stakeAmount -= drippedFromStakeAmount_;
+      reservePool_.depositAmount -= drippedFromDepositAmount_;
     }
 
-    lastFeesDripTime = block.timestamp.safeCastTo128();
+    reservePool_.lastFeesDripTime = uint128(block.timestamp);
   }
 }

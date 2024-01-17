@@ -12,7 +12,6 @@ import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
-import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -24,8 +23,6 @@ enum DepositType {
 }
 
 abstract contract DepositorUnitTest is TestBase {
-  using SafeCastLib for uint256;
-
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
   MockERC20 mockReserveDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
   MockERC20 mockRewardPoolDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
@@ -57,7 +54,8 @@ abstract contract DepositorUnitTest is TestBase {
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 1e4,
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: uint128(block.timestamp)
     });
     UndrippedRewardPool memory initialUndrippedRewardPool_ = UndrippedRewardPool({
       asset: IERC20(address(mockAsset)),
@@ -65,7 +63,7 @@ abstract contract DepositorUnitTest is TestBase {
       dripModel: IDripModel(address(0)),
       amount: 50e18,
       cumulativeDrippedRewards: 0,
-      lastDripTime: block.timestamp.safeCastTo128()
+      lastDripTime: uint128(block.timestamp)
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: initialSafetyModuleBal});
     component.mockAddReservePool(initialReservePool_);
@@ -518,10 +516,14 @@ contract TestableDepositor is Depositor {
     __readStub__();
   }
 
-  function _resetClaimableRewards(
+  function applyPendingDrippedRewards_(
     ReservePool storage reservePool_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal override {
+    __readStub__();
+  }
+
+  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
     __readStub__();
   }
 }

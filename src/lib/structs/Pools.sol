@@ -30,6 +30,7 @@ struct ReservePool {
   /// e.g. stkTokenA = 10%, means they're eligible for up to 10% of each pool, scaled to their balance of stkTokenA
   /// wrt totalSupply.
   uint16 rewardsPoolsWeight;
+  uint128 lastFeesDripTime;
 }
 
 struct UndrippedRewardPool {

@@ -108,7 +108,8 @@ contract TestBase is Test, TestAssertions {
       IERC20 asset,
       IReceiptToken stkToken,
       IReceiptToken depositToken,
-      uint16 rewardsPoolsWeight
+      uint16 rewardsPoolsWeight,
+      uint128 lastFeesDripTime
     ) = safetyModule_.reservePools(reservePoolId_);
     return ReservePool({
       stakeAmount: stakeAmount,
@@ -120,7 +121,8 @@ contract TestBase is Test, TestAssertions {
       asset: asset,
       stkToken: stkToken,
       depositToken: depositToken,
-      rewardsPoolsWeight: rewardsPoolsWeight
+      rewardsPoolsWeight: rewardsPoolsWeight,
+      lastFeesDripTime: lastFeesDripTime
     });
   }
 
@@ -154,6 +156,11 @@ contract TestBase is Test, TestAssertions {
     copied_.stakeAmount = original_.stakeAmount;
     copied_.depositAmount = original_.depositAmount;
     copied_.rewardsPoolsWeight = original_.rewardsPoolsWeight;
+    copied_.pendingUnstakesAmount = original_.pendingUnstakesAmount;
+    copied_.pendingWithdrawalsAmount = original_.pendingWithdrawalsAmount;
+    copied_.feeAmount = original_.feeAmount;
+    copied_.maxSlashPercentage = original_.maxSlashPercentage;
+    copied_.lastFeesDripTime = original_.lastFeesDripTime;
   }
 
   function copyUndrippedRewardPool(UndrippedRewardPool memory original_)
