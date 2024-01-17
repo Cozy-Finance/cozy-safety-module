@@ -442,7 +442,7 @@ contract TestableFeesHandler is RewardsHandler, Depositor, FeesHandler {
 
   // -------- Mock setters --------
   function mockSetLastDripTime(uint256 lastDripTime_) external {
-    dripTimes.lastFeesDripTime = uint128(lastDripTime_);
+    lastFeesDripTime = uint128(lastDripTime_);
   }
 
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
@@ -463,7 +463,7 @@ contract TestableFeesHandler is RewardsHandler, Depositor, FeesHandler {
   }
 
   function getLastDripTime() external view returns (uint256) {
-    return dripTimes.lastFeesDripTime;
+    return lastFeesDripTime;
   }
 
   function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {

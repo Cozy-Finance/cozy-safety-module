@@ -1489,7 +1489,7 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     if (mockNextDripType == DripType.DEPOSITS) reservePool_.depositAmount -= mockNextDepositDripAmount;
     else reservePool_.stakeAmount -= mockNextStakeDripAmount;
 
-    dripTimes.lastFeesDripTime = uint128(block.timestamp);
+    lastFeesDripTime = uint128(block.timestamp);
   }
 
   function _dripRewardPool(UndrippedRewardPool storage undrippedRewardPool_) internal override {
@@ -1507,9 +1507,9 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     if (mockNextDripType == DripType.REWARDS) {
       return block.timestamp - lastDripTime_ == 0 ? 0 : mockNextRewardsDripAmount;
     } else if (mockNextDripType == DripType.DEPOSITS) {
-      return block.timestamp == dripTimes.lastFeesDripTime ? 0 : mockNextDepositDripAmount;
+      return block.timestamp == lastFeesDripTime ? 0 : mockNextDepositDripAmount;
     } else {
-      return block.timestamp == dripTimes.lastFeesDripTime ? 0 : mockNextStakeDripAmount;
+      return block.timestamp == lastFeesDripTime ? 0 : mockNextStakeDripAmount;
     }
   }
 

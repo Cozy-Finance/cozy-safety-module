@@ -10,6 +10,7 @@ import {SafeCastLib} from "./SafeCastLib.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
+import {SafeCastLib} from "./SafeCastLib.sol";
 import {MathConstants} from "./MathConstants.sol";
 import {UndrippedRewardPool, IdLookup} from "./structs/Pools.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
@@ -19,11 +20,12 @@ import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 abstract contract FeesHandler is SafetyModuleCommon {
   using FixedPointMathLib for uint256;
   using SafeERC20 for IERC20;
+  using SafeCastLib for uint256;
 
   event ClaimedFees(IERC20 indexed reserveAsset_, uint256 feeAmount_, address indexed owner_);
 
   function dripFees() public override {
-    uint256 deltaT_ = block.timestamp - dripTimes.lastFeesDripTime;
+    uint256 deltaT_ = block.timestamp - lastFeesDripTime;
     if (deltaT_ == 0 || safetyModuleState != SafetyModuleState.ACTIVE) return;
 
     _dripFees(deltaT_);
@@ -56,7 +58,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
 
   function _dripFees(uint256 deltaT_) internal {
     uint256 dripFactor_ =
-      cozyManager.getFeeDripModel(ISafetyModule(address(this))).dripFactor(dripTimes.lastFeesDripTime, deltaT_);
+      cozyManager.getFeeDripModel(ISafetyModule(address(this))).dripFactor(lastFeesDripTime, deltaT_);
 
     if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
 
@@ -78,6 +80,6 @@ abstract contract FeesHandler is SafetyModuleCommon {
       }
     }
 
-    dripTimes.lastFeesDripTime = uint128(block.timestamp);
+    lastFeesDripTime = block.timestamp.safeCastTo128();
   }
 }

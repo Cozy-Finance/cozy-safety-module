@@ -10,7 +10,6 @@ import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/P
 import {Trigger} from "./structs/Trigger.sol";
 import {UserRewardsData, ClaimableRewardsData} from "./structs/Rewards.sol";
 import {Delays} from "./structs/Delays.sol";
-import {DripTimes} from "./structs/DripTimes.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 abstract contract SafetyModuleBaseStorage {
@@ -44,8 +43,8 @@ abstract contract SafetyModuleBaseStorage {
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;
 
-  /// @notice Fees and rewards drip times.
-  DripTimes public dripTimes;
+  /// @notice Fees drip time.
+  uint128 public lastFeesDripTime;
 
   /// @notice The number of slashes that must occur before the safety module can be active.
   /// @dev This value is incremented when a trigger occurs, and decremented when a slash from a trigger assigned payout

@@ -50,7 +50,6 @@ contract RewardsHandlerUnitTest is TestBase {
 
   function setUp() public {
     mockRewardsDripModel = new MockDripModel(DEFAULT_REWARDS_DRIP_RATE);
-    component.mockSetLastDripTime(block.timestamp);
   }
 
   function _setUpUndrippedRewardPools(uint256 numRewardAssets_) internal {
@@ -328,6 +327,8 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
       uint256 totalDrippedAssets_ =
         _calculateExpectedDripQuantity(expectedUndrippedRewardPool_.amount, expectedDripRate_);
       expectedUndrippedRewardPool_.amount -= totalDrippedAssets_;
+      expectedUndrippedRewardPool_.cumulativeDrippedRewards += totalDrippedAssets_;
+      expectedUndrippedRewardPool_.lastDripTime = block.timestamp.safeCastTo128();
       expectedUndrippedRewardPools_[i] = expectedUndrippedRewardPool_;
     }
 
@@ -937,10 +938,6 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   using SafeCastLib for uint256;
 
   // -------- Mock setters --------
-  function mockSetLastDripTime(uint256 lastDripTime_) external {
-    // TODO: FIX This
-  }
-
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;
   }

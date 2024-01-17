@@ -53,6 +53,6 @@ contract SafetyModule is
       reservePools, undrippedRewardPools, triggerData, delays, stkTokenToReservePoolIds, receiptTokenFactory, configs_
     );
 
-    dripTimes.lastFeesDripTime = block.timestamp.safeCastTo128();
+    lastFeesDripTime = block.timestamp.safeCastTo128();
   }
 }

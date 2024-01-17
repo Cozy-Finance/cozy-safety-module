@@ -142,7 +142,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   {
     ReservePool storage reservePool_ = reservePools[rewardPoolId_];
     IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
-    uint256 lastDripTime_ = dripTimes.lastFeesDripTime;
+    uint256 lastDripTime_ = lastFeesDripTime;
 
     reserveAssetAmount_ = _previewRedemption(
       isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken,
