@@ -354,7 +354,8 @@ library ConfiguratorLib {
         amount: 0,
         cumulativeDrippedRewards: 0,
         dripModel: undrippedRewardPoolConfig_.dripModel,
-        depositToken: rewardDepositToken_
+        depositToken: rewardDepositToken_,
+        lastDripTime: block.timestamp.safeCastTo128()
       })
     );
 

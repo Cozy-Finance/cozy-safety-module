@@ -19,6 +19,7 @@ import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol
 import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleBaseStorage} from "../src/lib/SafetyModuleBaseStorage.sol";
+import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {ReservePool, UndrippedRewardPool, AssetPool, IdLookup} from "../src/lib/structs/Pools.sol";
 import {
   ReservePoolConfig,
@@ -36,6 +37,8 @@ import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
 contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
+  using SafeCastLib for uint256;
+
   TestableConfigurator component;
   ReservePool reservePool1;
   ReservePool reservePool2;
@@ -98,14 +101,16 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       dripModel: IDripModel(_randomAddress()),
       depositToken: IReceiptToken(_randomAddress()),
       amount: _randomUint256(),
-      cumulativeDrippedRewards: 0
+      cumulativeDrippedRewards: 0,
+      lastDripTime: block.timestamp.safeCastTo128()
     });
     rewardPool2 = UndrippedRewardPool({
       asset: IERC20(_randomAddress()),
       dripModel: IDripModel(_randomAddress()),
       depositToken: IReceiptToken(_randomAddress()),
       amount: _randomUint256(),
-      cumulativeDrippedRewards: 0
+      cumulativeDrippedRewards: 0,
+      lastDripTime: block.timestamp.safeCastTo128()
     });
   }
 
@@ -1105,6 +1110,17 @@ contract TestableConfigurator is Configurator {
     uint256 userStkTokenBalance_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
     UserRewardsData[] storage userRewards_
+  ) internal override {
+    __readStub__();
+  }
+
+  function _dripRewardPool(UndrippedRewardPool storage undrippedRewardPool_) internal override {
+    __readStub__();
+  }
+
+  function _resetClaimableRewards(
+    ReservePool storage reservePool_,
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal override {
     __readStub__();
   }

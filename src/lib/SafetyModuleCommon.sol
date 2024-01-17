@@ -6,7 +6,7 @@ import {SafetyModuleBaseStorage} from "./SafetyModuleBaseStorage.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
 import {UserRewardsData, ClaimableRewardsData} from "./structs/Rewards.sol";
-import {ReservePool} from "./structs/Pools.sol";
+import {ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
 
 abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   /// @notice Claim staking rewards for a given reserve pool.
@@ -62,5 +62,12 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     uint256 userStkTokenBalance_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
     UserRewardsData[] storage userRewards_
+  ) internal virtual;
+
+  function _dripRewardPool(UndrippedRewardPool storage undrippedRewardPool_) internal virtual;
+
+  function _resetClaimableRewards(
+    ReservePool storage reservePool_,
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal virtual;
 }

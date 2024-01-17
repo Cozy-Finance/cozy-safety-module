@@ -11,9 +11,11 @@ import {MathConstants} from "../src/lib/MathConstants.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {Staker} from "../src/lib/Staker.sol";
 import {RewardsHandler} from "../src/lib/RewardsHandler.sol";
+import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -50,6 +52,7 @@ contract StakerUnitTest is TestBase {
     component.mockAddReservePool(initialReservePool_);
     component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
     component.mockAddUndrippedRewardPool(IERC20(address(mockAsset)));
+    component.mockSetClaimableRewardIndex(0, 0, 0);
   }
 
   function test_stake_StkTokensAndStorageUpdates() external {
@@ -321,6 +324,8 @@ contract StakerUnitTest is TestBase {
 }
 
 contract TestableStaker is Staker, Depositor, RewardsHandler {
+  using SafeCastLib for uint256;
+
   // -------- Mock setters --------
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;
@@ -341,9 +346,19 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
         dripModel: IDripModel(address(new MockDripModel(1e18))),
         amount: 0,
         depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6))),
-        cumulativeDrippedRewards: 0
+        cumulativeDrippedRewards: 0,
+        lastDripTime: block.timestamp.safeCastTo128()
       })
     );
+  }
+
+  function mockSetClaimableRewardIndex(
+    uint16 reservePoolId_,
+    uint16 undrippedRewardPoolId_,
+    uint256 claimableRewardIndex_
+  ) external {
+    claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_] =
+      ClaimableRewardsData({indexSnapshot: claimableRewardIndex_.safeCastTo128(), cumulativeClaimedRewards: 0});
   }
 
   // -------- Mock getters --------

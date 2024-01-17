@@ -94,8 +94,8 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
     dripFees();
-    (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, true, stkTokenAmount_, receiver_, owner_);
     claimRewards(reservePoolId_, receiver_);
+    (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, true, stkTokenAmount_, receiver_, owner_);
   }
 
   /// @notice Redeem by burning `depositTokenAmount_` of `rewardPoolId_` reward pool deposit tokens and sending
@@ -106,14 +106,17 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     external
     returns (uint256 rewardAssetAmount_)
   {
-    dripRewards();
-
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
-    IReceiptToken depositToken_ = undrippedRewardPool_.depositToken;
-    uint256 lastDripTime_ = dripTimes.lastRewardsDripTime;
+    _dripRewardPool(undrippedRewardPool_);
 
+    IReceiptToken depositToken_ = undrippedRewardPool_.depositToken;
     rewardAssetAmount_ = _previewRedemption(
-      depositToken_, depositTokenAmount_, undrippedRewardPool_.dripModel, undrippedRewardPool_.amount, lastDripTime_, 0
+      depositToken_,
+      depositTokenAmount_,
+      undrippedRewardPool_.dripModel,
+      undrippedRewardPool_.amount,
+      undrippedRewardPool_.lastDripTime,
+      block.timestamp - undrippedRewardPool_.lastDripTime
     );
 
     depositToken_.burn(msg.sender, owner_, depositTokenAmount_);
@@ -181,7 +184,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     returns (uint256 rewardAssetAmount_)
   {
     UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
-    uint256 lastDripTime_ = dripTimes.lastRewardsDripTime;
+    uint256 lastDripTime_ = undrippedRewardPool_.lastDripTime;
 
     rewardAssetAmount_ = _previewRedemption(
       undrippedRewardPool_.depositToken,

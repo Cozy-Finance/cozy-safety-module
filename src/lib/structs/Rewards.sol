@@ -9,7 +9,7 @@ struct UserRewardsData {
 }
 
 struct ClaimableRewardsData {
-  uint256 cumulativeDrippedRewards;
+  uint256 cumulativeClaimedRewards;
   uint128 indexSnapshot;
 }
 

@@ -12,6 +12,7 @@ import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
+import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -23,6 +24,8 @@ enum DepositType {
 }
 
 abstract contract DepositorUnitTest is TestBase {
+  using SafeCastLib for uint256;
+
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
   MockERC20 mockReserveDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
   MockERC20 mockRewardPoolDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
@@ -61,7 +64,8 @@ abstract contract DepositorUnitTest is TestBase {
       depositToken: IReceiptToken(address(mockRewardPoolDepositToken)),
       dripModel: IDripModel(address(0)),
       amount: 50e18,
-      cumulativeDrippedRewards: 0
+      cumulativeDrippedRewards: 0,
+      lastDripTime: block.timestamp.safeCastTo128()
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: initialSafetyModuleBal});
     component.mockAddReservePool(initialReservePool_);
@@ -506,6 +510,17 @@ contract TestableDepositor is Depositor {
     uint256 userStkTokenBalance_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
     UserRewardsData[] storage userRewards_
+  ) internal override {
+    __readStub__();
+  }
+
+  function _dripRewardPool(UndrippedRewardPool storage undrippedRewardPool_) internal override {
+    __readStub__();
+  }
+
+  function _resetClaimableRewards(
+    ReservePool storage reservePool_,
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal override {
     __readStub__();
   }

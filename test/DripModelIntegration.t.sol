@@ -100,7 +100,7 @@ contract RewardsDripModelIntegrationTest is DripModelIntegrationTestSetup {
 
   function _setRewardsDripModel(uint256 rate_) internal {
     DripModelExponential rewardsDripModel_ = new DripModelExponential(rate_);
-    (,,, IDripModel currentRewardsDripModel_,) = safetyModule.undrippedRewardPools(0);
+    (,,,, IDripModel currentRewardsDripModel_,) = safetyModule.undrippedRewardPools(0);
     vm.etch(address(currentRewardsDripModel_), address(rewardsDripModel_).code);
   }
 
@@ -113,7 +113,7 @@ contract RewardsDripModelIntegrationTest is DripModelIntegrationTestSetup {
     assertEq(rewardAsset.balanceOf(receiver_), expectedClaimedRewards_);
 
     // Reset reward pool.
-    (uint256 currentAmount_,,,,) = safetyModule.undrippedRewardPools(0);
+    (uint256 currentAmount_,,,,,) = safetyModule.undrippedRewardPools(0);
     depositRewards(safetyModule, REWARD_POOL_AMOUNT - currentAmount_, _randomAddress());
   }
 

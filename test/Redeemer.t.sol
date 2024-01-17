@@ -20,6 +20,7 @@ import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {RedemptionPreview} from "../src/lib/structs/Redemptions.sol";
+import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
@@ -28,6 +29,8 @@ import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
 abstract contract ReedemerUnitTestBase is TestBase {
+  using SafeCastLib for uint256;
+
   IReceiptToken stkToken;
   IReceiptToken depositToken;
   MockManager public mockManager = new MockManager();
@@ -212,7 +215,8 @@ abstract contract ReedemerUnitTestBase is TestBase {
         amount: 0,
         dripModel: IDripModel(address(0)),
         depositToken: IReceiptToken(address(0)),
-        cumulativeDrippedRewards: 0
+        cumulativeDrippedRewards: 0,
+        lastDripTime: block.timestamp.safeCastTo128()
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
@@ -1003,6 +1007,8 @@ contract UnstakeUnitTest is RedeemerUnitTest {
     component.mockSetNextRewardClaimAmount(rewardsClaimAmountToReceive_);
 
     _expectEmit();
+    emit TestableRedeemerEvents.MockClaimedRewards();
+    _expectEmit();
     emit Transfer(owner_, address(0), receiptTokenAmountToRedeem_);
     _expectEmit();
     emit RedemptionPending(
@@ -1014,8 +1020,6 @@ contract UnstakeUnitTest is RedeemerUnitTest {
       reserveAssetsToReceive_,
       nextRedemptionId_
     );
-    _expectEmit();
-    emit TestableRedeemerEvents.MockClaimedRewards();
     vm.prank(owner_);
     (uint64 resultRedemptionId_, uint256 resultReserveAssetAmount_) =
       _redeem(0, receiptTokenAmountToRedeem_, receiver_, owner_);
@@ -1037,6 +1041,8 @@ contract WithdrawUnitTest is RedeemerUnitTest {
 }
 
 contract RedeemUndrippedRewards is TestBase {
+  using SafeCastLib for uint256;
+
   IReceiptToken depositToken;
   MockManager public mockManager = new MockManager();
   TestableRedeemer component = new TestableRedeemer(IManager(address(mockManager)));
@@ -1100,7 +1106,8 @@ contract RedeemUndrippedRewards is TestBase {
         amount: 0,
         dripModel: IDripModel(address(0)),
         depositToken: IReceiptToken(address(depositToken)),
-        cumulativeDrippedRewards: 0
+        cumulativeDrippedRewards: 0,
+        lastDripTime: block.timestamp.safeCastTo128()
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
@@ -1275,6 +1282,8 @@ interface TestableRedeemerEvents {
 }
 
 contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
+  using SafeCastLib for uint256;
+
   enum DripType {
     REWARDS,
     DEPOSITS,
@@ -1467,7 +1476,7 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
     if (totalDrippedRewards_ > 0) undrippedRewardPool_.amount -= totalDrippedRewards_;
 
-    dripTimes.lastRewardsDripTime = uint128(block.timestamp);
+    undrippedRewardPool_.lastDripTime = block.timestamp.safeCastTo128();
   }
 
   function dripFees() public override {
@@ -1483,14 +1492,20 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     dripTimes.lastFeesDripTime = uint128(block.timestamp);
   }
 
+  function _dripRewardPool(UndrippedRewardPool storage undrippedRewardPool_) internal override {
+    uint256 totalDrippedRewards_ = mockNextRewardsDripAmount;
+    if (totalDrippedRewards_ > 0) undrippedRewardPool_.amount -= totalDrippedRewards_;
+    undrippedRewardPool_.lastDripTime = block.timestamp.safeCastTo128();
+  }
+
   function _getNextDripAmount(
     uint256, /* totalBaseAmount_ */
     IDripModel, /* dripModel_ */
-    uint256, /* lastDripTime_ */
+    uint256 lastDripTime_,
     uint256 /* deltaT_ */
   ) internal view override returns (uint256) {
     if (mockNextDripType == DripType.REWARDS) {
-      return block.timestamp == dripTimes.lastRewardsDripTime ? 0 : mockNextRewardsDripAmount;
+      return block.timestamp - lastDripTime_ == 0 ? 0 : mockNextRewardsDripAmount;
     } else if (mockNextDripType == DripType.DEPOSITS) {
       return block.timestamp == dripTimes.lastFeesDripTime ? 0 : mockNextDepositDripAmount;
     } else {
@@ -1520,6 +1535,13 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
     UserRewardsData[] storage /* userRewards_ */
   ) internal view override {
+    __readStub__();
+  }
+
+  function _resetClaimableRewards(
+    ReservePool storage reservePool_,
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
+  ) internal override {
     __readStub__();
   }
 }

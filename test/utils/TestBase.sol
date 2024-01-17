@@ -129,14 +129,21 @@ contract TestBase is Test, TestAssertions {
     view
     returns (UndrippedRewardPool memory)
   {
-    (uint256 amount, uint256 cumulativeDrippedRewards, IERC20 asset, IDripModel dripModel, IReceiptToken depositToken) =
-      safetyModule_.undrippedRewardPools(undrippedRewardPoolId_);
+    (
+      uint256 amount,
+      uint256 cumulativeDrippedRewards,
+      uint128 lastDripTime,
+      IERC20 asset,
+      IDripModel dripModel,
+      IReceiptToken depositToken
+    ) = safetyModule_.undrippedRewardPools(undrippedRewardPoolId_);
     return UndrippedRewardPool({
       amount: amount,
       asset: asset,
       dripModel: dripModel,
       depositToken: depositToken,
-      cumulativeDrippedRewards: cumulativeDrippedRewards
+      cumulativeDrippedRewards: cumulativeDrippedRewards,
+      lastDripTime: lastDripTime
     });
   }
 
@@ -159,5 +166,6 @@ contract TestBase is Test, TestAssertions {
     copied_.cumulativeDrippedRewards = original_.cumulativeDrippedRewards;
     copied_.dripModel = original_.dripModel;
     copied_.depositToken = original_.depositToken;
+    copied_.lastDripTime = original_.lastDripTime;
   }
 }

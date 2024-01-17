@@ -456,4 +456,15 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
   ) internal view virtual override {
     __readStub__();
   }
+
+  function _dripRewardPool(UndrippedRewardPool storage undrippedRewardPool_) internal override {
+    __readStub__();
+  }
+
+  function _resetClaimableRewards(
+    ReservePool storage reservePool_,
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
+  ) internal override {
+    __readStub__();
+  }
 }
