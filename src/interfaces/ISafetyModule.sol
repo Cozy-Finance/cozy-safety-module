@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "./IERC20.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
+import {SafetyModuleState} from "../lib/SafetyModuleStates.sol";
 import {IDripModel} from "./IDripModel.sol";
 import {IManager} from "./IManager.sol";
 import {IReceiptToken} from "./IReceiptToken.sol";
@@ -63,6 +64,12 @@ interface ISafetyModule {
       // Delay for two-step withdraw process (for deposited assets).
       uint64 withdrawDelay
     );
+
+  /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
+  /// `reservePools[reservePoolId_]` so it can `transferFrom`
+  function depositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
+    external
+    returns (uint256 depositTokenAmount_);
 
   function depositReserveAssetsWithoutTransfer(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
     external
@@ -132,6 +139,9 @@ interface ISafetyModule {
       /// wrt totalSupply.
       uint16 rewardsPoolsWeight
     );
+
+  /// @notice The state of this SafetyModule.
+  function safetyModuleState() external view returns (SafetyModuleState);
 
   /// @notice Retrieve accounting and metadata about undripped reward pools.
   /// @dev Claimable reward pool IDs are mapped 1:1 with undripped reward pool IDs.

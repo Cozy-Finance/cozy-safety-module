@@ -78,6 +78,12 @@ contract TestBase is Test, TestAssertions {
     }
   }
 
+  /// @dev Returns a random uint256 in range [min_, max_]. min_ must be greater than max_.
+  function _randomUint256InRange(uint256 min_, uint256 max_) internal view returns (uint256) {
+    uint256 base_ = _randomUint256();
+    return bound(base_, min_, max_);
+  }
+
   function _expectPanic(uint256 code_) internal {
     vm.expectRevert(abi.encodeWithSelector(PANIC_SELECTOR, code_));
   }
