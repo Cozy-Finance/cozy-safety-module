@@ -49,7 +49,8 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
     // accounting. It may no longer hold that:
     //    claimableRewardsIndices[reservePool][rewardPool].cumulativeClaimedRewards <=
     //        undrippedRewardsPool[rewardPool].cumulativeDrippedRewards*reservePools[reservePool].rewardsPoolsWeight
-    // So, before finalizing, we drip rewards and update the claimable rewards indices.
+    // So, before finalizing, we drip rewards, update claimable reward indices and reset the cumulative rewards values
+    // to 0.
     ReservePool[] storage reservePools_ = reservePools;
     UndrippedRewardPool[] storage undrippedRewardPools_ = undrippedRewardPools;
     _dripAndResetCumulativeRewardsValues(reservePools_, undrippedRewardPools_);
