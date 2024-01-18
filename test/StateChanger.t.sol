@@ -10,8 +10,8 @@ import {IStateChangerErrors} from "../src/interfaces/IStateChangerErrors.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {StateChanger} from "../src/lib/StateChanger.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
-import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
-import {ReservePool} from "../src/lib/structs/Pools.sol";
+import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
+import {ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
@@ -410,10 +410,6 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
   }
 
   // -------- Overridden abstract function placeholders --------
-  function claimRewards(uint16, /* reservePoolId_ */ address receiver_) public view override {
-    __readStub__();
-  }
-
   // Mock drip of rewards based on mocked next amount.
   function dripRewards() public override {
     emit DripRewardsCalled();
@@ -421,6 +417,10 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
 
   function dripFees() public override {
     emit DripFeesCalled();
+  }
+
+  function claimRewards(uint16, /* reservePoolId_ */ address /* receiver_ */ ) public view override {
+    __readStub__();
   }
 
   function _getNextDripAmount(
@@ -468,9 +468,31 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
   }
 
   function _updateUserRewards(
-    uint256 userStkTokenBalance_,
-    mapping(uint16 => uint256) storage claimableRewardsIndices_,
-    UserRewardsData[] storage userRewards_
+    uint256, /*userStkTokenBalance_*/
+    mapping(uint16 => ClaimableRewardsData) storage, /*claimableRewardsIndices_*/
+    UserRewardsData[] storage /*userRewards_*/
+  ) internal override {
+    __readStub__();
+  }
+
+  function _dripRewardPool(UndrippedRewardPool storage /*undrippedRewardPool_*/ ) internal override {
+    __readStub__();
+  }
+
+  function _applyPendingDrippedRewards(
+    ReservePool storage, /*reservePool_*/
+    mapping(uint16 => ClaimableRewardsData) storage /*claimableRewards_*/
+  ) internal override {
+    __readStub__();
+  }
+
+  function _dripFeesFromReservePool(ReservePool storage, /*reservePool_*/ IDripModel /*dripModel_*/ ) internal override {
+    __readStub__();
+  }
+
+  function _dripAndResetCumulativeRewardsValues(
+    ReservePool[] storage, /*reservePools_*/
+    UndrippedRewardPool[] storage /*undrippedRewardPools_*/
   ) internal override {
     __readStub__();
   }

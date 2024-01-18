@@ -8,9 +8,8 @@ import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
 import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
 import {Trigger} from "./structs/Trigger.sol";
-import {UserRewardsData} from "./structs/Rewards.sol";
+import {UserRewardsData, ClaimableRewardsData} from "./structs/Rewards.sol";
 import {Delays} from "./structs/Delays.sol";
-import {DripTimes} from "./structs/DripTimes.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 abstract contract SafetyModuleBaseStorage {
@@ -21,7 +20,7 @@ abstract contract SafetyModuleBaseStorage {
   UndrippedRewardPool[] public undrippedRewardPools;
 
   /// @notice Maps a reserve pool id to an undripped reward pool id to claimable reward index
-  mapping(uint16 => mapping(uint16 => uint256)) public claimableRewardsIndices;
+  mapping(uint16 => mapping(uint16 => ClaimableRewardsData)) public claimableRewardsIndices;
 
   /// @notice Maps a reserve pool id to a user address to a user reward pool accounting struct.
   mapping(uint16 => mapping(address => UserRewardsData[])) public userRewards;
@@ -43,9 +42,6 @@ abstract contract SafetyModuleBaseStorage {
 
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;
-
-  /// @notice Fees and rewards drip times.
-  DripTimes public dripTimes;
 
   /// @notice The number of slashes that must occur before the safety module can be active.
   /// @dev This value is incremented when a trigger occurs, and decremented when a slash from a trigger assigned payout

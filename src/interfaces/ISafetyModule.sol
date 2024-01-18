@@ -130,7 +130,8 @@ interface ISafetyModule {
       /// @dev The weighting of each stkToken's claim to all reward pools in terms of a ZOC. Must sum to 1.
       /// e.g. stkTokenA = 10%, means they're eligible for up to 10% of each pool, scaled to their balance of stkTokenA
       /// wrt totalSupply.
-      uint16 rewardsPoolsWeight
+      uint16 rewardsPoolsWeight,
+      uint128 lastFeesDripTime
     );
 
   /// @notice Retrieve accounting and metadata about undripped reward pools.
@@ -138,7 +139,14 @@ interface ISafetyModule {
   function undrippedRewardPools(uint256 id_)
     external
     view
-    returns (uint256 amount, IERC20 asset, IDripModel dripModel, IReceiptToken depositToken);
+    returns (
+      uint256 amount,
+      uint256 cumulativeDrippedRewards,
+      uint128 lastDripTime,
+      IERC20 asset,
+      IDripModel dripModel,
+      IReceiptToken depositToken
+    );
 
   /// @notice Redeem by burning `stkTokenAmount_` of `reservePoolId_` reserve pool stake tokens and sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`. Also claims any outstanding rewards

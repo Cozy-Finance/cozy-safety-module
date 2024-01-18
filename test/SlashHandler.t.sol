@@ -15,7 +15,8 @@ import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ISlashHandlerErrors} from "../src/interfaces/ISlashHandlerErrors.sol";
 import {SlashHandler} from "../src/lib/SlashHandler.sol";
 import {Redeemer} from "../src/lib/Redeemer.sol";
-import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
+import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
@@ -28,6 +29,7 @@ import "../src/lib/Stub.sol";
 
 contract TriggerHandlerTest is TestBase {
   using FixedPointMathLib for uint256;
+  using SafeCastLib for uint256;
 
   TestableSlashHandler component;
   address mockPayoutHandler;
@@ -65,7 +67,8 @@ contract TriggerHandlerTest is TestBase {
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 1e4,
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: stakeAmount_ + depositAmount_}));
@@ -154,7 +157,8 @@ contract TriggerHandlerTest is TestBase {
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.25e4,
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
       })
     );
     // Reserve pool 1.
@@ -169,7 +173,8 @@ contract TriggerHandlerTest is TestBase {
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.25e4,
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
       })
     );
     // Reserve pool 2.
@@ -184,7 +189,8 @@ contract TriggerHandlerTest is TestBase {
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4,
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: (stakeAmount_ + depositAmount_) * 3}));
@@ -290,7 +296,8 @@ contract TriggerHandlerTest is TestBase {
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4,
-        maxSlashPercentage: 0.5e18
+        maxSlashPercentage: 0.5e18,
+        lastFeesDripTime: uint128(block.timestamp)
       })
     );
     component.mockAddReservePool(
@@ -304,7 +311,8 @@ contract TriggerHandlerTest is TestBase {
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4,
-        maxSlashPercentage: 0.49e18
+        maxSlashPercentage: 0.49e18,
+        lastFeesDripTime: uint128(block.timestamp)
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: (stakeAmount_ + depositAmount_) * 2}));
@@ -340,7 +348,8 @@ contract TriggerHandlerTest is TestBase {
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4,
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
       })
     );
     component.mockAddReservePool(
@@ -354,7 +363,8 @@ contract TriggerHandlerTest is TestBase {
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
         rewardsPoolsWeight: 0.5e4,
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: (stakeAmount_ + depositAmount_) * 2}));
@@ -451,9 +461,35 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
 
   function _updateUserRewards(
     uint256, /* userStkTokenBalance_*/
-    mapping(uint16 => uint256) storage, /* claimableRewardsIndices_ */
+    mapping(uint16 => ClaimableRewardsData) storage, /* claimableRewardsIndices_ */
     UserRewardsData[] storage /* userRewards_ */
   ) internal view virtual override {
+    __readStub__();
+  }
+
+  function _dripRewardPool(UndrippedRewardPool storage /* undrippedRewardPool_ */ ) internal view override {
+    __readStub__();
+  }
+
+  function _applyPendingDrippedRewards(
+    ReservePool storage, /* reservePool_ */
+    mapping(uint16 => ClaimableRewardsData) storage /* claimableRewards_ */
+  ) internal view override {
+    __readStub__();
+  }
+
+  function _dripFeesFromReservePool(ReservePool storage, /* reservePool_ */ IDripModel /* dripModel_ */ )
+    internal
+    view
+    override
+  {
+    __readStub__();
+  }
+
+  function _dripAndResetCumulativeRewardsValues(
+    ReservePool[] storage, /* reservePools_ */
+    UndrippedRewardPool[] storage /* undrippedRewardPools_ */
+  ) internal view override {
     __readStub__();
   }
 }

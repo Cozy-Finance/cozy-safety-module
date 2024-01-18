@@ -10,7 +10,7 @@ import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
-import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
+import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
@@ -54,13 +54,16 @@ abstract contract DepositorUnitTest is TestBase {
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 1e4,
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: uint128(block.timestamp)
     });
     UndrippedRewardPool memory initialUndrippedRewardPool_ = UndrippedRewardPool({
       asset: IERC20(address(mockAsset)),
       depositToken: IReceiptToken(address(mockRewardPoolDepositToken)),
       dripModel: IDripModel(address(0)),
-      amount: 50e18
+      amount: 50e18,
+      cumulativeDrippedRewards: 0,
+      lastDripTime: uint128(block.timestamp)
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: initialSafetyModuleBal});
     component.mockAddReservePool(initialReservePool_);
@@ -502,10 +505,36 @@ contract TestableDepositor is Depositor {
   }
 
   function _updateUserRewards(
-    uint256 userStkTokenBalance_,
-    mapping(uint16 => uint256) storage claimableRewardsIndices_,
-    UserRewardsData[] storage userRewards_
-  ) internal override {
+    uint256, /*userStkTokenBalance_*/
+    mapping(uint16 => ClaimableRewardsData) storage, /*claimableRewardsIndices_*/
+    UserRewardsData[] storage /*userRewards_*/
+  ) internal view override {
+    __readStub__();
+  }
+
+  function _dripRewardPool(UndrippedRewardPool storage /*undrippedRewardPool_*/ ) internal view override {
+    __readStub__();
+  }
+
+  function _applyPendingDrippedRewards(
+    ReservePool storage, /*reservePool_*/
+    mapping(uint16 => ClaimableRewardsData) storage /*claimableRewards_*/
+  ) internal view override {
+    __readStub__();
+  }
+
+  function _dripFeesFromReservePool(ReservePool storage, /*reservePool_*/ IDripModel /*dripModel_*/ )
+    internal
+    view
+    override
+  {
+    __readStub__();
+  }
+
+  function _dripAndResetCumulativeRewardsValues(
+    ReservePool[] storage, /*reservePools_*/
+    UndrippedRewardPool[] storage /*undrippedRewardPools_*/
+  ) internal view override {
     __readStub__();
   }
 }

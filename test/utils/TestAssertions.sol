@@ -3,7 +3,10 @@ pragma solidity 0.8.22;
 
 import {UndrippedRewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
 import {
-  UserRewardsData, PreviewClaimableRewardsData, PreviewClaimableRewards
+  UserRewardsData,
+  PreviewClaimableRewardsData,
+  PreviewClaimableRewards,
+  ClaimableRewardsData
 } from "../../src/lib/structs/Rewards.sol";
 import {SafetyModuleState, TriggerState} from "../../src/lib/SafetyModuleStates.sol";
 import {Test} from "forge-std/Test.sol";
@@ -50,6 +53,12 @@ abstract contract TestAssertions is Test {
     assertEq(address(actual_.dripModel), address(expected_.dripModel), "UndrippedRewardPool.dripModel");
     assertEq(address(actual_.depositToken), address(expected_.depositToken), "UndrippedRewardPool.depositToken");
     assertEq(actual_.amount, expected_.amount, "UndrippedRewardPool.amount");
+    assertEq(
+      actual_.cumulativeDrippedRewards,
+      expected_.cumulativeDrippedRewards,
+      "UndrippedRewardPool.cumulativeDrippedRewards"
+    );
+    assertEq(actual_.lastDripTime, expected_.lastDripTime, "UndrippedRewardPool.lastDripTime");
   }
 
   function assertEq(UserRewardsData[] memory actual_, UserRewardsData[] memory expected_) internal {
@@ -70,6 +79,29 @@ abstract contract TestAssertions is Test {
 
   function assertEq(TriggerState actual_, TriggerState expected_) internal {
     assertEq(uint256(actual_), uint256(expected_), "TriggerState");
+  }
+
+  function assertEq(ClaimableRewardsData[][] memory actual_, ClaimableRewardsData[][] memory expected_) internal {
+    assertEq(actual_.length, expected_.length);
+    for (uint256 i = 0; i < actual_.length; i++) {
+      assertEq(actual_[i], expected_[i]);
+    }
+  }
+
+  function assertEq(ClaimableRewardsData[] memory actual_, ClaimableRewardsData[] memory expected_) internal {
+    assertEq(actual_.length, expected_.length);
+    for (uint256 i = 0; i < actual_.length; i++) {
+      assertEq(actual_[i], expected_[i]);
+    }
+  }
+
+  function assertEq(ClaimableRewardsData memory actual_, ClaimableRewardsData memory expected_) internal {
+    assertEq(
+      actual_.cumulativeClaimedRewards,
+      expected_.cumulativeClaimedRewards,
+      "ClaimableRewardsData.cumulativeClaimedRewards"
+    );
+    assertEq(actual_.indexSnapshot, expected_.indexSnapshot, "ClaimableRewardsData.indexSnapshot");
   }
 
   function assertEq(PreviewClaimableRewards[] memory actual_, PreviewClaimableRewards[] memory expected_) internal {

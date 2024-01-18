@@ -15,7 +15,12 @@ import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {Ownable} from "../src/lib/Ownable.sol";
 import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
-import {UserRewardsData, PreviewClaimableRewardsData, PreviewClaimableRewards} from "../src/lib/structs/Rewards.sol";
+import {
+  UserRewardsData,
+  PreviewClaimableRewardsData,
+  PreviewClaimableRewards,
+  ClaimableRewardsData
+} from "../src/lib/structs/Rewards.sol";
 import {IdLookup} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockStkToken} from "./utils/MockStkToken.sol";
@@ -45,7 +50,6 @@ contract RewardsHandlerUnitTest is TestBase {
 
   function setUp() public {
     mockRewardsDripModel = new MockDripModel(DEFAULT_REWARDS_DRIP_RATE);
-    component.mockSetLastDripTime(block.timestamp);
   }
 
   function _setUpUndrippedRewardPools(uint256 numRewardAssets_) internal {
@@ -56,7 +60,9 @@ contract RewardsHandlerUnitTest is TestBase {
         asset: IERC20(address(mockAsset_)),
         depositToken: IReceiptToken(address(0)),
         dripModel: IDripModel(mockRewardsDripModel),
-        amount: amount_
+        amount: amount_,
+        cumulativeDrippedRewards: 0,
+        lastDripTime: uint128(block.timestamp)
       });
       component.mockAddUndrippedRewardPool(rewardPool_);
 
@@ -83,7 +89,8 @@ contract RewardsHandlerUnitTest is TestBase {
         pendingWithdrawalsAmount: 0,
         feeAmount: 0,
         rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16(),
-        maxSlashPercentage: MathConstants.WAD
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
       });
       component.mockRegisterStkToken(i, stkToken_);
       component.mockAddReservePool(reservePool_);
@@ -93,6 +100,33 @@ contract RewardsHandlerUnitTest is TestBase {
 
       // Mint stkTokens and send to zero address to floor supply.
       stkToken_.mint(address(0), _randomUint256() % 500_000_000);
+    }
+  }
+
+  function _setUpReservePoolsZeroStkTokenSupply(uint256 numReservePools_) internal {
+    for (uint16 i = 0; i < numReservePools_; i++) {
+      IReceiptToken stkToken_ =
+        IReceiptToken(address(new MockStkToken("Mock Cozy  stkToken", "cozyStk", 6, ISafetyModule(address(component)))));
+      MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
+      uint256 depositAmount_ = _randomUint256() % 500_000_000;
+      ReservePool memory reservePool_ = ReservePool({
+        asset: IERC20(address(mockAsset_)),
+        stkToken: stkToken_,
+        depositToken: IReceiptToken(address(0)),
+        stakeAmount: 0,
+        depositAmount: depositAmount_,
+        pendingUnstakesAmount: 0,
+        pendingWithdrawalsAmount: 0,
+        feeAmount: 0,
+        rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16(),
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
+      });
+      component.mockRegisterStkToken(i, stkToken_);
+      component.mockAddReservePool(reservePool_);
+
+      mockAsset_.mint(address(component), depositAmount_);
+      component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: depositAmount_}));
     }
   }
 
@@ -129,7 +163,8 @@ contract RewardsHandlerUnitTest is TestBase {
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 0.1e4, // 10% weight
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: uint128(block.timestamp)
     });
     stkToken1_.mint(address(0), 0.1e18);
     component.mockAddReservePool(reservePool1_);
@@ -151,7 +186,8 @@ contract RewardsHandlerUnitTest is TestBase {
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 0.9e4, // 90% weight,
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: uint128(block.timestamp)
     });
     stkToken2_.mint(address(0), 10);
     component.mockAddReservePool(reservePool2_);
@@ -234,11 +270,11 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
   function testFuzz_noDripIfSafetyModuleIsPaused(uint64 timeElapsed_) public {
     _setUpDefault();
     component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
-    timeElapsed_ = uint64(bound(timeElapsed_, 0, type(uint64).max - component.getLastDripTime()));
+    timeElapsed_ = uint64(bound(timeElapsed_, 0, type(uint64).max));
     skip(timeElapsed_);
 
     UndrippedRewardPool[] memory initialUndrippedRewardPools_ = component.getUndrippedRewardPools();
-    uint256[][] memory initialClaimableRewardIndices_ = component.getClaimableRewardIndices();
+    ClaimableRewardsData[][] memory initialClaimableRewardIndices_ = component.getClaimableRewardIndices();
 
     component.dripRewards();
     assertEq(component.getUndrippedRewardPools(), initialUndrippedRewardPools_);
@@ -250,7 +286,7 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
     component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
 
     UndrippedRewardPool[] memory initialUndrippedRewardPools_ = component.getUndrippedRewardPools();
-    uint256[][] memory initialClaimableRewardIndices_ = component.getClaimableRewardIndices();
+    ClaimableRewardsData[][] memory initialClaimableRewardIndices_ = component.getClaimableRewardIndices();
 
     component.dripRewards();
     assertEq(component.getUndrippedRewardPools(), initialUndrippedRewardPools_);
@@ -267,6 +303,8 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
       expectedPool1_.asset = concreteUndrippedRewardPools_[0].asset;
       expectedPool1_.dripModel = concreteUndrippedRewardPools_[0].dripModel;
       expectedPool1_.amount = 99_000; // (1 - dripRate) * originalUndrippedPoolAmount = (1.0 - 0.01) * 100_000
+      expectedPool1_.cumulativeDrippedRewards = 1000; // dripRate * originalUndrippedPoolAmount = 0.01 * 100_000
+      expectedPool1_.lastDripTime = uint128(block.timestamp);
       expectedUndrippedRewardPools_[0] = expectedPool1_;
     }
     {
@@ -275,6 +313,9 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
       expectedPool2_.dripModel = concreteUndrippedRewardPools_[1].dripModel;
       expectedPool2_.amount = 750_000_000; // (1 - dripRate) * originalUndrippedPoolAmount = (1.0 - 0.25) *
         // 1_000_000_000
+      expectedPool2_.cumulativeDrippedRewards = 250_000_000; // dripRate * originalUndrippedPoolAmount = 0.25 *
+        // 1_000_000_000
+      expectedPool2_.lastDripTime = uint128(block.timestamp);
       expectedUndrippedRewardPools_[1] = expectedPool2_;
     }
     {
@@ -282,37 +323,23 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
       expectedPool3_.asset = concreteUndrippedRewardPools_[2].asset;
       expectedPool3_.dripModel = concreteUndrippedRewardPools_[2].dripModel;
       expectedPool3_.amount = 0; // (1 - dripRate) * originalUndrippedPoolAmount = (1.0 - 1.0) * 9999
+      expectedPool3_.cumulativeDrippedRewards = 9999; // dripRate * originalUndrippedPoolAmount = 1.0 * 9999
+      expectedPool3_.lastDripTime = uint128(block.timestamp);
       expectedUndrippedRewardPools_[2] = expectedPool3_;
-    }
-
-    // Set-up claimable reward indices.
-    uint256[][] memory expectedClaimableRewardsIndices_ = component.getClaimableRewardIndices();
-    {
-      expectedClaimableRewardsIndices_[0][0] = 1000; // [(drippedRewards * rewardsPoolWeight) / stkTokenSupply] * WAD =
-        // [(1000 * 0.1) / 0.1e18] * WAD
-      expectedClaimableRewardsIndices_[0][1] = 250_000_000; // [(250_000_000 * 0.1) / 0.1e18] * WAD
-      expectedClaimableRewardsIndices_[0][2] = 9990; //  [(9999 * 0.1) / 0.1e18] * WAD
-
-      expectedClaimableRewardsIndices_[1][0] = 900e17; // [(1000 * 0.9) / 10] * WAD
-      expectedClaimableRewardsIndices_[1][1] = 225_000_000e17; // [(250_000_000 * 0.9) / 10] * WAD
-      expectedClaimableRewardsIndices_[1][2] = 8999e17; // [(9999 * 0.9) / 10] * WAD
     }
 
     component.dripRewards();
     assertEq(component.getUndrippedRewardPools(), expectedUndrippedRewardPools_);
-    assertEq(component.getClaimableRewardIndices(), expectedClaimableRewardsIndices_);
-    assertEq(component.getLastDripTime(), block.timestamp);
   }
 
   function testFuzz_rewardsDrip(uint64 timeElapsed_) public {
     _setUpDefault();
 
     component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
-    timeElapsed_ = uint64(bound(timeElapsed_, 1, type(uint64).max - component.getLastDripTime()));
+    timeElapsed_ = uint64(bound(timeElapsed_, 1, type(uint64).max));
     skip(timeElapsed_);
 
     UndrippedRewardPool[] memory expectedUndrippedRewardPools_ = component.getUndrippedRewardPools();
-    uint256[][] memory expectedClaimableRewardsIndices_ = component.getClaimableRewardIndices();
 
     uint256 numRewardAssets_ = expectedUndrippedRewardPools_.length;
     for (uint16 i = 0; i < numRewardAssets_; i++) {
@@ -330,22 +357,13 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
       uint256 totalDrippedAssets_ =
         _calculateExpectedDripQuantity(expectedUndrippedRewardPool_.amount, expectedDripRate_);
       expectedUndrippedRewardPool_.amount -= totalDrippedAssets_;
+      expectedUndrippedRewardPool_.cumulativeDrippedRewards += totalDrippedAssets_;
+      expectedUndrippedRewardPool_.lastDripTime = uint128(block.timestamp);
       expectedUndrippedRewardPools_[i] = expectedUndrippedRewardPool_;
-
-      uint256 numReservePools_ = expectedClaimableRewardsIndices_.length;
-      for (uint16 j = 0; j < numReservePools_; j++) {
-        ReservePool memory reservePool_ = component.getReservePool(j);
-        expectedClaimableRewardsIndices_[j][i] = component.getClaimableRewardIndex(j, i)
-          + _calculateExpectedUpdateToClaimableRewardIndex(
-            totalDrippedAssets_, reservePool_.rewardsPoolsWeight, reservePool_.stkToken.totalSupply()
-          );
-      }
     }
 
     component.dripRewards();
     assertEq(component.getUndrippedRewardPools(), expectedUndrippedRewardPools_);
-    assertEq(component.getClaimableRewardIndices(), expectedClaimableRewardsIndices_);
-    assertEq(component.getLastDripTime(), block.timestamp);
   }
 
   function test_revertOnInvalidDripFactor() public {
@@ -449,14 +467,16 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
 
       // Claimable reward indices should be updated as: oldIndex + [(drippedRewards * rewardsPoolWeight) /
       // stkTokenSupply] * WAD.
-      uint256[][] memory claimableRewardIndices_ = component.getClaimableRewardIndices();
-      assertEq(claimableRewardIndices_[0][0], 1495); // 1000 + [(990 * 0.1) / 0.2e18] * WAD
-      assertEq(claimableRewardIndices_[0][1], 343_750_000); // 250_000_000 + [(187_500_000 * 0.1) / 0.2e18] * WAD
-      assertEq(claimableRewardIndices_[0][2], 9990); // 9_990 + [(0 * 0.1) / 0.2e18] * WAD
-      assertEq(claimableRewardIndices_[1][0], 107_820_000_000_000_000_000); // 900e17 + [(990 * 0.9) / 50] * WAD
-      assertEq(claimableRewardIndices_[1][1], 25_875_000_000_000_000_000_000_000); // 225_000_000e17 + [(187_500_000 *
-        // 0.9) / 50] * WAD
-      assertEq(claimableRewardIndices_[1][2], 8999e17); // 8999e17 + [(0 * 0.9) / 50] * WAD
+      ClaimableRewardsData[][] memory claimableRewardIndices_ = component.getClaimableRewardIndices();
+      assertEq(claimableRewardIndices_[0][0].indexSnapshot, 1495); // 1000 + [(990 * 0.1) / 0.2e18] * WAD
+      assertEq(claimableRewardIndices_[0][1].indexSnapshot, 343_750_000); // 250_000_000 + [(187_500_000 * 0.1) /
+        // 0.2e18] * WAD
+      assertEq(claimableRewardIndices_[0][2].indexSnapshot, 9990); // 9_990 + [(0 * 0.1) / 0.2e18] * WAD
+
+      // Claimable reward indices for reserve pool 2 are not yet re-set since no one has claimed.
+      assertEq(claimableRewardIndices_[1][0].indexSnapshot, 900e17);
+      assertEq(claimableRewardIndices_[1][1].indexSnapshot, 225_000_000e17);
+      assertEq(claimableRewardIndices_[1][2].indexSnapshot, 8999e17);
     }
 
     skip(10);
@@ -561,7 +581,9 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
         asset: IERC20(address(mockAsset_)),
         depositToken: IReceiptToken(address(0)),
         dripModel: IDripModel(mockRewardsDripModel),
-        amount: newRewardPoolAmount_
+        amount: newRewardPoolAmount_,
+        cumulativeDrippedRewards: 0,
+        lastDripTime: uint128(block.timestamp)
       });
       component.mockAddUndrippedRewardPool(rewardPool_);
       // Mint safety module undripped rewards.
@@ -614,23 +636,23 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
 
     skip(timeElapsed_);
     uint256 userStkTokenBalance_ = component.getReservePool(reservePoolId_).stkToken.balanceOf(user_);
-    uint256[] memory oldClaimableRewardIndices_ = component.getClaimableRewardIndices(reservePoolId_);
+    ClaimableRewardsData[] memory oldClaimableRewardIndices_ = component.getClaimableRewardIndices(reservePoolId_);
 
     // User claims rewards.
     vm.prank(user_);
     component.claimRewards(reservePoolId_, receiver_);
 
     // Check receiver balances and user rewards data.
-    uint256[] memory newClaimableRewardIndices_ = component.getClaimableRewardIndices(reservePoolId_);
+    ClaimableRewardsData[] memory newClaimableRewardIndices_ = component.getClaimableRewardIndices(reservePoolId_);
     UserRewardsData[] memory newUserRewards_ = component.getUserRewards(reservePoolId_, user_);
     UndrippedRewardPool[] memory undrippedRewardPools_ = component.getUndrippedRewardPools();
     for (uint16 i = 0; i < undrippedRewardPools_.length; i++) {
       IERC20 asset_ = undrippedRewardPools_[i].asset;
       uint256 accruedRewards_ = component.getUserAccruedRewards(
-        userStkTokenBalance_, newClaimableRewardIndices_[i], oldClaimableRewardIndices_[i]
+        userStkTokenBalance_, newClaimableRewardIndices_[i].indexSnapshot, oldClaimableRewardIndices_[i].indexSnapshot
       );
       assertApproxEqAbs(asset_.balanceOf(receiver_), accruedRewards_, 1);
-      assertApproxEqAbs(newUserRewards_[i].indexSnapshot, newClaimableRewardIndices_[i], 1);
+      assertApproxEqAbs(newUserRewards_[i].indexSnapshot, newClaimableRewardIndices_[i].indexSnapshot, 1);
       assertEq(newUserRewards_[i].accruedRewards, 0);
     }
   }
@@ -658,7 +680,9 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
         asset: IERC20(address(mockAsset_)),
         depositToken: IReceiptToken(address(0)),
         dripModel: IDripModel(mockRewardsDripModel),
-        amount: amount_
+        amount: amount_,
+        cumulativeDrippedRewards: 0,
+        lastDripTime: uint128(block.timestamp)
       });
       component.mockAddUndrippedRewardPool(rewardPool_);
       mockAsset_.mint(address(component), amount_);
@@ -761,27 +785,26 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     // Check rewards balances.
     UndrippedRewardPool[] memory undrippedRewardPools_ = component.getUndrippedRewardPools();
 
-    // The user receives rewards from the first rewards drip, from their original stkTokens. Then, they transfer the
-    // original stkTokens to receiver and stake again. They receive rewards on the second rewards drip, from their new
-    // stkTokens. At each point in time, they are holding 50% of the stkTokenSupply.
-    // firstStakeRewards = 100_000 * 0.01 * 0.1 * 0.5 = 50
+    // The user receives receive rewards on the second rewards drip, from their new stkTokens they received after
+    // transferring their original stkTokens. At that point in time, they are holding 50% of the stkTokenSupply.
     // secondStakeRewards = 99_000 * 0.01 * 0.1 * 0.5 = 49
-    assertApproxEqAbs(undrippedRewardPools_[0].asset.balanceOf(user_), 99, 1);
-    // firstStakeRewards = 1_000_000_000 * 0.25 * 0.1 * 0.5 = 12_500_000
+    assertApproxEqAbs(undrippedRewardPools_[0].asset.balanceOf(user_), 49, 1);
     // secondStakeRewards = 750_000_000 * 0.25 * 0.1 * 0.5 = 9_375_000
-    assertApproxEqAbs(undrippedRewardPools_[1].asset.balanceOf(user_), 21_875_000, 1);
-    // firstStakeRewards = 9_999 * 1.0 * 0.1 * 0.5 = 499
+    assertApproxEqAbs(undrippedRewardPools_[1].asset.balanceOf(user_), 9_375_000, 1);
     // secondStakeRewards = 0 * 1.0 * 0.1 * 0.5 = 0
-    assertApproxEqAbs(undrippedRewardPools_[2].asset.balanceOf(user_), 499, 1);
+    assertApproxEqAbs(undrippedRewardPools_[2].asset.balanceOf(user_), 0, 1);
 
-    // The receiver only receives rewards from the second rewards drip, after they have been transferred stkTokens. They
-    // hold 25% of the stkToken supply.
+    // The receiver receives rewards from the transferred stkTokens. Recall that the original user held 50% of the
+    // stkToken supply on the first drip. At the second drip, the transferred stkTokens are 25% of the stkToken supply.
+    // firstStakeRewards = 100_000 * 0.01 * 0.1 * 0.5 = 50
     // secondStakeRewards = 99_000 * 0.01 * 0.1 * 0.25 = 24
-    assertApproxEqAbs(undrippedRewardPools_[0].asset.balanceOf(receiver_), 24, 1);
+    assertApproxEqAbs(undrippedRewardPools_[0].asset.balanceOf(receiver_), 74, 1);
+    // firstStakeRewards = 1_000_000_000 * 0.25 * 0.1 * 0.5 = 12_500_000
     // secondStakeRewards = 750_000_000 * 0.25 * 0.1 * 0.25 = 4_687_500
-    assertApproxEqAbs(undrippedRewardPools_[1].asset.balanceOf(receiver_), 4_687_500, 1);
+    assertApproxEqAbs(undrippedRewardPools_[1].asset.balanceOf(receiver_), 17_187_500, 1);
+    // firstStakeRewards = 9_999 * 1.0 * 0.1 * 0.5 = 499
     // secondStakeRewards = 0 * 1.0 * 0.1 * 0.25 = 0
-    assertApproxEqAbs(undrippedRewardPools_[2].asset.balanceOf(receiver_), 0, 1);
+    assertApproxEqAbs(undrippedRewardPools_[2].asset.balanceOf(receiver_), 499, 1);
   }
 }
 
@@ -941,12 +964,84 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
   }
 }
 
-contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
-  // -------- Mock setters --------
-  function mockSetLastDripTime(uint256 lastDripTime_) external {
-    dripTimes.lastRewardsDripTime = uint128(lastDripTime_);
+contract RewardsHandlerDripAndResetCumulativeValuesUnitTest is RewardsHandlerUnitTest {
+  function _expectedClaimableRewardsData(uint128 indexSnapshot) internal pure returns (ClaimableRewardsData memory) {
+    return ClaimableRewardsData({indexSnapshot: indexSnapshot, cumulativeClaimedRewards: 0});
   }
 
+  function testFuzz_dripAndResetCumulativeRewardsValuesZeroStkTokenSupply() public {
+    _setUpReservePoolsZeroStkTokenSupply(1);
+    _setUpUndrippedRewardPools(1);
+    _setUpClaimableRewardIndices(1, 1);
+    skip(_randomUint64());
+
+    ClaimableRewardsData[][] memory initialClaimableRewardsIndices_ = component.getClaimableRewardIndices();
+    UndrippedRewardPool[] memory expectedUndrippedRewardPools_ = component.getUndrippedRewardPools();
+
+    component.dripAndResetCumulativeRewardsValues();
+
+    ClaimableRewardsData[][] memory claimableRewardsIndices_ = component.getClaimableRewardIndices();
+    UndrippedRewardPool[] memory undrippedRewardPools_ = component.getUndrippedRewardPools();
+    expectedUndrippedRewardPools_[0].lastDripTime = uint128(block.timestamp);
+    expectedUndrippedRewardPools_[0].amount -=
+      _calculateExpectedDripQuantity(expectedUndrippedRewardPools_[0].amount, DEFAULT_REWARDS_DRIP_RATE);
+
+    assertEq(
+      claimableRewardsIndices_[0][0], _expectedClaimableRewardsData(initialClaimableRewardsIndices_[0][0].indexSnapshot)
+    );
+    assertEq(expectedUndrippedRewardPools_, undrippedRewardPools_);
+  }
+
+  function test_dripAndResetCumulativeRewardsValuesConcrete() public {
+    _setUpConcrete();
+    component.dripAndResetCumulativeRewardsValues();
+
+    ClaimableRewardsData[][] memory claimableRewardIndices_ = component.getClaimableRewardIndices();
+    // Claimable reward indices should be updated as [(drippedRewards * rewardsPoolWeight) / stkTokenSupply] * WAD.
+    // Cumulative claimed rewards should be the drippedRewards. Cumulative claimed rewards should be reset to 0.
+    assertEq(claimableRewardIndices_[0][0], _expectedClaimableRewardsData(1000)); // [(100_000 * 0.01 * 0.1) / 0.1e18] *
+      // WAD
+    assertEq(claimableRewardIndices_[0][1], _expectedClaimableRewardsData(250_000_000)); // [(1_000_000_000 * 0.25 *
+      // 0.1) / 0.1e18] * WAD
+    assertEq(claimableRewardIndices_[0][2], _expectedClaimableRewardsData(9990)); // [(9999 * 1 * 0.1) / 0.1e18] * WAD
+    assertEq(claimableRewardIndices_[1][0], _expectedClaimableRewardsData(90e18)); // [(100_000 * 0.01 * 0.9) / 10] *
+      // WAD
+    assertEq(claimableRewardIndices_[1][1], _expectedClaimableRewardsData(225_000_000e17)); // [(1_000_000_000 * 0.25 *
+      // 0.9) / 10] * WAD
+    assertEq(claimableRewardIndices_[1][2], _expectedClaimableRewardsData(8999e17)); // [(9999 * 1 * 0.9) / 10] * WAD
+
+    // Cumulative claimed rewards here should match the sum of the cumulative claimed rewards.
+    UndrippedRewardPool[] memory undrippedRewardPools_ = component.getUndrippedRewardPools();
+    assertEq(undrippedRewardPools_[0].cumulativeDrippedRewards, 0);
+    assertEq(undrippedRewardPools_[1].cumulativeDrippedRewards, 0);
+    assertEq(undrippedRewardPools_[2].cumulativeDrippedRewards, 0);
+  }
+
+  function testFuzz_dripAndResetCumulativeValues() public {
+    _setUpDefault();
+    component.dripAndResetCumulativeRewardsValues();
+
+    ClaimableRewardsData[][] memory claimableRewardIndices_ = component.getClaimableRewardIndices();
+    UndrippedRewardPool[] memory undrippedRewardPools_ = component.getUndrippedRewardPools();
+    ReservePool[] memory reservePools_ = component.getReservePools();
+
+    // Check that cmulative claimed rewards here match the sum of the cumulative claimed rewards.
+    uint256 numRewardPools_ = undrippedRewardPools_.length;
+    uint256 numReservePools_ = reservePools_.length;
+
+    for (uint16 i = 0; i < numRewardPools_; i++) {
+      assertEq(undrippedRewardPools_[i].cumulativeDrippedRewards, 0);
+      for (uint16 j = 0; j < numReservePools_; j++) {
+        assertEq(claimableRewardIndices_[j][i].cumulativeClaimedRewards, 0);
+      }
+    }
+  }
+}
+
+contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
+  using SafeCastLib for uint256;
+
+  // -------- Mock setters --------
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;
   }
@@ -972,7 +1067,8 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
     uint16 undrippedRewardPoolId_,
     uint256 claimableRewardIndex_
   ) external {
-    claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_] = claimableRewardIndex_;
+    claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_] =
+      ClaimableRewardsData({indexSnapshot: claimableRewardIndex_.safeCastTo128(), cumulativeClaimedRewards: 0});
   }
 
   function mockRegisterStkToken(uint16 reservePoolId_, IReceiptToken stkToken_) external {
@@ -982,10 +1078,6 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   // -------- Mock getters --------
   function getReservePools() external view returns (ReservePool[] memory) {
     return reservePools;
-  }
-
-  function getLastDripTime() external view returns (uint256) {
-    return dripTimes.lastRewardsDripTime;
   }
 
   function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
@@ -1008,10 +1100,10 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
     return assetPools[asset_];
   }
 
-  function getClaimableRewardIndices() external view returns (uint256[][] memory) {
-    uint256[][] memory claimableRewardIndices_ = new uint256[][](reservePools.length);
+  function getClaimableRewardIndices() external view returns (ClaimableRewardsData[][] memory) {
+    ClaimableRewardsData[][] memory claimableRewardIndices_ = new ClaimableRewardsData[][](reservePools.length);
     for (uint16 i = 0; i < reservePools.length; i++) {
-      claimableRewardIndices_[i] = new uint256[](undrippedRewardPools.length);
+      claimableRewardIndices_[i] = new ClaimableRewardsData[](undrippedRewardPools.length);
       for (uint16 j = 0; j < undrippedRewardPools.length; j++) {
         claimableRewardIndices_[i][j] = claimableRewardsIndices[i][j];
       }
@@ -1019,8 +1111,8 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
     return claimableRewardIndices_;
   }
 
-  function getClaimableRewardIndices(uint16 reservePoolId_) external view returns (uint256[] memory) {
-    uint256[] memory claimableRewardIndices_ = new uint256[](undrippedRewardPools.length);
+  function getClaimableRewardIndices(uint16 reservePoolId_) external view returns (ClaimableRewardsData[] memory) {
+    ClaimableRewardsData[] memory claimableRewardIndices_ = new ClaimableRewardsData[](undrippedRewardPools.length);
     for (uint16 j = 0; j < undrippedRewardPools.length; j++) {
       claimableRewardIndices_[j] = claimableRewardsIndices[reservePoolId_][j];
     }
@@ -1032,7 +1124,7 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
     view
     returns (uint256)
   {
-    return claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_];
+    return claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_].indexSnapshot;
   }
 
   function getUserRewards(uint16 reservePoolId_, address user) external view returns (UserRewardsData[] memory) {
@@ -1040,12 +1132,16 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
   }
 
   // -------- Exposed internal functions --------
-  function getUserAccruedRewards(uint256 stkTokenAmount_, uint256 newRewardPoolIndex, uint256 oldRewardPoolIndex)
+  function getUserAccruedRewards(uint256 stkTokenAmount_, uint128 newRewardPoolIndex, uint128 oldRewardPoolIndex)
     external
     pure
     returns (uint256)
   {
     return _getUserAccruedRewards(stkTokenAmount_, newRewardPoolIndex, oldRewardPoolIndex);
+  }
+
+  function dripAndResetCumulativeRewardsValues() external {
+    _dripAndResetCumulativeRewardsValues(reservePools, undrippedRewardPools);
   }
 
   // -------- Overridden abstract function placeholders --------
@@ -1068,6 +1164,14 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
     uint256, /* oldStakeAmount_ */
     uint256 /* slashAmount_ */
   ) internal view override returns (uint256) {
+    __readStub__();
+  }
+
+  function _dripFeesFromReservePool(ReservePool storage, /* reservePool_*/ IDripModel /*dripModel_*/ )
+    internal
+    view
+    override
+  {
     __readStub__();
   }
 }

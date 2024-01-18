@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
@@ -11,19 +12,28 @@ import {MathConstants} from "../src/lib/MathConstants.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {Staker} from "../src/lib/Staker.sol";
 import {RewardsHandler} from "../src/lib/RewardsHandler.sol";
+import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
+import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
 contract StakerUnitTest is TestBase {
+  using FixedPointMathLib for uint256;
+  using SafeCastLib for uint256;
+
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
   MockERC20 mockStkToken = new MockERC20("Mock Cozy Stake Token", "cozyStk", 6);
   MockERC20 mockDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
   TestableStaker component = new TestableStaker();
+  uint256 cumulativeDrippedRewards_ = 290e18;
+  uint256 cumulativeClaimedRewards_ = 90e18;
+  uint256 initialIndexSnapshot_ = 11;
 
   event Staked(
     address indexed caller_,
@@ -44,12 +54,15 @@ contract StakerUnitTest is TestBase {
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
       rewardsPoolsWeight: 1e4,
-      maxSlashPercentage: MathConstants.WAD
+      maxSlashPercentage: MathConstants.WAD,
+      lastFeesDripTime: uint128(block.timestamp)
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: 150e18});
     component.mockAddReservePool(initialReservePool_);
     component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
-    component.mockAddUndrippedRewardPool(IERC20(address(mockAsset)));
+
+    component.mockAddUndrippedRewardPool(IERC20(address(mockAsset)), cumulativeDrippedRewards_);
+    component.mockSetClaimableRewardIndex(0, 0, initialIndexSnapshot_, cumulativeClaimedRewards_);
   }
 
   function test_stake_StkTokensAndStorageUpdates() external {
@@ -79,6 +92,8 @@ contract StakerUnitTest is TestBase {
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
+    ClaimableRewardsData memory finalClaimableRewardsData_ = component.getClaimableRewardIndex(0, 0);
+
     // 100e18 + 20e18
     assertEq(finalReservePool_.stakeAmount, 120e18);
     // No change
@@ -86,6 +101,10 @@ contract StakerUnitTest is TestBase {
     // 150e18 + 20e18
     assertEq(finalAssetPool_.amount, 170e18);
     assertEq(mockAsset.balanceOf(address(component)), 170e18);
+
+    // Because `stkToken.totalSupply() == 0`, the index snapshot and cumulative claimed rewards should not have change.
+    assertEq(finalClaimableRewardsData_.indexSnapshot, initialIndexSnapshot_);
+    assertEq(finalClaimableRewardsData_.cumulativeClaimedRewards, cumulativeClaimedRewards_);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
@@ -121,11 +140,22 @@ contract StakerUnitTest is TestBase {
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
+    ClaimableRewardsData memory finalClaimableRewardsData_ = component.getClaimableRewardIndex(0, 0);
+
     // 100e18 + 20e18
     assertEq(finalReservePool_.stakeAmount, 120e18);
     // 150e18 + 20e18
     assertEq(finalAssetPool_.amount, 170e18);
     assertEq(mockAsset.balanceOf(address(component)), 170e18);
+
+    // Because `stkToken.totalSupply() > 0`, the index snapshot and cumulative claimed rewards should not have change.
+    // Since this updates before the user stakes, the `stkToken.totalSupply() == initialStkTokenSupply_`.
+    assertEq(
+      finalClaimableRewardsData_.indexSnapshot,
+      initialIndexSnapshot_
+        + uint256(cumulativeDrippedRewards_ - cumulativeClaimedRewards_).divWadDown(initialStkTokenSupply_)
+    );
+    assertEq(finalClaimableRewardsData_.cumulativeClaimedRewards, cumulativeDrippedRewards_);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
@@ -321,6 +351,8 @@ contract StakerUnitTest is TestBase {
 }
 
 contract TestableStaker is Staker, Depositor, RewardsHandler {
+  using SafeCastLib for uint256;
+
   // -------- Mock setters --------
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;
@@ -334,15 +366,29 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     assetPools[asset_] = assetPool_;
   }
 
-  function mockAddUndrippedRewardPool(IERC20 rewardAsset_) external {
+  function mockAddUndrippedRewardPool(IERC20 rewardAsset_, uint256 cumulativeDrippedRewards_) external {
     undrippedRewardPools.push(
       UndrippedRewardPool({
         asset: rewardAsset_,
         dripModel: IDripModel(address(new MockDripModel(1e18))),
         amount: 0,
-        depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6)))
+        depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6))),
+        cumulativeDrippedRewards: cumulativeDrippedRewards_,
+        lastDripTime: uint128(block.timestamp)
       })
     );
+  }
+
+  function mockSetClaimableRewardIndex(
+    uint16 reservePoolId_,
+    uint16 undrippedRewardPoolId_,
+    uint256 indexSnapshot_,
+    uint256 cumulativeClaimedRewards_
+  ) external {
+    claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_] = ClaimableRewardsData({
+      indexSnapshot: indexSnapshot_.safeCastTo128(),
+      cumulativeClaimedRewards: cumulativeClaimedRewards_
+    });
   }
 
   // -------- Mock getters --------
@@ -352,6 +398,14 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
 
   function getAssetPool(IERC20 asset_) external view returns (AssetPool memory) {
     return assetPools[asset_];
+  }
+
+  function getClaimableRewardIndex(uint16 reservePoolId_, uint16 undrippedRewardPoolId_)
+    external
+    view
+    returns (ClaimableRewardsData memory)
+  {
+    return claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_];
   }
 
   // -------- Overridden abstract function placeholders --------
@@ -374,6 +428,14 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     uint256, /* oldStakeAmount_ */
     uint256 /* slashAmount_ */
   ) internal view override returns (uint256) {
+    __readStub__();
+  }
+
+  function _dripFeesFromReservePool(ReservePool storage, /* reservePool_ */ IDripModel /* dripModel_*/ )
+    internal
+    view
+    override
+  {
     __readStub__();
   }
 }

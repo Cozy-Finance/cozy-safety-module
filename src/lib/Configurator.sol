@@ -5,6 +5,8 @@ import {ConfiguratorLib} from "./ConfiguratorLib.sol";
 import {Governable} from "./Governable.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {Delays} from "./structs/Delays.sol";
+import {ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
+import {ClaimableRewardsData} from "./structs/Rewards.sol";
 import {
   ConfigUpdateMetadata,
   ReservePoolConfig,
@@ -12,6 +14,8 @@ import {
   UpdateConfigsCalldataParams
 } from "./structs/Configs.sol";
 import {TriggerConfig} from "./structs/Trigger.sol";
+import {IDripModel} from "../interfaces/IDripModel.sol";
+import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 
 abstract contract Configurator is SafetyModuleCommon, Governable {
   ConfigUpdateMetadata public lastConfigUpdate;
@@ -41,11 +45,21 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
   /// existing triggers or new triggers.
   /// - delaysConfig: The new delays config.
   function finalizeUpdateConfigs(UpdateConfigsCalldataParams calldata configUpdates_) external {
+    // A config update may change the rewards weights, which breaks the invariants that we use to do claimable rewards
+    // accounting. It may no longer hold that:
+    //    claimableRewardsIndices[reservePool][rewardPool].cumulativeClaimedRewards <=
+    //        undrippedRewardsPool[rewardPool].cumulativeDrippedRewards*reservePools[reservePool].rewardsPoolsWeight
+    // So, before finalizing, we drip rewards, update claimable reward indices and reset the cumulative rewards values
+    // to 0.
+    ReservePool[] storage reservePools_ = reservePools;
+    UndrippedRewardPool[] storage undrippedRewardPools_ = undrippedRewardPools;
+    _dripAndResetCumulativeRewardsValues(reservePools_, undrippedRewardPools_);
+
     ConfiguratorLib.finalizeUpdateConfigs(
       lastConfigUpdate,
       safetyModuleState,
-      reservePools,
-      undrippedRewardPools,
+      reservePools_,
+      undrippedRewardPools_,
       triggerData,
       delays,
       stkTokenToReservePoolIds,
