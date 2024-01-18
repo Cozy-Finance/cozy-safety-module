@@ -49,7 +49,7 @@ abstract contract InvariantBaseDeploy is TestBase, MockDeployer {
 /// If necessary, child contracts should override _fuzzedSelectors
 /// and _initHandler to set custom handlers and selectors.
 abstract contract InvariantTestBase is InvariantBaseDeploy {
-  function setUp() public virtual {
+  function setUp() public {
     deployMockProtocol();
 
     _initSafetyModule();
@@ -80,7 +80,7 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
     return selectors;
   }
 
-  function _initHandler() internal virtual {
+  function _initHandler() internal {
     safetyModuleHandler =
       new SafetyModuleHandler(manager, safetyModule, asset, numReservePools, numRewardPools, block.timestamp);
     targetSelector(FuzzSelector({addr: address(safetyModuleHandler), selectors: _fuzzedSelectors()}));
@@ -103,7 +103,7 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
     deal(address(asset), address(safetyModuleHandler), asset.balanceOf(address(safetyModuleHandler)) + amount_, true);
   }
 
-  function invariant_callSummary() public view virtual {
+  function invariant_callSummary() public view {
     safetyModuleHandler.callSummary();
   }
 }
@@ -134,5 +134,9 @@ abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is Invar
     numReservePools = reservePoolConfigs_.length;
     numRewardPools = undrippedRewardPoolConfigs_.length;
     safetyModule = manager.createSafetyModule(owner, pauser, configs_, _randomBytes32());
+
+    vm.label(address(getReservePool(safetyModule, 0).depositToken), "reservePoolADepositToken");
+    vm.label(address(getReservePool(safetyModule, 0).stkToken), "reservePoolAStkToken");
+    vm.label(address(getUndrippedRewardPool(safetyModule, 0).depositToken), "rewardPoolADepositToken");
   }
 }
