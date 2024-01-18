@@ -1553,9 +1553,16 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     __readStub__();
   }
 
-  function applyPendingDrippedRewards_(
+  function _applyPendingDrippedRewards(
     ReservePool storage reservePool_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
+  ) internal override {
+    __readStub__();
+  }
+
+  function _dripAndApplyPendingDrippedRewards(
+    ReservePool[] storage reservePools_,
+    UndrippedRewardPool[] storage undrippedRewardPools_
   ) internal override {
     __readStub__();
   }

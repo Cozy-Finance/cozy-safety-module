@@ -285,22 +285,52 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     return totalBaseAmount_.mulWadDown(dripFactor_);
   }
 
-  function applyPendingDrippedRewards_(
+  function _applyPendingDrippedRewards(
     ReservePool storage reservePool_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal override {
     uint256 numRewardAssets_ = undrippedRewardPools.length;
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
+      ClaimableRewardsData storage claimableRewardsData_ = claimableRewards_[i];
+
       claimableRewards_[i] = _previewNextClaimableRewardsData(
-        claimableRewards_[i],
+        claimableRewardsData_,
         _computeUnclaimedDrippedRewards(
           undrippedRewardPool_.cumulativeDrippedRewards,
-          claimableRewards_[i].cumulativeClaimedRewards,
+          claimableRewardsData_.cumulativeClaimedRewards,
           reservePool_.rewardsPoolsWeight
         ),
         reservePool_.stkToken.totalSupply()
       );
+    }
+  }
+
+  function _dripAndApplyPendingDrippedRewards(
+    ReservePool[] storage reservePools_,
+    UndrippedRewardPool[] storage undrippedRewardPools_
+  ) internal override {
+    uint256 numRewardAssets_ = undrippedRewardPools_.length;
+    uint256 numReservePools_ = reservePools_.length;
+
+    for (uint16 i = 0; i < numRewardAssets_; i++) {
+      UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools_[i];
+      _dripRewardPool(undrippedRewardPool_);
+
+      for (uint16 j = 0; j < numReservePools_; j++) {
+        ReservePool storage reservePool_ = reservePools_[j];
+        ClaimableRewardsData storage claimableRewardsData_ = claimableRewardsIndices[j][i];
+
+        claimableRewardsIndices[j][i] = _previewNextClaimableRewardsData(
+          claimableRewardsData_,
+          _computeUnclaimedDrippedRewards(
+            undrippedRewardPool_.cumulativeDrippedRewards,
+            claimableRewardsData_.cumulativeClaimedRewards,
+            reservePool_.rewardsPoolsWeight
+          ),
+          reservePool_.stkToken.totalSupply()
+        );
+      }
     }
   }
 

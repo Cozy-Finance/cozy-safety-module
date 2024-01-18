@@ -618,6 +618,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     vm.warp(lastConfigUpdate_.configUpdateTime);
 
     _expectEmit();
+    emit TestableConfiguratorEvents.DripApplyPendingDrippedRewardsCalled();
+    _expectEmit();
     emit ConfigUpdatesFinalized(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
     component.finalizeUpdateConfigs(
       UpdateConfigsCalldataParams({
@@ -949,7 +951,11 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
   }
 }
 
-contract TestableConfigurator is Configurator {
+interface TestableConfiguratorEvents {
+  event DripApplyPendingDrippedRewardsCalled();
+}
+
+contract TestableConfigurator is Configurator, TestableConfiguratorEvents {
   constructor(address owner_, IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     __initGovernable(owner_, owner_);
     cozyManager = manager_;
@@ -1047,6 +1053,13 @@ contract TestableConfigurator is Configurator {
     ConfiguratorLib.initializeUndrippedRewardPool(undrippedRewardPools, receiptTokenFactory, rewardPoolConfig_);
   }
 
+  function _dripAndApplyPendingDrippedRewards(
+    ReservePool[] storage reservePools_,
+    UndrippedRewardPool[] storage undrippedRewardPools_
+  ) internal override {
+    emit DripApplyPendingDrippedRewardsCalled();
+  }
+
   // -------- Overridden abstract function placeholders --------
   function claimRewards(uint16, /* reservePoolId_ */ address receiver_) public view override {
     __readStub__();
@@ -1117,7 +1130,7 @@ contract TestableConfigurator is Configurator {
     __readStub__();
   }
 
-  function applyPendingDrippedRewards_(
+  function _applyPendingDrippedRewards(
     ReservePool storage reservePool_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal override {
