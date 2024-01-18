@@ -39,10 +39,12 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     uint256 amount;
   }
 
-  struct ReservePoolData {
+  struct ClaimRewardsData {
     uint256 userStkTokenBalance;
     uint256 totalStkTokenSupply;
     uint256 rewardsWeight;
+    uint256 numRewardAssets;
+    uint256 numUserRewardAssets;
   }
 
   function dripRewards() public override {
@@ -62,24 +64,24 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     SafetyModuleState safetyModuleState_ = safetyModuleState;
 
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
-    ReservePoolData memory reservePoolData_ = ReservePoolData({
-      userStkTokenBalance: reservePool_.stkToken.balanceOf(msg.sender),
-      totalStkTokenSupply: reservePool_.stkToken.totalSupply(),
-      rewardsWeight: reservePool_.rewardsPoolsWeight
-    });
-
+    IReceiptToken stkToken_ = reservePool_.stkToken;
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_ = claimableRewardsIndices[reservePoolId_];
     UserRewardsData[] storage userRewards_ = userRewards[reservePoolId_][msg.sender];
 
-    uint256 numRewardAssets_ = undrippedRewardPools.length;
-    uint256 numUserRewardAssets_ = userRewards_.length;
+    ClaimRewardsData memory claimRewardsData_ = ClaimRewardsData({
+      userStkTokenBalance: stkToken_.balanceOf(msg.sender),
+      totalStkTokenSupply: stkToken_.totalSupply(),
+      rewardsWeight: reservePool_.rewardsPoolsWeight,
+      numRewardAssets: undrippedRewardPools.length,
+      numUserRewardAssets: userRewards_.length
+    });
 
     // When claiming rewards from a given reward pool, we take four steps:
     // (1) Drip from the reward pool since time may have passed since the last drip.
     // (2) Compute and update the next claimable rewards data for the (reserve pool, reward pool) pair.
     // (3) Update the user's accrued rewards data for the (reserve pool, reward pool) pair.
     // (4) Transfer the user's accrued rewards from the reward pool to the receiver.
-    for (uint16 i = 0; i < numRewardAssets_; i++) {
+    for (uint16 i = 0; i < claimRewardsData_.numRewardAssets; i++) {
       // Step (1)
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
       if (safetyModuleState_ != SafetyModuleState.PAUSED) _dripRewardPool(undrippedRewardPool_);
@@ -89,19 +91,23 @@ abstract contract RewardsHandler is SafetyModuleCommon {
         ClaimableRewardsData memory newClaimableRewardsData_ = _previewNextClaimableRewardsData(
           claimableRewards_[i],
           undrippedRewardPool_.cumulativeDrippedRewards,
-          reservePoolData_.totalStkTokenSupply,
-          reservePoolData_.rewardsWeight
+          claimRewardsData_.totalStkTokenSupply,
+          claimRewardsData_.rewardsWeight
         );
         claimableRewards_[i] = newClaimableRewardsData_;
 
-        uint128 oldIndexSnapshot_ = i < numUserRewardAssets_ ? userRewards_[i].indexSnapshot : 0;
         // Step (3)
         UserRewardsData memory newUserRewardsData_ =
           UserRewardsData({accruedRewards: 0, indexSnapshot: newClaimableRewardsData_.indexSnapshot});
         // A new UserRewardsData struct is pushed to the array in the case a new reward pool was added since rewards
         // were last claimed for this user.
-        if (i < numUserRewardAssets_) userRewards_[i] = newUserRewardsData_;
-        else userRewards_.push(newUserRewardsData_);
+        uint128 oldIndexSnapshot_ = 0;
+        if (i < claimRewardsData_.numUserRewardAssets) {
+          oldIndexSnapshot_ = userRewards_[i].indexSnapshot;
+          userRewards_[i] = newUserRewardsData_;
+        } else {
+          userRewards_.push(newUserRewardsData_);
+        }
 
         // Step (4)
         _transferClaimedRewards(
@@ -109,7 +115,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
           undrippedRewardPool_.asset,
           receiver_,
           _getUserAccruedRewards(
-            reservePoolData_.userStkTokenBalance, newClaimableRewardsData_.indexSnapshot, oldIndexSnapshot_
+            claimRewardsData_.userStkTokenBalance, newClaimableRewardsData_.indexSnapshot, oldIndexSnapshot_
           )
         );
       }
@@ -221,6 +227,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     uint256 totalStkTokenSupply_ = reservePool_.stkToken.totalSupply();
     uint256 ownerStkTokenBalance_ = reservePool_.stkToken.balanceOf(owner_);
+    uint256 rewardsWeight_ = reservePool_.rewardsPoolsWeight;
 
     // Compute preview user accrued rewards accounting for any pending rewards drips.
     PreviewClaimableRewardsData[] memory claimableRewardsData_ =
@@ -235,7 +242,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
         claimableRewards_[i],
         undrippedRewardPool_.cumulativeDrippedRewards + nextRewardDrips_[i].amount,
         totalStkTokenSupply_,
-        reservePool_.rewardsPoolsWeight
+        rewardsWeight_
       );
       claimableRewardsData_[i] = PreviewClaimableRewardsData({
         rewardPoolId: i,
@@ -278,15 +285,15 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal override {
     uint256 numRewardAssets_ = undrippedRewardPools.length;
+    uint256 totalStkTokenSupply_ = reservePool_.stkToken.totalSupply();
+    uint256 rewardsWeight_ = reservePool_.rewardsPoolsWeight;
+
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
       ClaimableRewardsData storage claimableRewardsData_ = claimableRewards_[i];
 
       claimableRewards_[i] = _previewNextClaimableRewardsData(
-        claimableRewardsData_,
-        undrippedRewardPool_.cumulativeDrippedRewards,
-        reservePool_.stkToken.totalSupply(),
-        reservePool_.rewardsPoolsWeight
+        claimableRewardsData_, undrippedRewardPool_.cumulativeDrippedRewards, totalStkTokenSupply_, rewardsWeight_
       );
     }
   }

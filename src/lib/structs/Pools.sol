@@ -35,6 +35,8 @@ struct ReservePool {
 
 struct UndrippedRewardPool {
   uint256 amount;
+  /// @dev The cumulative amount of rewards dripped to the pool since the last weight change. On a call to
+  /// `finalizeConfigUpdates`, if the associated config update changes the rewards weights, this value is reset to 0.
   uint256 cumulativeDrippedRewards;
   uint128 lastDripTime;
   IERC20 asset;

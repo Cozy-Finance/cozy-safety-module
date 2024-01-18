@@ -46,14 +46,14 @@ abstract contract FeesHandler is SafetyModuleCommon {
     // Cozy fee claims will often be batched, so we require it to be initiated from the manager to save gas by
     // removing calls and SLOADs to check the owner addresses each time.
     if (msg.sender != address(cozyManager)) revert Ownable.Unauthorized();
-
-    dripFees();
+    IDripModel dripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
 
     uint256 numReservePools_ = reservePools.length;
     for (uint16 i = 0; i < numReservePools_; i++) {
       ReservePool storage reservePool_ = reservePools[i];
-      uint256 feeAmount_ = reservePool_.feeAmount;
+      _dripFeesFromReservePool(reservePool_, dripModel_);
 
+      uint256 feeAmount_ = reservePool_.feeAmount;
       if (feeAmount_ > 0) {
         IERC20 asset_ = reservePool_.asset;
         reservePool_.feeAmount = 0;
@@ -66,10 +66,10 @@ abstract contract FeesHandler is SafetyModuleCommon {
   }
 
   function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
-    uint256 deltaT = block.timestamp - reservePool_.lastFeesDripTime;
-    if (deltaT == 0) return;
+    uint256 deltaT_ = block.timestamp - reservePool_.lastFeesDripTime;
+    if (deltaT_ == 0) return;
 
-    uint256 dripFactor_ = dripModel_.dripFactor(reservePool_.lastFeesDripTime, deltaT);
+    uint256 dripFactor_ = dripModel_.dripFactor(reservePool_.lastFeesDripTime, deltaT_);
     if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
 
     uint256 drippedFromStakeAmount_ =

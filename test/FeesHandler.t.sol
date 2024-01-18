@@ -198,6 +198,33 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     assertEq(component.getReservePools(), expectedReservePools_);
   }
 
+  function test_feesDripFromPoolConcrete() public {
+    _setUpConcrete();
+
+    ReservePool[] memory expectedReservePools_ = new ReservePool[](2);
+    ReservePool[] memory concreteReservePools_ = component.getReservePools();
+    expectedReservePools_[0] = concreteReservePools_[0];
+    {
+      ReservePool memory expectedPool2_;
+      expectedPool2_.asset = concreteReservePools_[1].asset;
+      expectedPool2_.stkToken = concreteReservePools_[1].stkToken;
+      expectedPool2_.depositToken = concreteReservePools_[1].depositToken;
+      // drippedFromStakeAmount = (stakeAmount - pendingUnstakesAmount) * dripRate = 190e6 * 0.05 = 9.5e6
+      // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 20e6 * 0.05 = 1e6
+      expectedPool2_.stakeAmount = 190.5e6; // stakeAmount = originalStakeAmount - drippedFromStakeAmount
+      expectedPool2_.depositAmount = 19e6; // depositAmount = originalDepositAmount - drippedFromDepositAmount
+      expectedPool2_.feeAmount = 10.5e6; // drippedFromStakeAmount + drippedFromDepositAmount
+      expectedPool2_.pendingUnstakesAmount = concreteReservePools_[1].pendingUnstakesAmount;
+      expectedPool2_.pendingWithdrawalsAmount = concreteReservePools_[1].pendingWithdrawalsAmount;
+      expectedPool2_.rewardsPoolsWeight = concreteReservePools_[1].rewardsPoolsWeight;
+      expectedPool2_.maxSlashPercentage = concreteReservePools_[1].maxSlashPercentage;
+      expectedReservePools_[1] = expectedPool2_;
+    }
+
+    component.dripFeesFromReservePool(1);
+    assertEq(component.getReservePools(), expectedReservePools_);
+  }
+
   function testFuzz_feesDrip(uint64 timeElapsed_) public {
     _setUpDefault();
 
@@ -228,6 +255,38 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     }
 
     component.dripFees();
+    assertEq(component.getReservePools(), expectedReservePools_);
+  }
+
+  function testFuzz_feesDripFromPool(uint64 timeElapsed_) public {
+    _setUpDefault();
+
+    component.mockSetSafetyModuleState(SafetyModuleState.ACTIVE);
+    timeElapsed_ = uint64(bound(timeElapsed_, 1, type(uint64).max));
+    skip(timeElapsed_);
+
+    uint256 dripRate_ = _randomUint256() % MathConstants.WAD;
+    MockDripModel model_ = new MockDripModel(dripRate_);
+    mockManager.setFeeDripModel(IDripModel(address(model_)));
+
+    ReservePool[] memory expectedReservePools_ = component.getReservePools();
+    uint16 feeDripPool_ = uint16(_randomUint256() % expectedReservePools_.length);
+
+    ReservePool memory expectedReservePool_ = expectedReservePools_[feeDripPool_];
+    uint256 drippedFromStakeAmount_ = _calculateExpectedDripQuantity(
+      expectedReservePool_.stakeAmount - expectedReservePool_.pendingUnstakesAmount, dripRate_
+    );
+    uint256 drippedFromDepositAmount_ = _calculateExpectedDripQuantity(
+      expectedReservePool_.depositAmount - expectedReservePool_.pendingWithdrawalsAmount, dripRate_
+    );
+
+    expectedReservePool_.stakeAmount -= drippedFromStakeAmount_;
+    expectedReservePool_.depositAmount -= drippedFromDepositAmount_;
+    expectedReservePool_.feeAmount += drippedFromStakeAmount_ + drippedFromDepositAmount_;
+
+    expectedReservePools_[feeDripPool_] = expectedReservePool_;
+
+    component.dripFeesFromReservePool(feeDripPool_);
     assertEq(component.getReservePools(), expectedReservePools_);
   }
 
