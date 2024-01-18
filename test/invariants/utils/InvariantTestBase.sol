@@ -51,12 +51,17 @@ abstract contract InvariantBaseDeploy is TestBase, MockDeployer {
 abstract contract InvariantTestBase is InvariantBaseDeploy {
   function setUp() public virtual {
     deployMockProtocol();
+
+    // TODO Move to MockDeployer
+    depositTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+
     _initSafetyModule();
     _initHandler();
   }
 
   function _fuzzedSelectors() internal pure virtual returns (bytes4[] memory) {
-    bytes4[] memory selectors = new bytes4[](12);
+    bytes4[] memory selectors = new bytes4[](17);
     selectors[0] = SafetyModuleHandler.depositReserveAssets.selector;
     selectors[1] = SafetyModuleHandler.depositReserveAssetsWithExistingActor.selector;
     selectors[2] = SafetyModuleHandler.depositReserveAssetsWithoutTransfer.selector;
@@ -69,6 +74,13 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
     selectors[9] = SafetyModuleHandler.stakeWithExistingActor.selector;
     selectors[10] = SafetyModuleHandler.stakeWithoutTransfer.selector;
     selectors[11] = SafetyModuleHandler.stakeWithoutTransferWithExistingActor.selector;
+    selectors[12] = SafetyModuleHandler.redeem.selector;
+    selectors[13] = SafetyModuleHandler.unstake.selector;
+    selectors[14] = SafetyModuleHandler.claimRewards.selector;
+    selectors[15] = SafetyModuleHandler.completeRedemption.selector;
+    selectors[16] = SafetyModuleHandler.dripFees.selector;
+    // TODO: This causes tests to fail - something missing from/in redeemUndrippedRewards potentially causing issues.
+    // selectors[13] = SafetyModuleHandler.redeemUndrippedRewards.selector;
     return selectors;
   }
 

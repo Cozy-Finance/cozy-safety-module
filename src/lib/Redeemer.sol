@@ -132,6 +132,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their redemption (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
+  // TODO: Rename to previewRewardPoolRedemption
   function previewRedemption(uint16 rewardPoolId_, uint256 receiptTokenAmount_, bool isUnstake_)
     external
     view

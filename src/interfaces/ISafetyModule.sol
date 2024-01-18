@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "./IERC20.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
+import {RedemptionPreview} from "../lib/structs/Redemptions.sol";
 import {SafetyModuleState} from "../lib/SafetyModuleStates.sol";
 import {IDripModel} from "./IDripModel.sol";
 import {IManager} from "./IManager.sol";
@@ -13,6 +14,8 @@ import {UndrippedRewardPoolConfig, ReservePoolConfig} from "../lib/structs/Confi
 interface ISafetyModule {
   /// @notice Replaces the constructor for minimal proxies.
   function initialize(address owner_, address pauser_, UpdateConfigsCalldataParams calldata configs_) external;
+
+  function claimRewards(uint16 reservePoolId_, address receiver_) external;
 
   function completeRedemption(uint64 redemptionId_) external returns (uint256 assetAmount_);
 
@@ -84,6 +87,8 @@ interface ISafetyModule {
     external
     returns (uint256 depositTokenAmount_);
 
+  function dripFees() external;
+
   function stake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
     external
     returns (uint256 stkTokenAmount_);
@@ -105,6 +110,13 @@ interface ISafetyModule {
 
   /// @notice Address of the SafetyModule pauser.
   function pauser() external view returns (address);
+
+  /// @notice Allows an on-chain or off-chain user to simulate the effects of their queued redemption (i.e. view the
+  /// number of reserve assets received) at the current block, given current on-chain conditions.
+  function previewQueuedRedemption(uint64 redemptionId_)
+    external
+    view
+    returns (RedemptionPreview memory redemptionPreview_);
 
   /// @notice Address of the Cozy protocol ReceiptTokenFactory.
   function receiptTokenFactory() external view returns (IReceiptTokenFactory);
