@@ -103,6 +103,33 @@ contract RewardsHandlerUnitTest is TestBase {
     }
   }
 
+  function _setUpReservePoolsZeroStkTokenSupply(uint256 numReservePools_) internal {
+    for (uint16 i = 0; i < numReservePools_; i++) {
+      IReceiptToken stkToken_ =
+        IReceiptToken(address(new MockStkToken("Mock Cozy  stkToken", "cozyStk", 6, ISafetyModule(address(component)))));
+      MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
+      uint256 depositAmount_ = _randomUint256() % 500_000_000;
+      ReservePool memory reservePool_ = ReservePool({
+        asset: IERC20(address(mockAsset_)),
+        stkToken: stkToken_,
+        depositToken: IReceiptToken(address(0)),
+        stakeAmount: 0,
+        depositAmount: depositAmount_,
+        pendingUnstakesAmount: 0,
+        pendingWithdrawalsAmount: 0,
+        feeAmount: 0,
+        rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16(),
+        maxSlashPercentage: MathConstants.WAD,
+        lastFeesDripTime: uint128(block.timestamp)
+      });
+      component.mockRegisterStkToken(i, stkToken_);
+      component.mockAddReservePool(reservePool_);
+
+      mockAsset_.mint(address(component), depositAmount_);
+      component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: depositAmount_}));
+    }
+  }
+
   function _setUpClaimableRewardIndices(uint256 numReservePools_, uint256 numRewardAssets_) internal {
     for (uint16 i = 0; i < numReservePools_; i++) {
       for (uint16 j = 0; j < numRewardAssets_; j++) {
@@ -940,6 +967,29 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
 contract RewardsHandlerDripAndResetCumulativeValuesUnitTest is RewardsHandlerUnitTest {
   function _expectedClaimableRewardsData(uint128 indexSnapshot) internal pure returns (ClaimableRewardsData memory) {
     return ClaimableRewardsData({indexSnapshot: indexSnapshot, cumulativeClaimedRewards: 0});
+  }
+
+  function testFuzz_dripAndResetCumulativeRewardsValuesZeroStkTokenSupply() public {
+    _setUpReservePoolsZeroStkTokenSupply(1);
+    _setUpUndrippedRewardPools(1);
+    _setUpClaimableRewardIndices(1, 1);
+    skip(_randomUint64());
+
+    ClaimableRewardsData[][] memory initialClaimableRewardsIndices_ = component.getClaimableRewardIndices();
+    UndrippedRewardPool[] memory expectedUndrippedRewardPools_ = component.getUndrippedRewardPools();
+
+    component.dripAndResetCumulativeRewardsValues();
+
+    ClaimableRewardsData[][] memory claimableRewardsIndices_ = component.getClaimableRewardIndices();
+    UndrippedRewardPool[] memory undrippedRewardPools_ = component.getUndrippedRewardPools();
+    expectedUndrippedRewardPools_[0].lastDripTime = uint128(block.timestamp);
+    expectedUndrippedRewardPools_[0].amount -=
+      _calculateExpectedDripQuantity(expectedUndrippedRewardPools_[0].amount, DEFAULT_REWARDS_DRIP_RATE);
+
+    assertEq(
+      claimableRewardsIndices_[0][0], _expectedClaimableRewardsData(initialClaimableRewardsIndices_[0][0].indexSnapshot)
+    );
+    assertEq(expectedUndrippedRewardPools_, undrippedRewardPools_);
   }
 
   function test_dripAndResetCumulativeRewardsValuesConcrete() public {
