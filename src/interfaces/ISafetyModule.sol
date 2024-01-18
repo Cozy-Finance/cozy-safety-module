@@ -109,7 +109,7 @@ interface ISafetyModule {
   /// @notice Address of the Cozy protocol ReceiptTokenFactory.
   function receiptTokenFactory() external view returns (IReceiptTokenFactory);
 
-  /// @notice Redeem by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
+  /// @notice Redeems by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
   function redeem(uint16 reservePoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
