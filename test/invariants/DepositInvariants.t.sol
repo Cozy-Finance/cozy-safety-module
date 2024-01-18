@@ -21,7 +21,7 @@ abstract contract DepositInvariants is InvariantTestBase {
         getUndrippedRewardPool(safetyModule, rewardPoolId_).depositToken.totalSupply();
     }
 
-    safetyModuleHandler.depositReserveAssetsWithoutCountingCall(_randomUint256());
+    safetyModuleHandler.depositReserveAssetsWithExistingActorWithoutCountingCall(_randomUint256());
 
     for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       uint256 currentTotalSupply_ = getReservePool(safetyModule, reservePoolId_).depositToken.totalSupply();

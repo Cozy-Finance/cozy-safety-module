@@ -66,18 +66,27 @@ interface ISafetyModule {
     );
 
   /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
-  /// `reservePools[reservePoolId_]` so it can `transferFrom`
+  /// `reservePools[reservePoolId_].asset` so it can `transferFrom`
   function depositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
     external
     returns (uint256 depositTokenAmount_);
 
+  /// @dev Expects depositer to transfer assets to the SafetyModule beforehand.
   function depositReserveAssetsWithoutTransfer(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
+    external
+    returns (uint256 depositTokenAmount_);
+
+  function depositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_, address from_)
     external
     returns (uint256 depositTokenAmount_);
 
   function depositRewardAssetsWithoutTransfer(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_)
     external
     returns (uint256 depositTokenAmount_);
+
+  function stake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
+    external
+    returns (uint256 stkTokenAmount_);
 
   /// @notice Stake by minting `stkTokenAmount_` stkTokens to `receiver_`.
   /// @dev Assumes that `amount_` of reserve asset has already been transferred to this contract.

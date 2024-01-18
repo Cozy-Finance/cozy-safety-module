@@ -31,13 +31,16 @@ abstract contract InvariantBaseDeploy is TestBase, MockDeployer {
   ISafetyModule public safetyModule;
   SafetyModuleHandler public safetyModuleHandler;
 
-  IERC20 asset = IERC20(address(new MockERC20("Mock Asset", "MOCK", 6)));
+  IERC20 public asset = IERC20(address(new MockERC20("Mock Asset", "MOCK", 6)));
 
   // Deploy with some sane params for default models.
-  IDripModel dripDecayModel = IDripModel(address(new DripModelExponential(9_116_094_774)));
+  IDripModel public dripDecayModel = IDripModel(address(new DripModelExponential(9_116_094_774)));
 
-  uint256 numReservePools;
-  uint256 numRewardPools;
+  Delays public delays =
+    Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
+
+  uint256 public numReservePools;
+  uint256 public numRewardPools;
 
   function _initSafetyModule() internal virtual;
 }
@@ -53,8 +56,19 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
   }
 
   function _fuzzedSelectors() internal pure virtual returns (bytes4[] memory) {
-    bytes4[] memory selectors = new bytes4[](1);
+    bytes4[] memory selectors = new bytes4[](12);
     selectors[0] = SafetyModuleHandler.depositReserveAssets.selector;
+    selectors[1] = SafetyModuleHandler.depositReserveAssetsWithExistingActor.selector;
+    selectors[2] = SafetyModuleHandler.depositReserveAssetsWithoutTransfer.selector;
+    selectors[3] = SafetyModuleHandler.depositReserveAssetsWithoutTransferWithExistingActor.selector;
+    selectors[4] = SafetyModuleHandler.depositRewardAssets.selector;
+    selectors[5] = SafetyModuleHandler.depositRewardAssetsWithExistingActor.selector;
+    selectors[6] = SafetyModuleHandler.depositRewardAssetsWithoutTransfer.selector;
+    selectors[7] = SafetyModuleHandler.depositRewardAssetsWithoutTransferWithExistingActor.selector;
+    selectors[8] = SafetyModuleHandler.stake.selector;
+    selectors[9] = SafetyModuleHandler.stakeWithExistingActor.selector;
+    selectors[10] = SafetyModuleHandler.stakeWithoutTransfer.selector;
+    selectors[11] = SafetyModuleHandler.stakeWithoutTransferWithExistingActor.selector;
     return selectors;
   }
 
@@ -106,12 +120,7 @@ abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is Invar
       reservePoolConfigs: reservePoolConfigs_,
       undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
       triggerConfigUpdates: triggerConfig_,
-      delaysConfig: Delays({
-        unstakeDelay: 2 days,
-        withdrawDelay: 2 days,
-        configUpdateDelay: 15 days,
-        configUpdateGracePeriod: 1 days
-      })
+      delaysConfig: delays
     });
 
     numReservePools = reservePoolConfigs_.length;

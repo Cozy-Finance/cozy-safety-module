@@ -52,8 +52,11 @@ contract SafetyModuleHandler is TestBase {
   // -------- Ghost Variables --------
 
   mapping(uint16 reservePoolId_ => GhostReservePool reservePool_) public ghost_reservePoolCumulative;
+  mapping(uint16 rewardPoolId_ => GhostRewardPool) public ghost_rewardPoolCumulative;
 
   mapping(address actor_ => uint256 actorReserveDepositCount_) public ghost_actorReserveDepositCount;
+  mapping(address actor_ => uint256 actorRewardDepositCount_) public ghost_actorRewardDepositCount;
+  mapping(address actor_ => uint256 actorStakeCount_) public ghost_actorStakeCount;
 
   // -------- Structs --------
 
@@ -63,6 +66,11 @@ contract SafetyModuleHandler is TestBase {
     uint256 depositSharesAmount;
     uint256 stakeAssetAmount;
     uint256 stakeSharesAmount;
+  }
+
+  struct GhostRewardPool {
+    uint256 totalAssetAmount;
+    uint256 depositSharesAmount;
   }
 
   // -------- Constructor --------
@@ -126,7 +134,7 @@ contract SafetyModuleHandler is TestBase {
   function depositReserveAssetsWithExistingActor(uint256 assetAmount_)
     public
     virtual
-    useActorWithReseveDeposits(_randomUint256())
+    useActor(_randomUint256())
     useValidReservePoolId(_randomUint256())
     countCall("depositReserveAssetsWithExistingActor")
     advanceTime(_randomUint256())
@@ -153,11 +161,309 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
+  function depositReserveAssetsWithoutTransfer(uint256 assetAmount_)
+    public
+    virtual
+    createActor
+    createActorWithReserveDeposits
+    useValidReservePoolId(_randomUint256())
+    countCall("depositReserveAssetsWithoutTransfer")
+    advanceTime(_randomUint256())
+    returns (address actor_)
+  {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["depositReserveAssetsWithoutTransfer"] += 1;
+      return currentActor;
+    }
+
+    assetAmount_ = uint80(bound(assetAmount_, 0.0001e6, type(uint80).max));
+    _simulateTransferToSafetyModule(assetAmount_);
+
+    vm.prank(currentActor);
+    uint256 shares_ = safetyModule.depositReserveAssetsWithoutTransfer(currentReservePoolId, assetAmount_, currentActor);
+
+    ghost_reservePoolCumulative[currentReservePoolId].depositAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].depositSharesAmount += shares_;
+
+    ghost_actorReserveDepositCount[currentActor] += 1;
+
+    return currentActor;
+  }
+
+  function depositReserveAssetsWithoutTransferWithExistingActor(uint256 assetAmount_)
+    public
+    virtual
+    useActor(_randomUint256())
+    useValidReservePoolId(_randomUint256())
+    countCall("depositReserveAssetsWithoutTransferWithExistingActor")
+    advanceTime(_randomUint256())
+    returns (address actor_)
+  {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["depositReserveAssetsWithoutTransferWithExistingActor"] += 1;
+      return currentActor;
+    }
+    assetAmount_ = uint80(bound(assetAmount_, 0.0001e6, type(uint80).max));
+    _simulateTransferToSafetyModule(assetAmount_);
+
+    vm.prank(currentActor);
+    uint256 shares_ = safetyModule.depositReserveAssets(currentReservePoolId, assetAmount_, currentActor, currentActor);
+
+    ghost_reservePoolCumulative[currentReservePoolId].depositAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].depositSharesAmount += shares_;
+
+    ghost_actorReserveDepositCount[currentActor] += 1;
+
+    return currentActor;
+  }
+
+  function depositRewardAssets(uint256 assetAmount_)
+    public
+    virtual
+    createActor
+    createActorWithRewardDeposits
+    useValidRewardPoolId(_randomUint256())
+    countCall("depositRewardAssets")
+    advanceTime(_randomUint256())
+    returns (address actor_)
+  {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["depositRewardAssets"] += 1;
+      return currentActor;
+    }
+
+    assetAmount_ = uint80(bound(assetAmount_, 0.0001e6, type(uint80).max));
+    deal(address(asset), currentActor, asset.balanceOf(currentActor) + assetAmount_, true);
+
+    vm.startPrank(currentActor);
+    asset.approve(address(safetyModule), assetAmount_);
+    uint256 shares_ = safetyModule.depositRewardAssets(currentReservePoolId, assetAmount_, currentActor, currentActor);
+    vm.stopPrank();
+
+    ghost_rewardPoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
+    ghost_rewardPoolCumulative[currentReservePoolId].depositSharesAmount += shares_;
+
+    ghost_actorRewardDepositCount[currentActor] += 1;
+
+    return currentActor;
+  }
+
+  function depositRewardAssetsWithExistingActor(uint256 assetAmount_)
+    public
+    virtual
+    useActor(_randomUint256())
+    useValidRewardPoolId(_randomUint256())
+    countCall("depositRewardAssetsWithExistingActor")
+    advanceTime(_randomUint256())
+    returns (address actor_)
+  {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["depositRewardAssetsWithExistingActor"] += 1;
+      return currentActor;
+    }
+
+    assetAmount_ = uint80(bound(assetAmount_, 0.0001e6, type(uint80).max));
+    deal(address(asset), currentActor, asset.balanceOf(currentActor) + assetAmount_, true);
+
+    vm.startPrank(currentActor);
+    asset.approve(address(safetyModule), assetAmount_);
+    uint256 shares_ = safetyModule.depositRewardAssets(currentReservePoolId, assetAmount_, currentActor, currentActor);
+    vm.stopPrank();
+
+    ghost_rewardPoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
+    ghost_rewardPoolCumulative[currentReservePoolId].depositSharesAmount += shares_;
+
+    ghost_actorRewardDepositCount[currentActor] += 1;
+
+    return currentActor;
+  }
+
+  function depositRewardAssetsWithoutTransfer(uint256 assetAmount_)
+    public
+    virtual
+    createActor
+    createActorWithRewardDeposits
+    useValidRewardPoolId(_randomUint256())
+    countCall("depositRewardAssetsWithoutTransfer")
+    advanceTime(_randomUint256())
+    returns (address actor_)
+  {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["depositRewardAssetsWithoutTransfer"] += 1;
+      return currentActor;
+    }
+
+    assetAmount_ = uint80(bound(assetAmount_, 0.0001e6, type(uint80).max));
+    _simulateTransferToSafetyModule(assetAmount_);
+
+    vm.prank(currentActor);
+    uint256 shares_ = safetyModule.depositRewardAssets(currentReservePoolId, assetAmount_, currentActor, currentActor);
+
+    ghost_rewardPoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
+    ghost_rewardPoolCumulative[currentReservePoolId].depositSharesAmount += shares_;
+
+    ghost_actorRewardDepositCount[currentActor] += 1;
+
+    return currentActor;
+  }
+
+  function depositRewardAssetsWithoutTransferWithExistingActor(uint256 assetAmount_)
+    public
+    virtual
+    useActor(_randomUint256())
+    useValidRewardPoolId(_randomUint256())
+    countCall("depositRewardAssetsWithoutTransferWithExistingActor")
+    advanceTime(_randomUint256())
+    returns (address actor_)
+  {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["depositRewardAssetsWithoutTransferWithExistingActor"] += 1;
+      return currentActor;
+    }
+
+    assetAmount_ = uint80(bound(assetAmount_, 0.0001e6, type(uint80).max));
+    _simulateTransferToSafetyModule(assetAmount_);
+
+    vm.prank(currentActor);
+    uint256 shares_ = safetyModule.depositRewardAssets(currentReservePoolId, assetAmount_, currentActor, currentActor);
+
+    ghost_rewardPoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
+    ghost_rewardPoolCumulative[currentReservePoolId].depositSharesAmount += shares_;
+
+    ghost_actorRewardDepositCount[currentActor] += 1;
+
+    return currentActor;
+  }
+
+  function stake(uint256 assetAmount_)
+    public
+    virtual
+    createActor
+    createActorWithStakes
+    useValidReservePoolId(_randomUint256())
+    countCall("stake")
+    advanceTime(_randomUint256())
+    returns (address actor_)
+  {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["stake"] += 1;
+      return currentActor;
+    }
+
+    assetAmount_ = uint80(bound(assetAmount_, 0.0001e6, type(uint80).max));
+    deal(address(asset), currentActor, asset.balanceOf(currentActor) + assetAmount_, true);
+
+    vm.startPrank(currentActor);
+    asset.approve(address(safetyModule), assetAmount_);
+    uint256 shares_ = safetyModule.stake(currentReservePoolId, assetAmount_, currentActor, currentActor);
+    vm.stopPrank();
+
+    ghost_reservePoolCumulative[currentReservePoolId].stakeAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].stakeSharesAmount += shares_;
+
+    ghost_actorStakeCount[currentActor] += 1;
+
+    return currentActor;
+  }
+
+  function stakeWithExistingActor(uint256 assetAmount_)
+    public
+    virtual
+    useActor(_randomUint256())
+    useValidReservePoolId(_randomUint256())
+    countCall("stakeWithExistingActor")
+    advanceTime(_randomUint256())
+    returns (address actor_)
+  {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["stakeWithExistingActor"] += 1;
+      return currentActor;
+    }
+
+    assetAmount_ = uint80(bound(assetAmount_, 0.0001e6, type(uint80).max));
+    deal(address(asset), currentActor, asset.balanceOf(currentActor) + assetAmount_, true);
+
+    vm.startPrank(currentActor);
+    asset.approve(address(safetyModule), assetAmount_);
+    uint256 shares_ = safetyModule.stake(currentReservePoolId, assetAmount_, currentActor, currentActor);
+    vm.stopPrank();
+
+    ghost_reservePoolCumulative[currentReservePoolId].stakeAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].stakeSharesAmount += shares_;
+
+    ghost_actorStakeCount[currentActor] += 1;
+
+    return currentActor;
+  }
+
+  function stakeWithoutTransfer(uint256 assetAmount_)
+    public
+    virtual
+    createActor
+    createActorWithStakes
+    useValidReservePoolId(_randomUint256())
+    countCall("stakeWithoutTransfer")
+    advanceTime(_randomUint256())
+    returns (address actor_)
+  {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["stakeWithoutTransfer"] += 1;
+      return currentActor;
+    }
+
+    assetAmount_ = uint80(bound(assetAmount_, 0.0001e6, type(uint80).max));
+    _simulateTransferToSafetyModule(assetAmount_);
+
+    vm.prank(currentActor);
+    uint256 shares_ = safetyModule.stakeWithoutTransfer(currentReservePoolId, assetAmount_, currentActor);
+
+    ghost_reservePoolCumulative[currentReservePoolId].stakeAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].stakeSharesAmount += shares_;
+
+    ghost_actorStakeCount[currentActor] += 1;
+
+    return currentActor;
+  }
+
+  function stakeWithoutTransferWithExistingActor(uint256 assetAmount_)
+    public
+    virtual
+    useActor(_randomUint256())
+    useValidReservePoolId(_randomUint256())
+    countCall("stakeWithoutTransferWithExistingActor")
+    advanceTime(_randomUint256())
+    returns (address actor_)
+  {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["stakeWithoutTransferWithExistingActor"] += 1;
+      return currentActor;
+    }
+
+    assetAmount_ = uint80(bound(assetAmount_, 0.0001e6, type(uint80).max));
+    _simulateTransferToSafetyModule(assetAmount_);
+
+    vm.prank(currentActor);
+    uint256 shares_ = safetyModule.stakeWithoutTransfer(currentReservePoolId, assetAmount_, currentActor);
+
+    ghost_reservePoolCumulative[currentReservePoolId].stakeAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].stakeSharesAmount += shares_;
+
+    ghost_actorStakeCount[currentActor] += 1;
+
+    return currentActor;
+  }
+
   // ----------------------------------
   // -------- Helper functions --------
   // ----------------------------------
 
-  function depositReserveAssetsWithoutCountingCall(uint256 assets_) external returns (address) {
+  function depositReserveAssetsWithExistingActorWithoutCountingCall(uint256 assets_) external returns (address) {
     address actor_ = depositReserveAssetsWithExistingActor(assets_);
     calls["depositReserveAssetsWithExistingActor"] -= 1; // depositWithExistingActor increments by 1.
 
@@ -172,11 +478,45 @@ contract SafetyModuleHandler is TestBase {
     console2.log("-------------------");
     console2.log("Calls:");
     console2.log("");
-    console2.log("deposit", calls["depositReserveAssets"]);
+    console2.log("depositReserveAssets", calls["depositReserveAssets"]);
+    console2.log("depositReserveAssetsWithExistingActor", calls["depositReserveAssetsWithExistingActor"]);
+    console2.log("depositReserveAssetsWithoutTransfer", calls["depositReserveAssetsWithoutTransfer"]);
+    console2.log(
+      "depositReserveAssetsWithoutTransferWithExistingActor",
+      calls["depositReserveAssetsWithoutTransferWithExistingActor"]
+    );
+    console2.log("depositRewardAssets", calls["depositRewardAssets"]);
+    console2.log("depositRewardAssetsWithExistingActor", calls["depositRewardAssetsWithExistingActor"]);
+    console2.log("depositRewardAssetsWithoutTransfer", calls["depositRewardAssetsWithoutTransfer"]);
+    console2.log(
+      "depositRewardAssetsWithoutTransferWithExistingActor",
+      calls["depositRewardAssetsWithoutTransferWithExistingActor"]
+    );
+    console2.log("stake", calls["stake"]);
+    console2.log("stakeWithExistingActor", calls["stakeWithExistingActor"]);
+    console2.log("stakeWithoutTransfer", calls["stakeWithoutTransfer"]);
+    console2.log("stakeWithoutTransferWithExistingActor", calls["stakeWithoutTransferWithExistingActor"]);
     console2.log("-------------------");
     console2.log("Invalid calls:");
     console2.log("");
     console2.log("depositReserveAssets", invalidCalls["depositReserveAssets"]);
+    console2.log("depositReserveAssetsWithExistingActor", invalidCalls["depositReserveAssetsWithExistingActor"]);
+    console2.log("depositReserveAssetsWithoutTransfer", invalidCalls["depositReserveAssetsWithoutTransfer"]);
+    console2.log(
+      "depositReserveAssetsWithoutTransferWithExistingActor",
+      invalidCalls["depositReserveAssetsWithoutTransferWithExistingActor"]
+    );
+    console2.log("depositRewardAssets", invalidCalls["depositRewardAssets"]);
+    console2.log("depositRewardAssetsWithExistingActor", invalidCalls["depositRewardAssetsWithExistingActor"]);
+    console2.log("depositRewardAssetsWithoutTransfer", invalidCalls["depositRewardAssetsWithoutTransfer"]);
+    console2.log(
+      "depositRewardAssetsWithoutTransferWithExistingActor",
+      invalidCalls["depositRewardAssetsWithoutTransferWithExistingActor"]
+    );
+    console2.log("stake", invalidCalls["stake"]);
+    console2.log("stakeWithExistingActor", invalidCalls["stakeWithExistingActor"]);
+    console2.log("stakeWithoutTransfer", invalidCalls["stakeWithoutTransfer"]);
+    console2.log("stakeWithoutTransferWithExistingActor", invalidCalls["stakeWithoutTransferWithExistingActor"]);
   }
 
   function _simulateTransferToSafetyModule(uint256 assets_) internal {

@@ -28,8 +28,7 @@ abstract contract Staker is SafetyModuleCommon {
   );
 
   /// @notice Stake by minting `stkTokenAmount_` stkTokens to `receiver_` after depositing exactly `reserveAssetAmount_`
-  /// of
-  /// the reserve asset.
+  /// of the reserve asset.
   /// @dev Assumes that `from_` has already approved this contract to transfer `amount_` of reserve asset.
   function stake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
     external
