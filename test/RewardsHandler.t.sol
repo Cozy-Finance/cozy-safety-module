@@ -937,37 +937,39 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
   }
 }
 
-contract RewardsHandlerDripAndApplyPendingDrippedRewardsUnitTest is RewardsHandlerUnitTest {
-  function test_dripAndApplyPendingDrippedRewardsConcrete() public {
+contract RewardsHandlerDripAndResetCumulativeValuesUnitTest is RewardsHandlerUnitTest {
+  function _expectedClaimableRewardsData(uint128 indexSnapshot) internal pure returns (ClaimableRewardsData memory) {
+    return ClaimableRewardsData({indexSnapshot: indexSnapshot, cumulativeClaimedRewards: 0});
+  }
+
+  function test_dripAndResetCumulativeRewardsValuesConcrete() public {
     _setUpConcrete();
-    component.dripAndApplyPendingDrippedRewards();
+    component.dripAndResetCumulativeRewardsValues();
 
     ClaimableRewardsData[][] memory claimableRewardIndices_ = component.getClaimableRewardIndices();
     // Claimable reward indices should be updated as [(drippedRewards * rewardsPoolWeight) / stkTokenSupply] * WAD.
-    // Cumulative claimed rewards should be the drippedRewards.
-    assertEq(claimableRewardIndices_[0][0].indexSnapshot, 1000); // [(100_000 * 0.01 * 0.1) / 0.1e18] * WAD
-    assertEq(claimableRewardIndices_[0][0].cumulativeClaimedRewards, 100); // 100_000 * 0.01 * 0.1
-    assertEq(claimableRewardIndices_[0][1].indexSnapshot, 250_000_000); // [(1_000_000_000 * 0.25 * 0.1) / 0.1e18] * WAD
-    assertEq(claimableRewardIndices_[0][1].cumulativeClaimedRewards, 25_000_000); // 1_000_000_000 * 0.25 * 0.1
-    assertEq(claimableRewardIndices_[0][2].indexSnapshot, 9990); // [(9999 * 1 * 0.1) / 0.1e18] * WAD
-    assertEq(claimableRewardIndices_[0][2].cumulativeClaimedRewards, 999); // 9999 * 1 * 0.1
-    assertEq(claimableRewardIndices_[1][0].indexSnapshot, 90e18); // [(100_000 * 0.01 * 0.9) / 10] * WAD
-    assertEq(claimableRewardIndices_[1][0].cumulativeClaimedRewards, 900); // 100_000 * 0.01 * 0.9
-    assertEq(claimableRewardIndices_[1][1].indexSnapshot, 225_000_000e17); // [(1_000_000_000 * 0.25 * 0.9) / 10] * WAD
-    assertEq(claimableRewardIndices_[1][1].cumulativeClaimedRewards, 225_000_000); // 1_000_000_000 * 0.25 * 0.9
-    assertEq(claimableRewardIndices_[1][2].indexSnapshot, 8999e17); // [(9999 * 1 * 0.9) / 10] * WAD
-    assertEq(claimableRewardIndices_[1][2].cumulativeClaimedRewards, 8999); // 9999 * 1 * 0.9
+    // Cumulative claimed rewards should be the drippedRewards. Cumulative claimed rewards should be reset to 0.
+    assertEq(claimableRewardIndices_[0][0], _expectedClaimableRewardsData(1000)); // [(100_000 * 0.01 * 0.1) / 0.1e18] *
+      // WAD
+    assertEq(claimableRewardIndices_[0][1], _expectedClaimableRewardsData(250_000_000)); // [(1_000_000_000 * 0.25 *
+      // 0.1) / 0.1e18] * WAD
+    assertEq(claimableRewardIndices_[0][2], _expectedClaimableRewardsData(9990)); // [(9999 * 1 * 0.1) / 0.1e18] * WAD
+    assertEq(claimableRewardIndices_[1][0], _expectedClaimableRewardsData(90e18)); // [(100_000 * 0.01 * 0.9) / 10] *
+      // WAD
+    assertEq(claimableRewardIndices_[1][1], _expectedClaimableRewardsData(225_000_000e17)); // [(1_000_000_000 * 0.25 *
+      // 0.9) / 10] * WAD
+    assertEq(claimableRewardIndices_[1][2], _expectedClaimableRewardsData(8999e17)); // [(9999 * 1 * 0.9) / 10] * WAD
 
     // Cumulative claimed rewards here should match the sum of the cumulative claimed rewards.
     UndrippedRewardPool[] memory undrippedRewardPools_ = component.getUndrippedRewardPools();
-    assertApproxEqAbs(undrippedRewardPools_[0].cumulativeDrippedRewards, 100 + 900, 1);
-    assertApproxEqAbs(undrippedRewardPools_[1].cumulativeDrippedRewards, 25_000_000 + 225_000_000, 1);
-    assertApproxEqAbs(undrippedRewardPools_[2].cumulativeDrippedRewards, 999 + 8999, 1);
+    assertEq(undrippedRewardPools_[0].cumulativeDrippedRewards, 0);
+    assertEq(undrippedRewardPools_[1].cumulativeDrippedRewards, 0);
+    assertEq(undrippedRewardPools_[2].cumulativeDrippedRewards, 0);
   }
 
-  function testFuzz_dripAndApplyPendingDrippedRewardsConcrete() public {
+  function testFuzz_dripAndResetCumulativeValues() public {
     _setUpDefault();
-    component.dripAndApplyPendingDrippedRewards();
+    component.dripAndResetCumulativeRewardsValues();
 
     ClaimableRewardsData[][] memory claimableRewardIndices_ = component.getClaimableRewardIndices();
     UndrippedRewardPool[] memory undrippedRewardPools_ = component.getUndrippedRewardPools();
@@ -978,11 +980,10 @@ contract RewardsHandlerDripAndApplyPendingDrippedRewardsUnitTest is RewardsHandl
     uint256 numReservePools_ = reservePools_.length;
 
     for (uint16 i = 0; i < numRewardPools_; i++) {
-      uint256 cumulativeClaimedRewards_ = 0;
+      assertEq(undrippedRewardPools_[i].cumulativeDrippedRewards, 0);
       for (uint16 j = 0; j < numReservePools_; j++) {
-        cumulativeClaimedRewards_ += claimableRewardIndices_[j][i].cumulativeClaimedRewards;
+        assertEq(claimableRewardIndices_[j][i].cumulativeClaimedRewards, 0);
       }
-      assertApproxEqAbs(undrippedRewardPools_[i].cumulativeDrippedRewards, cumulativeClaimedRewards_, 1);
     }
   }
 }
@@ -1089,8 +1090,8 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
     return _getUserAccruedRewards(stkTokenAmount_, newRewardPoolIndex, oldRewardPoolIndex);
   }
 
-  function dripAndApplyPendingDrippedRewards() external {
-    _dripAndApplyPendingDrippedRewards(reservePools, undrippedRewardPools);
+  function dripAndResetCumulativeRewardsValues() external {
+    _dripAndResetCumulativeRewardsValues(reservePools, undrippedRewardPools);
   }
 
   // -------- Overridden abstract function placeholders --------

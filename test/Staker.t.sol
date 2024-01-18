@@ -397,7 +397,11 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     __readStub__();
   }
 
-  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
+  function _dripFeesFromReservePool(ReservePool storage, /* reservePool_ */ IDripModel /* dripModel_*/ )
+    internal
+    view
+    override
+  {
     __readStub__();
   }
 }

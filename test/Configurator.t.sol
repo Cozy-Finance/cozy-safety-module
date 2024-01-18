@@ -618,7 +618,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     vm.warp(lastConfigUpdate_.configUpdateTime);
 
     _expectEmit();
-    emit TestableConfiguratorEvents.DripApplyPendingDrippedRewardsCalled();
+    emit TestableConfiguratorEvents.DripAndResetCumulativeRewardsValuesCalled();
     _expectEmit();
     emit ConfigUpdatesFinalized(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfigUpdates_, delayConfig_);
     component.finalizeUpdateConfigs(
@@ -952,7 +952,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 }
 
 interface TestableConfiguratorEvents {
-  event DripApplyPendingDrippedRewardsCalled();
+  event DripAndResetCumulativeRewardsValuesCalled();
 }
 
 contract TestableConfigurator is Configurator, TestableConfiguratorEvents {
@@ -1053,11 +1053,11 @@ contract TestableConfigurator is Configurator, TestableConfiguratorEvents {
     ConfiguratorLib.initializeUndrippedRewardPool(undrippedRewardPools, receiptTokenFactory, rewardPoolConfig_);
   }
 
-  function _dripAndApplyPendingDrippedRewards(
+  function _dripAndResetCumulativeRewardsValues(
     ReservePool[] storage reservePools_,
     UndrippedRewardPool[] storage undrippedRewardPools_
   ) internal override {
-    emit DripApplyPendingDrippedRewardsCalled();
+    emit DripAndResetCumulativeRewardsValuesCalled();
   }
 
   // -------- Overridden abstract function placeholders --------
@@ -1119,25 +1119,29 @@ contract TestableConfigurator is Configurator, TestableConfiguratorEvents {
   }
 
   function _updateUserRewards(
-    uint256 userStkTokenBalance_,
-    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
-    UserRewardsData[] storage userRewards_
-  ) internal override {
+    uint256, /*userStkTokenBalance_*/
+    mapping(uint16 => ClaimableRewardsData) storage, /*claimableRewardsIndices_*/
+    UserRewardsData[] storage /*userRewards_*/
+  ) internal view override {
     __readStub__();
   }
 
-  function _dripRewardPool(UndrippedRewardPool storage undrippedRewardPool_) internal override {
+  function _dripRewardPool(UndrippedRewardPool storage /*undrippedRewardPool_*/ ) internal view override {
     __readStub__();
   }
 
   function _applyPendingDrippedRewards(
-    ReservePool storage reservePool_,
-    mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
-  ) internal override {
+    ReservePool storage, /*reservePool_*/
+    mapping(uint16 => ClaimableRewardsData) storage /*claimableRewards_*/
+  ) internal view override {
     __readStub__();
   }
 
-  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
+  function _dripFeesFromReservePool(ReservePool storage, /*reservePool_*/ IDripModel /*dripModel_*/ )
+    internal
+    view
+    override
+  {
     __readStub__();
   }
 }

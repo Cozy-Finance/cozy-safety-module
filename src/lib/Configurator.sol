@@ -52,7 +52,7 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
     // So, before finalizing, we drip rewards and update the claimable rewards indices.
     ReservePool[] storage reservePools_ = reservePools;
     UndrippedRewardPool[] storage undrippedRewardPools_ = undrippedRewardPools;
-    _dripAndApplyPendingDrippedRewards(reservePools_, undrippedRewardPools_);
+    _dripAndResetCumulativeRewardsValues(reservePools_, undrippedRewardPools_);
 
     ConfiguratorLib.finalizeUpdateConfigs(
       lastConfigUpdate,

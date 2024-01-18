@@ -505,32 +505,36 @@ contract TestableDepositor is Depositor {
   }
 
   function _updateUserRewards(
-    uint256 userStkTokenBalance_,
-    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
-    UserRewardsData[] storage userRewards_
-  ) internal override {
+    uint256, /*userStkTokenBalance_*/
+    mapping(uint16 => ClaimableRewardsData) storage, /*claimableRewardsIndices_*/
+    UserRewardsData[] storage /*userRewards_*/
+  ) internal view override {
     __readStub__();
   }
 
-  function _dripRewardPool(UndrippedRewardPool storage undrippedRewardPool_) internal override {
+  function _dripRewardPool(UndrippedRewardPool storage /*undrippedRewardPool_*/ ) internal view override {
     __readStub__();
   }
 
   function _applyPendingDrippedRewards(
-    ReservePool storage reservePool_,
-    mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
-  ) internal override {
+    ReservePool storage, /*reservePool_*/
+    mapping(uint16 => ClaimableRewardsData) storage /*claimableRewards_*/
+  ) internal view override {
     __readStub__();
   }
 
-  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
+  function _dripFeesFromReservePool(ReservePool storage, /*reservePool_*/ IDripModel /*dripModel_*/ )
+    internal
+    view
+    override
+  {
     __readStub__();
   }
 
-  function _dripAndApplyPendingDrippedRewards(
-    ReservePool[] storage reservePools_,
-    UndrippedRewardPool[] storage undrippedRewardPools_
-  ) internal override {
+  function _dripAndResetCumulativeRewardsValues(
+    ReservePool[] storage, /*reservePools_*/
+    UndrippedRewardPool[] storage /*undrippedRewardPools_*/
+  ) internal view override {
     __readStub__();
   }
 }

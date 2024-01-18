@@ -88,12 +88,9 @@ abstract contract RewardsHandler is SafetyModuleCommon {
         // Step (2)
         ClaimableRewardsData memory newClaimableRewardsData_ = _previewNextClaimableRewardsData(
           claimableRewards_[i],
-          _computeUnclaimedDrippedRewards(
-            undrippedRewardPool_.cumulativeDrippedRewards,
-            claimableRewards_[i].cumulativeClaimedRewards,
-            reservePoolData_.rewardsWeight
-          ),
-          reservePoolData_.totalStkTokenSupply
+          undrippedRewardPool_.cumulativeDrippedRewards,
+          reservePoolData_.totalStkTokenSupply,
+          reservePoolData_.rewardsWeight
         );
         claimableRewards_[i] = newClaimableRewardsData_;
 
@@ -170,8 +167,9 @@ abstract contract RewardsHandler is SafetyModuleCommon {
 
   function _previewNextClaimableRewardsData(
     ClaimableRewardsData memory claimableRewardsData_,
-    uint256 unclaimedDrippedRewards_,
-    uint256 totalStkTokenSupply_
+    uint256 cumulativeDrippedRewards_,
+    uint256 totalStkTokenSupply_,
+    uint256 rewardsWeight_
   ) internal pure returns (ClaimableRewardsData memory nextClaimableRewardsData_) {
     nextClaimableRewardsData_.cumulativeClaimedRewards = claimableRewardsData_.cumulativeClaimedRewards;
     nextClaimableRewardsData_.indexSnapshot = claimableRewardsData_.indexSnapshot;
@@ -180,6 +178,9 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     // the claimable rewards data. We have to update the index snapshot and cumulative claimed rewards at the same time
     // to keep accounting correct.
     if (totalStkTokenSupply_ > 0) {
+      // Round down, in favor of leaving assets in the undripped pool.
+      uint256 unclaimedDrippedRewards_ = cumulativeDrippedRewards_.mulDivDown(rewardsWeight_, MathConstants.ZOC)
+        - claimableRewardsData_.cumulativeClaimedRewards;
       nextClaimableRewardsData_.cumulativeClaimedRewards += unclaimedDrippedRewards_;
       // Round down, in favor of leaving assets in the claimable reward pool.
       nextClaimableRewardsData_.indexSnapshot +=
@@ -194,16 +195,6 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     assetPools[rewardAsset_].amount -= amount_;
     rewardAsset_.safeTransfer(receiver_, amount_);
     emit ClaimedRewards(reservePoolId_, rewardAsset_, amount_, msg.sender, receiver_);
-  }
-
-  function _computeUnclaimedDrippedRewards(
-    uint256 cumulativeDrippedRewards_,
-    uint256 cumulativeClaimedRewards_,
-    uint256 rewardsWeight_
-  ) internal pure returns (uint256) {
-    // Round down, in favor of leaving assets in the undripped pool.
-    uint256 scaledCumulativeDrippedRewards_ = cumulativeDrippedRewards_.mulDivDown(rewardsWeight_, MathConstants.ZOC);
-    return scaledCumulativeDrippedRewards_ - cumulativeClaimedRewards_;
   }
 
   function _previewNextRewardDrip(UndrippedRewardPool storage undrippedRewardPool_)
@@ -242,12 +233,9 @@ abstract contract RewardsHandler is SafetyModuleCommon {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[i];
       ClaimableRewardsData memory previewNextClaimableRewardsData_ = _previewNextClaimableRewardsData(
         claimableRewards_[i],
-        _computeUnclaimedDrippedRewards(
-          undrippedRewardPool_.cumulativeDrippedRewards + nextRewardDrips_[i].amount,
-          claimableRewards_[i].cumulativeClaimedRewards,
-          reservePool_.rewardsPoolsWeight
-        ),
-        totalStkTokenSupply_
+        undrippedRewardPool_.cumulativeDrippedRewards + nextRewardDrips_[i].amount,
+        totalStkTokenSupply_,
+        reservePool_.rewardsPoolsWeight
       );
       claimableRewardsData_[i] = PreviewClaimableRewardsData({
         rewardPoolId: i,
@@ -296,17 +284,14 @@ abstract contract RewardsHandler is SafetyModuleCommon {
 
       claimableRewards_[i] = _previewNextClaimableRewardsData(
         claimableRewardsData_,
-        _computeUnclaimedDrippedRewards(
-          undrippedRewardPool_.cumulativeDrippedRewards,
-          claimableRewardsData_.cumulativeClaimedRewards,
-          reservePool_.rewardsPoolsWeight
-        ),
-        reservePool_.stkToken.totalSupply()
+        undrippedRewardPool_.cumulativeDrippedRewards,
+        reservePool_.stkToken.totalSupply(),
+        reservePool_.rewardsPoolsWeight
       );
     }
   }
 
-  function _dripAndApplyPendingDrippedRewards(
+  function _dripAndResetCumulativeRewardsValues(
     ReservePool[] storage reservePools_,
     UndrippedRewardPool[] storage undrippedRewardPools_
   ) internal override {
@@ -316,20 +301,19 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools_[i];
       _dripRewardPool(undrippedRewardPool_);
+      uint256 oldCumulativeDrippedRewards_ = undrippedRewardPool_.cumulativeDrippedRewards;
+      undrippedRewardPool_.cumulativeDrippedRewards = 0;
 
       for (uint16 j = 0; j < numReservePools_; j++) {
         ReservePool storage reservePool_ = reservePools_[j];
-        ClaimableRewardsData storage claimableRewardsData_ = claimableRewardsIndices[j][i];
-
-        claimableRewardsIndices[j][i] = _previewNextClaimableRewardsData(
-          claimableRewardsData_,
-          _computeUnclaimedDrippedRewards(
-            undrippedRewardPool_.cumulativeDrippedRewards,
-            claimableRewardsData_.cumulativeClaimedRewards,
-            reservePool_.rewardsPoolsWeight
-          ),
-          reservePool_.stkToken.totalSupply()
+        ClaimableRewardsData memory claimableRewardsData_ = _previewNextClaimableRewardsData(
+          claimableRewardsIndices[j][i],
+          oldCumulativeDrippedRewards_,
+          reservePool_.stkToken.totalSupply(),
+          reservePool_.rewardsPoolsWeight
         );
+        claimableRewardsIndices[j][i] =
+          ClaimableRewardsData({cumulativeClaimedRewards: 0, indexSnapshot: claimableRewardsData_.indexSnapshot});
       }
     }
   }

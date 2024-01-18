@@ -1547,23 +1547,23 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
   function _updateUserRewards(
     uint256, /* userStkTokenBalance */
-    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
+    mapping(uint16 => ClaimableRewardsData) storage, /* claimableRewardsIndices_ */
     UserRewardsData[] storage /* userRewards_ */
   ) internal view override {
     __readStub__();
   }
 
   function _applyPendingDrippedRewards(
-    ReservePool storage reservePool_,
-    mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
-  ) internal override {
+    ReservePool storage, /* reservePool_ */
+    mapping(uint16 => ClaimableRewardsData) storage /* claimableRewards_ */
+  ) internal view override {
     __readStub__();
   }
 
-  function _dripAndApplyPendingDrippedRewards(
-    ReservePool[] storage reservePools_,
-    UndrippedRewardPool[] storage undrippedRewardPools_
-  ) internal override {
+  function _dripAndResetCumulativeRewardsValues(
+    ReservePool[] storage, /* reservePools_ */
+    UndrippedRewardPool[] storage /* undrippedRewardPools_ */
+  ) internal view override {
     __readStub__();
   }
 }
