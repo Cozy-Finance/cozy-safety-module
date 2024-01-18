@@ -1229,7 +1229,7 @@ contract RedeemUndrippedRewards is TestBase {
     vm.warp(100);
     component.mockSetNextRewardsDripAmount(rewardAssetAmount_ / 2);
 
-    uint256 previewRewardAssetAmount_ = component.previewUndrippedRewardsWithdrawal(0, depositTokenAmount_);
+    uint256 previewRewardAssetAmount_ = component.previewUndrippedRewardsRedemption(0, depositTokenAmount_);
 
     vm.prank(owner_);
     uint256 resultRewardAssetAmount_ = _redeem(0, depositTokenAmount_, receiver_, owner_);
@@ -1249,7 +1249,7 @@ contract RedeemUndrippedRewards is TestBase {
     component.mockSetNextRewardsDripAmount(rewardAssetAmount_);
 
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
-    component.previewUndrippedRewardsWithdrawal(0, depositTokenAmount_);
+    component.previewUndrippedRewardsRedemption(0, depositTokenAmount_);
 
     vm.prank(owner_);
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
@@ -1263,7 +1263,7 @@ contract RedeemUndrippedRewards is TestBase {
     _deposit(0, owner_, reserveAssetAmount_, receiptTokenAmount_);
 
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
-    component.previewUndrippedRewardsWithdrawal(0, 2);
+    component.previewUndrippedRewardsRedemption(0, 2);
   }
 }
 
