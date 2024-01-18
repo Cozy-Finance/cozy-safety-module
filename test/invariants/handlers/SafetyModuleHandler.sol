@@ -381,8 +381,9 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
-    vm.prank(currentActor);
+    vm.startPrank(currentActor);
     safetyModule.claimRewards(currentReservePoolId, receiver_);
+    vm.stopPrank();
   }
 
   function completeRedemption(address caller_)
@@ -400,15 +401,17 @@ contract SafetyModuleHandler is TestBase {
     RedemptionPreview memory queuedRedemption_ = safetyModule.previewQueuedRedemption(redemptionId_);
 
     skip(queuedRedemption_.delayRemaining);
-    vm.prank(caller_);
+    vm.startPrank(caller_);
     safetyModule.completeRedemption(redemptionId_);
+    vm.stopPrank();
 
     ghost_redemptions[redemptionId_].completed = true;
   }
 
   function dripFees(address caller_) public virtual countCall("dripFees") advanceTime(_randomUint256()) {
-    vm.prank(caller_);
+    vm.startPrank(caller_);
     safetyModule.dripFees();
+    vm.stopPrank();
   }
 
   // ----------------------------------
@@ -419,8 +422,6 @@ contract SafetyModuleHandler is TestBase {
     uint256 invalidCallsBefore_ = invalidCalls["depositReserveAssetsWithExistingActor"];
 
     address actor_ = depositReserveAssetsWithExistingActor(assets_);
-
-    console2.log("currentReservePoolId", currentReservePoolId);
 
     calls["depositReserveAssetsWithExistingActor"] -= 1; // depositWithExistingActor increments by 1.
     if (invalidCallsBefore_ < invalidCalls["depositReserveAssetsWithExistingActor"]) {
@@ -520,8 +521,9 @@ contract SafetyModuleHandler is TestBase {
     assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
     _simulateTransferToSafetyModule(assetAmount_);
 
-    vm.prank(currentActor);
+    vm.startPrank(currentActor);
     uint256 shares_ = safetyModule.depositReserveAssetsWithoutTransfer(currentReservePoolId, assetAmount_, currentActor);
+    vm.stopPrank();
 
     ghost_reservePoolCumulative[currentReservePoolId].depositAssetAmount += assetAmount_;
     ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
@@ -559,8 +561,9 @@ contract SafetyModuleHandler is TestBase {
     assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
     _simulateTransferToSafetyModule(assetAmount_);
 
-    vm.prank(currentActor);
+    vm.startPrank(currentActor);
     uint256 shares_ = safetyModule.depositRewardAssetsWithoutTransfer(currentRewardPoolId, assetAmount_, currentActor);
+    vm.stopPrank();
 
     ghost_rewardPoolCumulative[currentRewardPoolId].totalAssetAmount += assetAmount_;
     ghost_rewardPoolCumulative[currentRewardPoolId].depositSharesAmount += shares_;
@@ -598,8 +601,9 @@ contract SafetyModuleHandler is TestBase {
     assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
     _simulateTransferToSafetyModule(assetAmount_);
 
-    vm.prank(currentActor);
+    vm.startPrank(currentActor);
     uint256 shares_ = safetyModule.stakeWithoutTransfer(currentReservePoolId, assetAmount_, currentActor);
+    vm.stopPrank();
 
     ghost_reservePoolCumulative[currentReservePoolId].stakeAssetAmount += assetAmount_;
     ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
