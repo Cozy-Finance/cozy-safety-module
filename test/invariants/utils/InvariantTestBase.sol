@@ -52,10 +52,6 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
   function setUp() public virtual {
     deployMockProtocol();
 
-    // TODO Move to MockDeployer
-    depositTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
-    stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
-
     _initSafetyModule();
     _initHandler();
   }
@@ -80,7 +76,7 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
     selectors[15] = SafetyModuleHandler.completeRedemption.selector;
     selectors[16] = SafetyModuleHandler.dripFees.selector;
     // TODO: This causes tests to fail - something missing from/in redeemUndrippedRewards potentially causing issues.
-    // selectors[13] = SafetyModuleHandler.redeemUndrippedRewards.selector;
+    // selectors[17] = SafetyModuleHandler.redeemUndrippedRewards.selector;
     return selectors;
   }
 
