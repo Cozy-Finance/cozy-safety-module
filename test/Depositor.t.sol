@@ -418,6 +418,17 @@ abstract contract DepositorUnitTest is TestBase {
     vm.prank(depositor_);
     _deposit(depositType, true, 0, amountToDeposit_, receiver_, address(0));
   }
+
+  function test_depositWithoutTransfer_RevertZeroShares() external {
+    address depositor_ = _randomAddress();
+    address receiver_ = _randomAddress();
+    uint256 amountToDeposit_ = 0;
+
+    // 0 assets should give 0 shares.
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
+    vm.prank(depositor_);
+    _deposit(depositType, false, 0, amountToDeposit_, receiver_, address(0));
+  }
 }
 
 contract ReservePoolDepositorUnitTest is DepositorUnitTest {
