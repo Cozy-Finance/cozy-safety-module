@@ -2,10 +2,13 @@
 pragma solidity 0.8.22;
 
 import {console2} from "forge-std/console2.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Manager} from "../../../src/Manager.sol";
 import {SafetyModule} from "../../../src/SafetyModule.sol";
 import {SafetyModuleState, TriggerState} from "../../../src/lib/SafetyModuleStates.sol";
+import {ReservePool} from "../../../src/lib/structs/Pools.sol";
 import {RedemptionPreview} from "../../../src/lib/structs/Redemptions.sol";
+import {Slash} from "../../../src/lib/structs/Slash.sol";
 import {Trigger} from "../../../src/lib/structs/Trigger.sol";
 import {IERC20} from "../../../src/interfaces/IERC20.sol";
 import {ISafetyModule} from "../../../src/interfaces/ISafetyModule.sol";
@@ -15,6 +18,7 @@ import {MockTrigger} from "../../utils/MockTrigger.sol";
 import {TestBase} from "../../utils/TestBase.sol";
 
 contract SafetyModuleHandler is TestBase {
+  using FixedPointMathLib for uint256;
   using AddressSetLib for AddressSet;
 
   uint64 constant SECONDS_IN_A_YEAR = 365 * 24 * 60 * 60;
@@ -31,6 +35,7 @@ contract SafetyModuleHandler is TestBase {
   uint256 numRewardPools;
 
   ITrigger[] public triggers;
+  ITrigger[] public triggeredTriggers; // Triggers that have triggered the safety module.
 
   mapping(string => uint256) public calls;
   mapping(string => uint256) public invalidCalls;
@@ -48,6 +53,8 @@ contract SafetyModuleHandler is TestBase {
   uint16 public currentReservePoolId;
 
   uint16 public currentRewardPoolId;
+
+  address public currentPayoutHandler;
 
   ITrigger public currentTrigger;
 
@@ -449,12 +456,41 @@ contract SafetyModuleHandler is TestBase {
     }
     MockTrigger(address(currentTrigger)).mockState(TriggerState.TRIGGERED);
     safetyModule.trigger(currentTrigger);
+    triggeredTriggers.push(currentTrigger);
 
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       assertEq(safetyModule.safetyModuleState(), SafetyModuleState.PAUSED);
     } else {
       assertEq(safetyModule.safetyModuleState(), SafetyModuleState.TRIGGERED);
     }
+  }
+
+  function slash(uint256 seedA_, uint256 seedB_)
+    public
+    virtual
+    useValidPayoutHandler(seedA_)
+    countCall("slash")
+    advanceTime(seedA_)
+  {
+    if (safetyModule.numPendingSlashes() == 0 || safetyModule.safetyModuleState() != SafetyModuleState.TRIGGERED) {
+      invalidCalls["slash"] += 1;
+      return;
+    }
+
+    Slash[] memory slashes_ = new Slash[](numReservePools);
+    for (uint16 i = 0; i < numReservePools; i++) {
+      ReservePool memory reservePool_ = getReservePool(safetyModule, uint16(i));
+
+      uint256 depositAmountToSlash_ = reservePool_.depositAmount > 0 ? bound(seedA_, 0, reservePool_.depositAmount) : 0;
+      uint256 stakeAmountToSlash_ = reservePool_.stakeAmount > 0
+        ? bound(seedB_, 0, reservePool_.stakeAmount.mulWadUp(reservePool_.maxSlashPercentage))
+        : 0;
+
+      slashes_[i] = Slash({reservePoolId: uint16(i), amount: depositAmountToSlash_ + stakeAmountToSlash_});
+    }
+
+    vm.prank(currentPayoutHandler);
+    safetyModule.slash(slashes_, _randomAddress());
   }
 
   // ----------------------------------
@@ -509,6 +545,7 @@ contract SafetyModuleHandler is TestBase {
     console2.log("pause", calls["pause"]);
     console2.log("unpause", calls["unpause"]);
     console2.log("trigger", calls["trigger"]);
+    console2.log("slash", calls["slash"]);
     console2.log("----------------------------------------------------------------------------");
     console2.log("Invalid calls:");
     console2.log("");
@@ -539,6 +576,7 @@ contract SafetyModuleHandler is TestBase {
     console2.log("pause", invalidCalls["pause"]);
     console2.log("unpause", invalidCalls["unpause"]);
     console2.log("trigger", invalidCalls["trigger"]);
+    console2.log("slash", invalidCalls["slash"]);
   }
 
   function _depositReserveAssets(uint256 assetAmount_, string memory callName_) internal {
@@ -754,8 +792,23 @@ contract SafetyModuleHandler is TestBase {
     // Iterate through triggers to find the first trigger that can has not yet triggered the safety module,
     // if there is one.
     for (uint256 i = initIndex_; indicesVisited_ < triggers.length; i = (i + 1) % triggers.length) {
-      if (!safetyModule.triggerData(currentTrigger).triggered) {
+      if (!safetyModule.triggerData(triggers[i]).triggered) {
         currentTrigger = triggers[i];
+        break;
+      }
+      indicesVisited_++;
+    }
+    _;
+  }
+
+  modifier useValidPayoutHandler(uint256 seed_) {
+    uint256 initIndex_ = bound(seed_, 0, triggeredTriggers.length - 1);
+    uint256 indicesVisited_ = 0;
+
+    for (uint256 i = initIndex_; indicesVisited_ < triggeredTriggers.length; i = (i + 1) % triggeredTriggers.length) {
+      Trigger memory triggerData_ = safetyModule.triggerData(triggeredTriggers[i]);
+      if (triggerData_.triggered && safetyModule.payoutHandlerNumPendingSlashes(triggerData_.payoutHandler) > 0) {
+        currentPayoutHandler = triggerData_.payoutHandler;
         break;
       }
       indicesVisited_++;
