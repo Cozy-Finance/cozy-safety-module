@@ -4,12 +4,14 @@ pragma solidity 0.8.22;
 import {console2} from "forge-std/console2.sol";
 import {Manager} from "../../../src/Manager.sol";
 import {SafetyModule} from "../../../src/SafetyModule.sol";
-import {SafetyModuleState} from "../../../src/lib/SafetyModuleStates.sol";
+import {SafetyModuleState, TriggerState} from "../../../src/lib/SafetyModuleStates.sol";
 import {RedemptionPreview} from "../../../src/lib/structs/Redemptions.sol";
+import {Trigger} from "../../../src/lib/structs/Trigger.sol";
 import {IERC20} from "../../../src/interfaces/IERC20.sol";
 import {ISafetyModule} from "../../../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../../../src/interfaces/ITrigger.sol";
 import {AddressSet, AddressSetLib} from "../utils/AddressSet.sol";
+import {MockTrigger} from "../../utils/MockTrigger.sol";
 import {TestBase} from "../../utils/TestBase.sol";
 
 contract SafetyModuleHandler is TestBase {
@@ -439,12 +441,20 @@ contract SafetyModuleHandler is TestBase {
     safetyModule.unpause();
   }
 
-  function trigger(uint256 seed_) public virtual countCall("trigger") advanceTime(seed_) {
-    if (safetyModule.triggerData(currentTrigger).triggered) {
+  function trigger(uint256 seed_) public virtual useValidTrigger(seed_) countCall("trigger") advanceTime(seed_) {
+    Trigger memory triggerData_ = safetyModule.triggerData(currentTrigger);
+    if (triggerData_.triggered || !triggerData_.exists) {
       invalidCalls["trigger"] += 1;
       return;
     }
+    MockTrigger(address(currentTrigger)).mockState(TriggerState.TRIGGERED);
     safetyModule.trigger(currentTrigger);
+
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      assertEq(safetyModule.safetyModuleState(), SafetyModuleState.PAUSED);
+    } else {
+      assertEq(safetyModule.safetyModuleState(), SafetyModuleState.TRIGGERED);
+    }
   }
 
   // ----------------------------------
@@ -733,7 +743,18 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useValidTrigger(uint256 seed_) {
-    currentTrigger = triggers[bound(seed_, 0, triggers.length - 1)];
+    uint256 initIndex_ = bound(seed_, 0, triggers.length - 1);
+    uint256 indicesVisited_ = 0;
+
+    // Iterate through triggers to find the first trigger that can has not yet triggered the safety module,
+    // if there is one.
+    for (uint256 i = initIndex_; indicesVisited_ < triggers.length; i = (i + 1) % triggers.length) {
+      if (!safetyModule.triggerData(currentTrigger).triggered) {
+        currentTrigger = triggers[i];
+        break;
+      }
+      indicesVisited_++;
+    }
     _;
   }
 
