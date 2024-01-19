@@ -28,9 +28,14 @@ library AddressSetLib {
     }
   }
 
-  function rand(AddressSet storage s, uint256 seed) internal view returns (address) {
-    if (s.addrs.length > 0) return s.addrs[seed % s.addrs.length];
-    else return address(0xc0ffee);
+  function rand(AddressSet storage s, uint256 seed) internal returns (address) {
+    if (s.addrs.length > 0) {
+      return s.addrs[seed % s.addrs.length];
+    } else {
+      address defaultAddress_ = address(0xc0ffee);
+      add(s, defaultAddress_);
+      return defaultAddress_;
+    }
   }
 
   function reduce(AddressSet storage s, uint256 acc, function(uint256,address) external returns (uint256) func)
