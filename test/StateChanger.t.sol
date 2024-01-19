@@ -475,7 +475,7 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     __readStub__();
   }
 
-  function _dripRewardPool(RewardPool storage /*undrippedRewardPool_*/ ) internal override {
+  function _dripRewardPool(RewardPool storage /*rewardPool_*/ ) internal override {
     __readStub__();
   }
 
@@ -492,7 +492,7 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
 
   function _dripAndResetCumulativeRewardsValues(
     ReservePool[] storage, /*reservePools_*/
-    RewardPool[] storage /*undrippedRewardPools_*/
+    RewardPool[] storage /*rewardPools_*/
   ) internal override {
     __readStub__();
   }

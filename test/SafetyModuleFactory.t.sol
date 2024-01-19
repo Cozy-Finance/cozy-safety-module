@@ -52,7 +52,7 @@ contract SafetyModuleFactoryTest is TestBase {
       address(0),
       UpdateConfigsCalldataParams({
         reservePoolConfigs: new ReservePoolConfig[](0),
-        undrippedRewardPoolConfigs: new RewardPoolConfig[](0),
+        rewardPoolConfigs: new RewardPoolConfig[](0),
         triggerConfigUpdates: new TriggerConfig[](0),
         delaysConfig: Delays({configUpdateDelay: 0, configUpdateGracePeriod: 0, unstakeDelay: 0, withdrawDelay: 0})
       })
@@ -86,8 +86,8 @@ contract SafetyModuleFactoryTest is TestBase {
     reservePoolConfigs_[0] =
       ReservePoolConfig({maxSlashPercentage: 0, asset: asset_, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
 
-    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](1);
-    undrippedRewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(_randomAddress()))});
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
+    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(_randomAddress()))});
 
     Delays memory delaysConfig_ =
       Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
@@ -101,7 +101,7 @@ contract SafetyModuleFactoryTest is TestBase {
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
-      undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+      rewardPoolConfigs: rewardPoolConfigs_,
       triggerConfigUpdates: triggerConfig_,
       delaysConfig: delaysConfig_
     });
@@ -127,7 +127,7 @@ contract SafetyModuleFactoryTest is TestBase {
 
     RewardPool memory rewardPool_ = getRewardPool(safetyModule_, 0);
     assertEq(address(rewardPool_.asset), address(asset_));
-    assertEq(address(rewardPool_.dripModel), address(undrippedRewardPoolConfigs_[0].dripModel));
+    assertEq(address(rewardPool_.dripModel), address(rewardPoolConfigs_[0].dripModel));
   }
 
   function test_revertDeploySafetyModuleNotManager() public {
@@ -141,8 +141,8 @@ contract SafetyModuleFactoryTest is TestBase {
     reservePoolConfigs_[0] =
       ReservePoolConfig({maxSlashPercentage: 0, asset: asset_, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
 
-    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](1);
-    undrippedRewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(_randomAddress()))});
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
+    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(_randomAddress()))});
 
     Delays memory delaysConfig_ =
       Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
@@ -156,7 +156,7 @@ contract SafetyModuleFactoryTest is TestBase {
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
-      undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+      rewardPoolConfigs: rewardPoolConfigs_,
       triggerConfigUpdates: triggerConfig_,
       delaysConfig: delaysConfig_
     });

@@ -231,7 +231,7 @@ contract CozyRouter {
     );
   }
 
-  /// @notice Deposits assets into a `safetyModule_` undripped reward pool. Mints `depositTokenAmount_` to `receiver_`
+  /// @notice Deposits assets into a `safetyModule_` reward pool. Mints `depositTokenAmount_` to `receiver_`
   /// by depositing exactly `reserveAssetAmount_` of the reward pool's underlying tokens into the `safetyModule_`, and
   /// reverts if less than `minReceiptTokensReceived_` are minted. The specified amount of assets are transferred from
   /// the caller to the Safety Module.
@@ -243,7 +243,7 @@ contract CozyRouter {
     uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
   ) external payable returns (uint256 depositTokenAmount_) {
     // Caller must first approve this router to spend the reward pool's asset.
-    (,,, IERC20 asset_,,) = safetyModule_.undrippedRewardPools(rewardPoolId_);
+    (,,, IERC20 asset_,,) = safetyModule_.rewardPools(rewardPoolId_);
     asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);
 
     depositTokenAmount_ = depositRewardAssetsWithoutTransfer(
@@ -271,11 +271,11 @@ contract CozyRouter {
     if (depositTokenAmount_ < minReceiptTokensReceived_) revert SlippageExceeded();
   }
 
-  /// @notice Executes a deposit into `safetyModule_` in the undripped reward pool corresponding to `rewardPoolId`,
+  /// @notice Executes a deposit into `safetyModule_` in the reward pool corresponding to `rewardPoolId`,
   /// sending the resulting deposit tokens to `receiver_`. This method does not transfer the assets to the Safety
   /// Module which are necessary for the deposit, thus the caller should ensure that a transfer to the Safety Module
   /// with the needed amount of assets (`rewardAssetAmount_`) of the reward pool's underlying asset (viewable with
-  /// `safetyModule.undrippedRewardPools(rewardPoolId_)`) is transferred to the Safety Module before calling this
+  /// `safetyModule.rewardPools(rewardPoolId_)`) is transferred to the Safety Module before calling this
   /// method. In general, prefer using `CozyRouter.depositRewardAssets` to deposit into a Safety Module reward pool,
   /// this method is here to facilitate MultiCall transactions.
   function depositRewardAssetsWithoutTransfer(
@@ -419,9 +419,9 @@ contract CozyRouter {
     if (assetsReceived_ < minAssetsReceived_) revert SlippageExceeded();
   }
 
-  /// @notice Removes assets from a `safetyModule_` undripped reward pool. Burns `depositTokenAmount_` from owner and
+  /// @notice Removes assets from a `safetyModule_` reward pool. Burns `depositTokenAmount_` from owner and
   /// sends exactly `rewardAssetAmount_` of the reward pool's underlying tokens to the `receiver_`, and reverts if
-  /// more than `maxReceiptTokensBurned_` are burned. Withdrawal of assets from undripped reward pools can be completed
+  /// more than `maxReceiptTokensBurned_` are burned. Withdrawal of assets from reward pools can be completed
   /// instantly.
   function withdrawRewardPoolAssets(
     ISafetyModule safetyModule_,
@@ -434,12 +434,12 @@ contract CozyRouter {
     depositTokenAmount_ = safetyModule_.convertToRewardDepositTokenAmount(rewardPoolId_, rewardAssetAmount_);
     if (depositTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
     // Caller must first approve the CozyRouter to spend the deposit tokens.
-    safetyModule_.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, msg.sender);
+    safetyModule_.redeemRewards(rewardPoolId_, depositTokenAmount_, receiver_, msg.sender);
   }
 
-  // @notice Removes assets from a `safetyModule_` undripped reward pool. Burns `depositTokenAmount_` from owner and
+  // @notice Removes assets from a `safetyModule_` reward pool. Burns `depositTokenAmount_` from owner and
   /// sends exactly `rewardAssetAmount_` of the reward pool's underlying tokens to the `receiver_`, and reverts if
-  /// less than `minAssetsReceived_` would be received. Withdrawal of assets from undripped reward pools can be
+  /// less than `minAssetsReceived_` would be received. Withdrawal of assets from reward pools can be
   /// completed instantly.
   function redeemRewardPoolDepositTokens(
     ISafetyModule safetyModule_,
@@ -450,7 +450,7 @@ contract CozyRouter {
   ) external payable returns (uint256 assetsReceived_) {
     _assertAddressNotZero(receiver_);
     // Caller must first approve the CozyRouter to spend the deposit tokens.
-    assetsReceived_ = safetyModule_.redeemUndrippedRewards(poolId_, depositTokenAmount_, receiver_, msg.sender);
+    assetsReceived_ = safetyModule_.redeemRewards(poolId_, depositTokenAmount_, receiver_, msg.sender);
     if (assetsReceived_ < minAssetsReceived_) revert SlippageExceeded();
   }
 

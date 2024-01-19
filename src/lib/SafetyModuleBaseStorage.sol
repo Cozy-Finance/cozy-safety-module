@@ -16,10 +16,10 @@ abstract contract SafetyModuleBaseStorage {
   /// @dev Reserve pool index in this array is its ID
   ReservePool[] public reservePools;
 
-  /// @dev Undripped reward pool index in this array is its ID
-  RewardPool[] public undrippedRewardPools;
+  /// @dev Reward pool index in this array is its ID
+  RewardPool[] public rewardPools;
 
-  /// @notice Maps a reserve pool id to an undripped reward pool id to claimable reward index
+  /// @notice Maps a reserve pool id to an reward pool id to claimable reward index
   mapping(uint16 => mapping(uint16 => ClaimableRewardsData)) public claimableRewardsIndices;
 
   /// @notice Maps a reserve pool id to a user address to a user reward pool accounting struct.

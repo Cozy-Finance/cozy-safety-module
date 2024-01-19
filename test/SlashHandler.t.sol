@@ -194,7 +194,7 @@ contract TriggerHandlerTest is TestBase {
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: (stakeAmount_ + depositAmount_) * 3}));
-    // Mint safety module undripped rewards.
+    // Mint safety module rewards.
     mockAsset.mint(address(component), 3 * (stakeAmount_ + depositAmount_));
 
     Slash[] memory slashes_ = new Slash[](3);
@@ -412,7 +412,7 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
   }
 
   function mockAddRewardPool(RewardPool memory rewardPool_) external {
-    undrippedRewardPools.push(rewardPool_);
+    rewardPools.push(rewardPool_);
   }
 
   function mockAddAssetPool(IERC20 asset_, AssetPool memory assetPool_) external {
@@ -488,7 +488,7 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
 
   function _dripAndResetCumulativeRewardsValues(
     ReservePool[] storage, /* reservePools_ */
-    RewardPool[] storage /* undrippedRewardPools_ */
+    RewardPool[] storage /* rewardPools_ */
   ) internal view override {
     __readStub__();
   }

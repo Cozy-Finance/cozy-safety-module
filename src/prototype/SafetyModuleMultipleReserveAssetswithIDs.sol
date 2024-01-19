@@ -28,7 +28,7 @@ contract SafetyModule {
 
   mapping(IERC20 asset_ => uint256 amount_) public claimableRewardPools;
 
-  mapping(IERC20 asset_ => RewardPool rewardPool_) public undrippedRewardPools;
+  mapping(IERC20 asset_ => RewardPool rewardPool_) public rewardPools;
 
   mapping(IStkAsset asset_ => uint256 reserveAssetPoolId) public stkAssetToReserveAssetPoolId;
 

@@ -48,7 +48,7 @@ contract SafetyModule is
     __initGovernable(owner_, pauser_);
 
     ConfiguratorLib.applyConfigUpdates(
-      reservePools, undrippedRewardPools, triggerData, delays, stkTokenToReservePoolIds, receiptTokenFactory, configs_
+      reservePools, rewardPools, triggerData, delays, stkTokenToReservePoolIds, receiptTokenFactory, configs_
     );
   }
 }

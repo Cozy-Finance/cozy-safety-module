@@ -35,7 +35,7 @@ struct ConfigUpdateMetadata {
 
 struct UpdateConfigsCalldataParams {
   ReservePoolConfig[] reservePoolConfigs;
-  RewardPoolConfig[] undrippedRewardPoolConfigs;
+  RewardPoolConfig[] rewardPoolConfigs;
   TriggerConfig[] triggerConfigUpdates;
   Delays delaysConfig;
 }

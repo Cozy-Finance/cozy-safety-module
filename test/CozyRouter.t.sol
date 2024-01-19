@@ -90,12 +90,12 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
     });
     wethReservePoolId = 1;
 
-    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](2);
-    undrippedRewardPoolConfigs_[0] = RewardPoolConfig({
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](2);
+    rewardPoolConfigs_[0] = RewardPoolConfig({
       asset: IERC20(address(weth)),
       dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))
     });
-    undrippedRewardPoolConfigs_[1] =
+    rewardPoolConfigs_[1] =
       RewardPoolConfig({asset: rewardAssetA, dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))});
     wethRewardPoolId = 0;
 
@@ -114,7 +114,7 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
               self,
               UpdateConfigsCalldataParams({
                 reservePoolConfigs: reservePoolConfigs_,
-                undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+                rewardPoolConfigs: rewardPoolConfigs_,
                 triggerConfigUpdates: triggerConfig_,
                 delaysConfig: delaysConfig_
               }),
@@ -509,7 +509,7 @@ contract CozyRouterDepositTest is CozyRouterTestSetup {
     } else {
       RewardPool memory rewardPool_ = getRewardPool(safetyModule_, poolId_);
       assertEq(rewardPool_.depositToken.balanceOf(user_), shares);
-      assertEq(rewardPool_.amount, assets_);
+      assertEq(rewardPool_.undrippedRewards, assets_);
     }
   }
 
@@ -696,7 +696,7 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     );
 
     RewardPool memory rewardPool_ = getRewardPool(safetyModule, 1);
-    assertEq(rewardPool_.amount, wrappedAssetDepositAmount_);
+    assertEq(rewardPool_.undrippedRewards, wrappedAssetDepositAmount_);
   }
 
   function test_WrapBaseAssetViaConnectorForReserveDepositSharesLowerThanMinSharesReceived() public {
@@ -876,7 +876,7 @@ contract CozyRouterWithdrawTest is CozyRouterTestSetup {
 
       router.completeWithdraw(safetyModule_, 0);
     } else {
-      // Withdrawal from undripped rewwards is instant.
+      // Withdrawal from rewwards is instant.
       router.withdrawRewardPoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
     }
     vm.stopPrank();
@@ -1153,7 +1153,7 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
 
     uint256 poolAmount_ = isReserveDeposit_
       ? getReservePool(safetyModule, poolId_).depositAmount
-      : getRewardPool(safetyModule, poolId_).amount;
+      : getRewardPool(safetyModule, poolId_).undrippedRewards;
 
     assertEq(weth.balanceOf(address(safetyModule)) - poolAmount_, 0);
 
@@ -1359,8 +1359,8 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] =
       ReservePoolConfig({maxSlashPercentage: 0, asset: reserveAssetA, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
-    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](1);
-    undrippedRewardPoolConfigs_[0] =
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
+    rewardPoolConfigs_[0] =
       RewardPoolConfig({asset: rewardAssetA, dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))});
     Delays memory delaysConfig_ =
       Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
@@ -1370,7 +1370,7 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     triggerConfig_[2] = TriggerConfig({trigger: ITrigger(triggerC_), payoutHandler: _randomAddress(), exists: true});
 
     UpdateConfigsCalldataParams memory updateConfigsParams_ =
-      UpdateConfigsCalldataParams(reservePoolConfigs_, undrippedRewardPoolConfigs_, triggerConfig_, delaysConfig_);
+      UpdateConfigsCalldataParams(reservePoolConfigs_, rewardPoolConfigs_, triggerConfig_, delaysConfig_);
 
     {
       bytes[] memory calls_ = new bytes[](4);

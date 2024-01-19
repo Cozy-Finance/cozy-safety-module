@@ -52,7 +52,7 @@ abstract contract TestAssertions is Test {
     assertEq(address(actual_.asset), address(expected_.asset), "RewardPool.asset");
     assertEq(address(actual_.dripModel), address(expected_.dripModel), "RewardPool.dripModel");
     assertEq(address(actual_.depositToken), address(expected_.depositToken), "RewardPool.depositToken");
-    assertEq(actual_.amount, expected_.amount, "RewardPool.amount");
+    assertEq(actual_.undrippedRewards, expected_.undrippedRewards, "RewardPool.undrippedRewards");
     assertEq(
       actual_.cumulativeDrippedRewards, expected_.cumulativeDrippedRewards, "RewardPool.cumulativeDrippedRewards"
     );

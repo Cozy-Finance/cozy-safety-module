@@ -50,14 +50,14 @@ abstract contract RewardsHandler is SafetyModuleCommon {
   function dripRewards() public override {
     if (safetyModuleState == SafetyModuleState.PAUSED) return;
 
-    uint256 numRewardAssets_ = undrippedRewardPools.length;
+    uint256 numRewardAssets_ = rewardPools.length;
     for (uint16 i = 0; i < numRewardAssets_; i++) {
-      _dripRewardPool(undrippedRewardPools[i]);
+      _dripRewardPool(rewardPools[i]);
     }
   }
 
   function dripRewardPool(uint16 rewardPoolId_) external {
-    _dripRewardPool(undrippedRewardPools[rewardPoolId_]);
+    _dripRewardPool(rewardPools[rewardPoolId_]);
   }
 
   function claimRewards(uint16 reservePoolId_, address receiver_) public override {
@@ -72,7 +72,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
       userStkTokenBalance: stkToken_.balanceOf(msg.sender),
       totalStkTokenSupply: stkToken_.totalSupply(),
       rewardsWeight: reservePool_.rewardsPoolsWeight,
-      numRewardAssets: undrippedRewardPools.length,
+      numRewardAssets: rewardPools.length,
       numUserRewardAssets: userRewards_.length
     });
 
@@ -83,7 +83,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     // (4) Transfer the user's accrued rewards from the reward pool to the receiver.
     for (uint16 i = 0; i < claimRewardsData_.numRewardAssets; i++) {
       // Step (1)
-      RewardPool storage rewardPool_ = undrippedRewardPools[i];
+      RewardPool storage rewardPool_ = rewardPools[i];
       if (safetyModuleState_ != SafetyModuleState.PAUSED) _dripRewardPool(rewardPool_);
 
       {
@@ -127,11 +127,11 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     view
     returns (PreviewClaimableRewards[] memory previewClaimableRewards_)
   {
-    uint256 numRewardAssets_ = undrippedRewardPools.length;
+    uint256 numRewardAssets_ = rewardPools.length;
 
     RewardDrip[] memory nextRewardDrips_ = new RewardDrip[](numRewardAssets_);
     for (uint16 i = 0; i < numRewardAssets_; i++) {
-      nextRewardDrips_[i] = _previewNextRewardDrip(undrippedRewardPools[i]);
+      nextRewardDrips_[i] = _previewNextRewardDrip(rewardPools[i]);
     }
 
     previewClaimableRewards_ = new PreviewClaimableRewards[](reservePoolIds_.length);
@@ -165,7 +165,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
 
     RewardDrip memory rewardDrip_ = _previewNextRewardDrip(rewardPool_);
     if (rewardDrip_.amount > 0) {
-      rewardPool_.amount -= rewardDrip_.amount;
+      rewardPool_.undrippedRewards -= rewardDrip_.amount;
       rewardPool_.cumulativeDrippedRewards += rewardDrip_.amount;
     }
     rewardPool_.lastDripTime = uint128(block.timestamp);
@@ -184,7 +184,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     // the claimable rewards data. We have to update the index snapshot and cumulative claimed rewards at the same time
     // to keep accounting correct.
     if (totalStkTokenSupply_ > 0) {
-      // Round down, in favor of leaving assets in the undripped pool.
+      // Round down, in favor of leaving assets in the pool.
       uint256 unclaimedDrippedRewards_ = cumulativeDrippedRewards_.mulDivDown(rewardsWeight_, MathConstants.ZOC)
         - claimableRewardsData_.cumulativeClaimedRewards;
       nextClaimableRewardsData_.cumulativeClaimedRewards += unclaimedDrippedRewards_;
@@ -207,7 +207,10 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     return RewardDrip({
       rewardAsset: rewardPool_.asset,
       amount: _getNextDripAmount(
-        rewardPool_.amount, rewardPool_.dripModel, rewardPool_.lastDripTime, block.timestamp - rewardPool_.lastDripTime
+        rewardPool_.undrippedRewards,
+        rewardPool_.dripModel,
+        rewardPool_.lastDripTime,
+        block.timestamp - rewardPool_.lastDripTime
         )
     });
   }
@@ -230,7 +233,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     uint256 numUserRewardAssets_ = userRewards[reservePoolId_][owner_].length;
 
     for (uint16 i = 0; i < nextRewardDrips_.length; i++) {
-      RewardPool storage rewardPool_ = undrippedRewardPools[i];
+      RewardPool storage rewardPool_ = rewardPools[i];
       ClaimableRewardsData memory previewNextClaimableRewardsData_ = _previewNextClaimableRewardsData(
         claimableRewards_[i],
         rewardPool_.cumulativeDrippedRewards + nextRewardDrips_[i].amount,
@@ -277,12 +280,12 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     ReservePool storage reservePool_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal override {
-    uint256 numRewardAssets_ = undrippedRewardPools.length;
+    uint256 numRewardAssets_ = rewardPools.length;
     uint256 totalStkTokenSupply_ = reservePool_.stkToken.totalSupply();
     uint256 rewardsWeight_ = reservePool_.rewardsPoolsWeight;
 
     for (uint16 i = 0; i < numRewardAssets_; i++) {
-      RewardPool storage rewardPool_ = undrippedRewardPools[i];
+      RewardPool storage rewardPool_ = rewardPools[i];
       ClaimableRewardsData storage claimableRewardsData_ = claimableRewards_[i];
 
       claimableRewards_[i] = _previewNextClaimableRewardsData(
@@ -291,15 +294,15 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     }
   }
 
-  function _dripAndResetCumulativeRewardsValues(
-    ReservePool[] storage reservePools_,
-    RewardPool[] storage undrippedRewardPools_
-  ) internal override {
-    uint256 numRewardAssets_ = undrippedRewardPools_.length;
+  function _dripAndResetCumulativeRewardsValues(ReservePool[] storage reservePools_, RewardPool[] storage rewardPools_)
+    internal
+    override
+  {
+    uint256 numRewardAssets_ = rewardPools_.length;
     uint256 numReservePools_ = reservePools_.length;
 
     for (uint16 i = 0; i < numRewardAssets_; i++) {
-      RewardPool storage rewardPool_ = undrippedRewardPools_[i];
+      RewardPool storage rewardPool_ = rewardPools_[i];
       _dripRewardPool(rewardPool_);
       uint256 oldCumulativeDrippedRewards_ = rewardPool_.cumulativeDrippedRewards;
       rewardPool_.cumulativeDrippedRewards = 0;
@@ -323,7 +326,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_,
     UserRewardsData[] storage userRewards_
   ) internal override {
-    uint256 numRewardAssets_ = undrippedRewardPools.length;
+    uint256 numRewardAssets_ = rewardPools.length;
     uint256 numUserRewardAssets_ = userRewards_.length;
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       if (i < numUserRewardAssets_) {

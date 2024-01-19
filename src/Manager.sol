@@ -135,7 +135,7 @@ contract Manager is Governable, IManager {
     if (
       !ConfiguratorLib.isValidConfiguration(
         configs_.reservePoolConfigs,
-        configs_.undrippedRewardPoolConfigs,
+        configs_.rewardPoolConfigs,
         configs_.delaysConfig,
         allowedReservePools,
         allowedRewardPools

@@ -9,7 +9,7 @@ interface IConfiguratorEvents {
   /// @dev Emitted when a safety module owner queues a new configuration.
   event ConfigUpdatesQueued(
     ReservePoolConfig[] reservePoolConfigs,
-    RewardPoolConfig[] undrippedRewardPoolConfigs,
+    RewardPoolConfig[] rewardPoolConfigs,
     TriggerConfig[] triggerConfigUpdates,
     Delays delaysConfig,
     uint256 updateTime,
@@ -19,7 +19,7 @@ interface IConfiguratorEvents {
   /// @dev Emitted when a safety module's queued configuration updates are applied.
   event ConfigUpdatesFinalized(
     ReservePoolConfig[] reservePoolConfigs,
-    RewardPoolConfig[] undrippedRewardPoolConfigs,
+    RewardPoolConfig[] rewardPoolConfigs,
     TriggerConfig[] triggerConfigUpdates,
     Delays delaysConfig
   );
@@ -29,8 +29,6 @@ interface IConfiguratorEvents {
     uint16 indexed reservePoolId, address reserveAssetAddress, address stkTokenAddress, address depositTokenAddress
   );
 
-  /// @notice Emitted when an undripped reward pool is created.
-  event RewardPoolCreated(
-    uint16 indexed undrippedRewardPoolId, address rewardAssetAddress, address depositTokenAddress
-  );
+  /// @notice Emitted when an reward pool is created.
+  event RewardPoolCreated(uint16 indexed rewardPoolid, address rewardAssetAddress, address depositTokenAddress);
 }

@@ -126,21 +126,17 @@ contract TestBase is Test, TestAssertions {
     });
   }
 
-  function getRewardPool(ISafetyModule safetyModule_, uint256 undrippedRewardPoolId_)
-    internal
-    view
-    returns (RewardPool memory)
-  {
+  function getRewardPool(ISafetyModule safetyModule_, uint256 rewardPoolid_) internal view returns (RewardPool memory) {
     (
-      uint256 amount,
+      uint256 undrippedRewards,
       uint256 cumulativeDrippedRewards,
       uint128 lastDripTime,
       IERC20 asset,
       IDripModel dripModel,
       IReceiptToken depositToken
-    ) = safetyModule_.undrippedRewardPools(undrippedRewardPoolId_);
+    ) = safetyModule_.rewardPools(rewardPoolid_);
     return RewardPool({
-      amount: amount,
+      undrippedRewards: undrippedRewards,
       asset: asset,
       dripModel: dripModel,
       depositToken: depositToken,
@@ -165,7 +161,7 @@ contract TestBase is Test, TestAssertions {
 
   function copyRewardPool(RewardPool memory original_) internal pure returns (RewardPool memory copied_) {
     copied_.asset = original_.asset;
-    copied_.amount = original_.amount;
+    copied_.undrippedRewards = original_.undrippedRewards;
     copied_.cumulativeDrippedRewards = original_.cumulativeDrippedRewards;
     copied_.dripModel = original_.dripModel;
     copied_.depositToken = original_.depositToken;

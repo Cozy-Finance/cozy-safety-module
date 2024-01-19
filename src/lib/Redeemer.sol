@@ -64,8 +64,8 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint64 redemptionId_
   );
 
-  /// @dev Emitted when a user redeems undripped rewards.
-  event RedeemedUndrippedRewards(
+  /// @dev Emitted when a user redeems rewards.
+  event RedeemedRewards(
     address caller_,
     address indexed receiver_,
     address indexed owner_,
@@ -106,11 +106,11 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   /// `rewardAssetAmount_` of `rewardPoolId_` reward pool assets to `receiver_`. Reward pool assets can only be redeemed
   /// if they have not been dripped yet.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeemUndrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeemRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
     external
     returns (uint256 rewardAssetAmount_)
   {
-    RewardPool storage rewardPool_ = undrippedRewardPools[rewardPoolId_];
+    RewardPool storage rewardPool_ = rewardPools[rewardPoolId_];
     _dripRewardPool(rewardPool_);
 
     IReceiptToken depositToken_ = rewardPool_.depositToken;
@@ -118,16 +118,16 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       depositToken_,
       depositTokenAmount_,
       rewardPool_.dripModel,
-      rewardPool_.amount,
+      rewardPool_.undrippedRewards,
       rewardPool_.lastDripTime,
       block.timestamp - rewardPool_.lastDripTime
     );
 
     depositToken_.burn(msg.sender, owner_, depositTokenAmount_);
-    rewardPool_.amount -= rewardAssetAmount_;
+    rewardPool_.undrippedRewards -= rewardAssetAmount_;
     rewardPool_.asset.safeTransfer(receiver_, rewardAssetAmount_);
 
-    emit RedeemedUndrippedRewards(msg.sender, receiver_, owner_, depositToken_, depositTokenAmount_, rewardAssetAmount_);
+    emit RedeemedRewards(msg.sender, receiver_, owner_, depositToken_, depositTokenAmount_, rewardAssetAmount_);
   }
 
   /// @notice Completes the redemption request for the specified redemption ID.
@@ -182,19 +182,19 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     });
   }
 
-  function previewUndrippedRewardsWithdrawal(uint16 rewardPoolId_, uint256 depositTokenAmount_)
+  function previewRewardsWithdrawal(uint16 rewardPoolId_, uint256 depositTokenAmount_)
     external
     view
     returns (uint256 rewardAssetAmount_)
   {
-    RewardPool storage rewardPool_ = undrippedRewardPools[rewardPoolId_];
+    RewardPool storage rewardPool_ = rewardPools[rewardPoolId_];
     uint256 lastDripTime_ = rewardPool_.lastDripTime;
 
     rewardAssetAmount_ = _previewRedemption(
       rewardPool_.depositToken,
       depositTokenAmount_,
       rewardPool_.dripModel,
-      rewardPool_.amount,
+      rewardPool_.undrippedRewards,
       lastDripTime_,
       block.timestamp - lastDripTime_
     );

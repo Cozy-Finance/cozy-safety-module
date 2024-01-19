@@ -12,7 +12,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   /// @notice Claim staking rewards for a given reserve pool.
   function claimRewards(uint16 reservePoolId_, address receiver_) public virtual;
 
-  /// @notice Updates the balances for each undripped reward pool by applying a drip factor on them, and increment the
+  /// @notice Updates the balances for each reward pool by applying a drip factor on them, and increment the
   /// claimable rewards index for each claimable rewards pool.
   /// @dev Defined in RewardsHandler.
   function dripRewards() public virtual;
@@ -73,8 +73,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
 
   function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal virtual;
 
-  function _dripAndResetCumulativeRewardsValues(
-    ReservePool[] storage reservePools_,
-    RewardPool[] storage undrippedRewardPools_
-  ) internal virtual;
+  function _dripAndResetCumulativeRewardsValues(ReservePool[] storage reservePools_, RewardPool[] storage rewardPools_)
+    internal
+    virtual;
 }

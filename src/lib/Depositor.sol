@@ -60,7 +60,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     external
     returns (uint256 depositTokenAmount_)
   {
-    RewardPool storage rewardsPool_ = undrippedRewardPools[rewardPoolId_];
+    RewardPool storage rewardsPool_ = rewardPools[rewardPoolId_];
 
     IERC20 underlyingToken_ = rewardsPool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
@@ -78,7 +78,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     external
     returns (uint256 depositTokenAmount_)
   {
-    RewardPool storage rewardsPool_ = undrippedRewardPools[rewardPoolId_];
+    RewardPool storage rewardsPool_ = rewardPools[rewardPoolId_];
     IERC20 underlyingToken_ = rewardsPool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
 
@@ -122,10 +122,10 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     IReceiptToken depositToken_ = rewardPool_.depositToken;
 
     depositTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
-      rewardAssetAmount_, depositToken_.totalSupply(), rewardPool_.amount
+      rewardAssetAmount_, depositToken_.totalSupply(), rewardPool_.undrippedRewards
     );
     // Increment reward pool accounting only after calculating `depositTokenAmount_` to mint.
-    rewardPool_.amount += rewardAssetAmount_;
+    rewardPool_.undrippedRewards += rewardAssetAmount_;
     assetPool_.amount += rewardAssetAmount_;
 
     depositToken_.mint(receiver_, depositTokenAmount_);

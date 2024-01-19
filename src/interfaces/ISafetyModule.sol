@@ -104,7 +104,7 @@ interface ISafetyModule {
   /// `rewardAssetAmount_` of `rewardPoolId_` reward pool assets to `receiver_`. Reward pool assets can only be redeemed
   /// if they have not been dripped yet.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeemUndrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeemRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
     external
     returns (uint256 rewardAssetAmount_);
 
@@ -134,9 +134,9 @@ interface ISafetyModule {
       uint128 lastFeesDripTime
     );
 
-  /// @notice Retrieve accounting and metadata about undripped reward pools.
-  /// @dev Claimable reward pool IDs are mapped 1:1 with undripped reward pool IDs.
-  function undrippedRewardPools(uint256 id_)
+  /// @notice Retrieve accounting and metadata about reward pools.
+  /// @dev Claimable reward pool IDs are mapped 1:1 with reward pool IDs.
+  function rewardPools(uint256 id_)
     external
     view
     returns (

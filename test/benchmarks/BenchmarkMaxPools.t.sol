@@ -38,7 +38,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     _createSafetyModule(
       UpdateConfigsCalldataParams({
         reservePoolConfigs: _createReservePools(numReserveAssets),
-        undrippedRewardPoolConfigs: _createUndrippedRewardPools(numRewardAssets),
+        rewardPoolConfigs: _createRewardPools(numRewardAssets),
         triggerConfigUpdates: _createTriggerConfig(),
         delaysConfig: DEFAULT_DELAYS
       })
@@ -70,15 +70,15 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     return reservePoolConfigs_;
   }
 
-  function _createUndrippedRewardPools(uint16 numPools) internal returns (RewardPoolConfig[] memory) {
-    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](numPools);
+  function _createRewardPools(uint16 numPools) internal returns (RewardPoolConfig[] memory) {
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](numPools);
     for (uint256 i = 0; i < numPools; i++) {
-      undrippedRewardPoolConfigs_[i] = RewardPoolConfig({
+      rewardPoolConfigs_[i] = RewardPoolConfig({
         asset: IERC20(address(new MockERC20("Mock Reward Asset", "cozyRew", 18))),
         dripModel: IDripModel(address(new DripModelExponential(DEFAULT_DRIP_RATE)))
       });
     }
-    return undrippedRewardPoolConfigs_;
+    return rewardPoolConfigs_;
   }
 
   function _createTriggerConfig() internal returns (TriggerConfig[] memory) {
@@ -168,12 +168,9 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     vm.stopPrank();
   }
 
-  function _setUpRedeemUndrippedRewards(uint16 rewardPoolId_, address receiver_)
-    internal
-    returns (uint256 depositTokenAmount_)
-  {
+  function _setUpRedeemRewards(uint16 rewardPoolId_, address receiver_) internal returns (uint256 depositTokenAmount_) {
     RewardPool memory rewardPool_ = getRewardPool(ISafetyModule(address(safetyModule)), rewardPoolId_);
-    _depositRewardAssets(rewardPoolId_, rewardPool_.amount, receiver_);
+    _depositRewardAssets(rewardPoolId_, rewardPool_.undrippedRewards, receiver_);
 
     depositTokenAmount_ = rewardPool_.depositToken.balanceOf(receiver_);
     vm.startPrank(receiver_);
@@ -183,7 +180,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
 
   function _setUpConfigUpdate() internal returns (UpdateConfigsCalldataParams memory updateConfigs_) {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numReserveAssets + 1);
-    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](numRewardAssets + 1);
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](numRewardAssets + 1);
 
     uint16 weightSum_ = 0;
     for (uint256 i = 0; i < numReserveAssets + 1; i++) {
@@ -203,9 +200,9 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     for (uint256 i = 0; i < numRewardAssets + 1; i++) {
       if (i < numRewardAssets) {
         RewardPool memory rewardPool_ = getRewardPool(ISafetyModule(address(safetyModule)), i);
-        undrippedRewardPoolConfigs_[i] = RewardPoolConfig({asset: rewardPool_.asset, dripModel: rewardPool_.dripModel});
+        rewardPoolConfigs_[i] = RewardPoolConfig({asset: rewardPool_.asset, dripModel: rewardPool_.dripModel});
       } else {
-        undrippedRewardPoolConfigs_[i] = RewardPoolConfig({
+        rewardPoolConfigs_[i] = RewardPoolConfig({
           asset: IERC20(address(new MockERC20("Mock Reward Asset", "cozyRew", 18))),
           dripModel: IDripModel(address(new DripModelExponential(DEFAULT_DRIP_RATE)))
         });
@@ -217,7 +214,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
 
     updateConfigs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
-      undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+      rewardPoolConfigs: rewardPoolConfigs_,
       triggerConfigUpdates: triggerConfig_,
       delaysConfig: delaysConfig_
     });
@@ -226,7 +223,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
   function test_createSafetyModule() public {
     UpdateConfigsCalldataParams memory updateConfigs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: _createReservePools(numReserveAssets),
-      undrippedRewardPoolConfigs: _createUndrippedRewardPools(numRewardAssets),
+      rewardPoolConfigs: _createRewardPools(numRewardAssets),
       triggerConfigUpdates: _createTriggerConfig(),
       delaysConfig: DEFAULT_DELAYS
     });
@@ -290,14 +287,14 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     console2.log("Gas used for completeRedemption: %s", gasInitial_ - gasleft());
   }
 
-  function test_redeemUndrippedRewards() public {
+  function test_redeemRewards() public {
     (uint16 rewardPoolId_,, address receiver_) = _randomSingleActionFixture(false);
-    uint256 depositTokenAmount_ = _setUpRedeemUndrippedRewards(rewardPoolId_, receiver_);
+    uint256 depositTokenAmount_ = _setUpRedeemRewards(rewardPoolId_, receiver_);
 
     vm.startPrank(receiver_);
     uint256 gasInitial_ = gasleft();
-    safetyModule.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, receiver_);
-    console2.log("Gas used for redeemUndrippedRewards: %s", gasInitial_ - gasleft());
+    safetyModule.redeemRewards(rewardPoolId_, depositTokenAmount_, receiver_, receiver_);
+    console2.log("Gas used for redeemRewards: %s", gasInitial_ - gasleft());
     vm.stopPrank();
   }
 

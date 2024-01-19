@@ -61,7 +61,7 @@ contract StakerUnitTest is TestBase {
     component.mockAddReservePool(initialReservePool_);
     component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
 
-    component.mockAddUndrippedRewardPool(IERC20(address(mockAsset)), cumulativeDrippedRewards_);
+    component.mockAddRewardPool(IERC20(address(mockAsset)), cumulativeDrippedRewards_);
     component.mockSetClaimableRewardIndex(0, 0, initialIndexSnapshot_, cumulativeClaimedRewards_);
   }
 
@@ -366,12 +366,12 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     assetPools[asset_] = assetPool_;
   }
 
-  function mockAddUndrippedRewardPool(IERC20 rewardAsset_, uint256 cumulativeDrippedRewards_) external {
-    undrippedRewardPools.push(
+  function mockAddRewardPool(IERC20 rewardAsset_, uint256 cumulativeDrippedRewards_) external {
+    rewardPools.push(
       RewardPool({
         asset: rewardAsset_,
         dripModel: IDripModel(address(new MockDripModel(1e18))),
-        amount: 0,
+        undrippedRewards: 0,
         depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6))),
         cumulativeDrippedRewards: cumulativeDrippedRewards_,
         lastDripTime: uint128(block.timestamp)
@@ -381,11 +381,11 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
 
   function mockSetClaimableRewardIndex(
     uint16 reservePoolId_,
-    uint16 undrippedRewardPoolId_,
+    uint16 rewardPoolid_,
     uint256 indexSnapshot_,
     uint256 cumulativeClaimedRewards_
   ) external {
-    claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_] = ClaimableRewardsData({
+    claimableRewardsIndices[reservePoolId_][rewardPoolid_] = ClaimableRewardsData({
       indexSnapshot: indexSnapshot_.safeCastTo128(),
       cumulativeClaimedRewards: cumulativeClaimedRewards_
     });
@@ -400,12 +400,12 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     return assetPools[asset_];
   }
 
-  function getClaimableRewardIndex(uint16 reservePoolId_, uint16 undrippedRewardPoolId_)
+  function getClaimableRewardIndex(uint16 reservePoolId_, uint16 rewardPoolid_)
     external
     view
     returns (ClaimableRewardsData memory)
   {
-    return claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_];
+    return claimableRewardsIndices[reservePoolId_][rewardPoolid_];
   }
 
   // -------- Overridden abstract function placeholders --------

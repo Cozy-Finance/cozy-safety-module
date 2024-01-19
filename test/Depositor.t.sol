@@ -57,17 +57,17 @@ abstract contract DepositorUnitTest is TestBase {
       maxSlashPercentage: MathConstants.WAD,
       lastFeesDripTime: uint128(block.timestamp)
     });
-    RewardPool memory initialUndrippedRewardPool_ = RewardPool({
+    RewardPool memory initialRewardPool_ = RewardPool({
       asset: IERC20(address(mockAsset)),
       depositToken: IReceiptToken(address(mockRewardPoolDepositToken)),
       dripModel: IDripModel(address(0)),
-      amount: 50e18,
+      undrippedRewards: 50e18,
       cumulativeDrippedRewards: 0,
       lastDripTime: uint128(block.timestamp)
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: initialSafetyModuleBal});
     component.mockAddReservePool(initialReservePool_);
-    component.mockAddUndrippedRewardPool(initialUndrippedRewardPool_);
+    component.mockAddRewardPool(initialRewardPool_);
     component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
   }
 
@@ -120,7 +120,7 @@ abstract contract DepositorUnitTest is TestBase {
     assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
-    RewardPool memory finalUndrippedRewardPool_ = component.getRewardPool(0);
+    RewardPool memory finalRewardPool_ = component.getRewardPool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
     // No change
     assertEq(finalReservePool_.stakeAmount, 100e18);
@@ -133,10 +133,10 @@ abstract contract DepositorUnitTest is TestBase {
     }
     if (depositType == DepositType.REWARDS) {
       // 50e18 + 10e18
-      assertEq(finalUndrippedRewardPool_.amount, 60e18);
+      assertEq(finalRewardPool_.undrippedRewards, 60e18);
     } else {
       // No change
-      assertEq(finalUndrippedRewardPool_.amount, 50e18);
+      assertEq(finalRewardPool_.undrippedRewards, 50e18);
     }
     // 200e18 + 10e18
     assertEq(finalAssetPool_.amount, 210e18);
@@ -175,7 +175,7 @@ abstract contract DepositorUnitTest is TestBase {
     assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
-    RewardPool memory finalUndrippedRewardPool_ = component.getRewardPool(0);
+    RewardPool memory finalRewardPool_ = component.getRewardPool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
 
     // No change
@@ -189,10 +189,10 @@ abstract contract DepositorUnitTest is TestBase {
     }
     if (depositType == DepositType.REWARDS) {
       // 50e18 + 20e18
-      assertEq(finalUndrippedRewardPool_.amount, 70e18);
+      assertEq(finalRewardPool_.undrippedRewards, 70e18);
     } else {
       // No change
-      assertEq(finalUndrippedRewardPool_.amount, 50e18);
+      assertEq(finalRewardPool_.undrippedRewards, 50e18);
     }
     // 200e18 + 20e18
     assertEq(finalAssetPool_.amount, 220e18);
@@ -277,7 +277,7 @@ abstract contract DepositorUnitTest is TestBase {
     assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
-    RewardPool memory finalUndrippedRewardPool_ = component.getRewardPool(0);
+    RewardPool memory finalRewardPool_ = component.getRewardPool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
     // No change
     assertEq(finalReservePool_.stakeAmount, 100e18);
@@ -290,10 +290,10 @@ abstract contract DepositorUnitTest is TestBase {
     }
     if (depositType == DepositType.REWARDS) {
       // 50e18 + 10e18
-      assertEq(finalUndrippedRewardPool_.amount, 60e18);
+      assertEq(finalRewardPool_.undrippedRewards, 60e18);
     } else {
       // No change
-      assertEq(finalUndrippedRewardPool_.amount, 50e18);
+      assertEq(finalRewardPool_.undrippedRewards, 50e18);
     }
     // 200e18 + 10e18
     assertEq(finalAssetPool_.amount, 210e18);
@@ -332,7 +332,7 @@ abstract contract DepositorUnitTest is TestBase {
     assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
-    RewardPool memory finalUndrippedRewardPool_ = component.getRewardPool(0);
+    RewardPool memory finalRewardPool_ = component.getRewardPool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
     // No change
     assertEq(finalReservePool_.stakeAmount, 100e18);
@@ -345,10 +345,10 @@ abstract contract DepositorUnitTest is TestBase {
     }
     if (depositType == DepositType.REWARDS) {
       // 50e18 + 20e18
-      assertEq(finalUndrippedRewardPool_.amount, 70e18);
+      assertEq(finalRewardPool_.undrippedRewards, 70e18);
     } else {
       // No change
-      assertEq(finalUndrippedRewardPool_.amount, 50e18);
+      assertEq(finalRewardPool_.undrippedRewards, 50e18);
     }
     // 200e18 + 20e18
     assertEq(finalAssetPool_.amount, 220e18);
@@ -433,8 +433,8 @@ contract TestableDepositor is Depositor {
     reservePools.push(reservePool_);
   }
 
-  function mockAddUndrippedRewardPool(RewardPool memory rewardPool_) external {
-    undrippedRewardPools.push(rewardPool_);
+  function mockAddRewardPool(RewardPool memory rewardPool_) external {
+    rewardPools.push(rewardPool_);
   }
 
   function mockAddAssetPool(IERC20 asset_, AssetPool memory assetPool_) external {
@@ -446,8 +446,8 @@ contract TestableDepositor is Depositor {
     return reservePools[reservePoolId_];
   }
 
-  function getRewardPool(uint16 undrippedRewardPoolId_) external view returns (RewardPool memory) {
-    return undrippedRewardPools[undrippedRewardPoolId_];
+  function getRewardPool(uint16 rewardPoolid_) external view returns (RewardPool memory) {
+    return rewardPools[rewardPoolid_];
   }
 
   function getAssetPool(IERC20 asset_) external view returns (AssetPool memory) {
@@ -512,7 +512,7 @@ contract TestableDepositor is Depositor {
     __readStub__();
   }
 
-  function _dripRewardPool(RewardPool storage /*undrippedRewardPool_*/ ) internal view override {
+  function _dripRewardPool(RewardPool storage /*rewardPool_*/ ) internal view override {
     __readStub__();
   }
 
@@ -533,7 +533,7 @@ contract TestableDepositor is Depositor {
 
   function _dripAndResetCumulativeRewardsValues(
     ReservePool[] storage, /*reservePools_*/
-    RewardPool[] storage /*undrippedRewardPools_*/
+    RewardPool[] storage /*rewardPools_*/
   ) internal view override {
     __readStub__();
   }
