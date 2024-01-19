@@ -6,13 +6,13 @@ import {SafetyModuleBaseStorage} from "./SafetyModuleBaseStorage.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
 import {UserRewardsData, ClaimableRewardsData} from "./structs/Rewards.sol";
-import {ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
+import {ReservePool, RewardPool} from "./structs/Pools.sol";
 
 abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   /// @notice Claim staking rewards for a given reserve pool.
   function claimRewards(uint16 reservePoolId_, address receiver_) public virtual;
 
-  /// @notice Updates the balances for each undripped reward pool by applying a drip factor on them, and increment the
+  /// @notice Updates the balances for each reward pool by applying a drip factor on them, and increment the
   /// claimable rewards index for each claimable rewards pool.
   /// @dev Defined in RewardsHandler.
   function dripRewards() public virtual;
@@ -60,11 +60,11 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
 
   function _updateUserRewards(
     uint256 userStkTokenBalance_,
-    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsIndices_,
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewards_,
     UserRewardsData[] storage userRewards_
   ) internal virtual;
 
-  function _dripRewardPool(UndrippedRewardPool storage undrippedRewardPool_) internal virtual;
+  function _dripRewardPool(RewardPool storage rewardPool_) internal virtual;
 
   function _applyPendingDrippedRewards(
     ReservePool storage reservePool_,
@@ -73,8 +73,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
 
   function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal virtual;
 
-  function _dripAndResetCumulativeRewardsValues(
-    ReservePool[] storage reservePools_,
-    UndrippedRewardPool[] storage undrippedRewardPools_
-  ) internal virtual;
+  function _dripAndResetCumulativeRewardsValues(ReservePool[] storage reservePools_, RewardPool[] storage rewardPools_)
+    internal
+    virtual;
 }

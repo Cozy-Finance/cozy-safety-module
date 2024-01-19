@@ -5,11 +5,7 @@ import {DripModelExponential} from "cozy-safety-module-models/DripModelExponenti
 import {SafetyModule} from "../../../src/SafetyModule.sol";
 import {MathConstants} from "../../../src/lib/MathConstants.sol";
 import {TriggerState} from "../../../src/lib/SafetyModuleStates.sol";
-import {
-  ReservePoolConfig,
-  UndrippedRewardPoolConfig,
-  UpdateConfigsCalldataParams
-} from "../../../src/lib/structs/Configs.sol";
+import {ReservePoolConfig, RewardPoolConfig, UpdateConfigsCalldataParams} from "../../../src/lib/structs/Configs.sol";
 import {Delays} from "../../../src/lib/structs/Delays.sol";
 import {TriggerConfig} from "../../../src/lib/structs/Trigger.sol";
 import {IDripModel} from "../../../src/interfaces/IDripModel.sol";
@@ -114,8 +110,8 @@ abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is Invar
     reservePoolConfigs_[0] =
       ReservePoolConfig({maxSlashPercentage: 0, asset: asset, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
 
-    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
-    undrippedRewardPoolConfigs_[0] = UndrippedRewardPoolConfig({asset: asset, dripModel: dripDecayModel});
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
+    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset, dripModel: dripDecayModel});
 
     TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](1);
     triggerConfig_[0] = TriggerConfig({
@@ -126,17 +122,17 @@ abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is Invar
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
-      undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+      rewardPoolConfigs: rewardPoolConfigs_,
       triggerConfigUpdates: triggerConfig_,
       delaysConfig: delays
     });
 
     numReservePools = reservePoolConfigs_.length;
-    numRewardPools = undrippedRewardPoolConfigs_.length;
+    numRewardPools = rewardPoolConfigs_.length;
     safetyModule = manager.createSafetyModule(owner, pauser, configs_, _randomBytes32());
 
     vm.label(address(getReservePool(safetyModule, 0).depositToken), "reservePoolADepositToken");
     vm.label(address(getReservePool(safetyModule, 0).stkToken), "reservePoolAStkToken");
-    vm.label(address(getUndrippedRewardPool(safetyModule, 0).depositToken), "rewardPoolADepositToken");
+    vm.label(address(getRewardPool(safetyModule, 0).depositToken), "rewardPoolADepositToken");
   }
 }

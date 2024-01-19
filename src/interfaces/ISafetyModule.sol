@@ -9,7 +9,7 @@ import {IDripModel} from "./IDripModel.sol";
 import {IManager} from "./IManager.sol";
 import {IReceiptToken} from "./IReceiptToken.sol";
 import {IReceiptTokenFactory} from "./IReceiptTokenFactory.sol";
-import {UndrippedRewardPoolConfig, ReservePoolConfig} from "../lib/structs/Configs.sol";
+import {RewardPoolConfig, ReservePoolConfig} from "../lib/structs/Configs.sol";
 
 interface ISafetyModule {
   /// @notice Replaces the constructor for minimal proxies.
@@ -165,9 +165,9 @@ interface ISafetyModule {
   /// @notice The state of this SafetyModule.
   function safetyModuleState() external view returns (SafetyModuleState);
 
-  /// @notice Retrieve accounting and metadata about undripped reward pools.
-  /// @dev Claimable reward pool IDs are mapped 1:1 with undripped reward pool IDs.
-  function undrippedRewardPools(uint256 id_)
+  /// @notice Retrieve accounting and metadata about reward pools.
+  /// @dev Claimable reward pool IDs are mapped 1:1 with reward pool IDs.
+  function rewardPools(uint256 id_)
     external
     view
     returns (

@@ -14,7 +14,7 @@ import {StkToken} from "../src/StkToken.sol";
 import {
   ReservePoolConfig,
   TriggerConfig,
-  UndrippedRewardPoolConfig,
+  RewardPoolConfig,
   UpdateConfigsCalldataParams
 } from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
@@ -183,7 +183,7 @@ contract DeployProtocol is ScriptUtils {
       address(0),
       UpdateConfigsCalldataParams({
         reservePoolConfigs: new ReservePoolConfig[](0),
-        undrippedRewardPoolConfigs: new UndrippedRewardPoolConfig[](0),
+        rewardPoolConfigs: new RewardPoolConfig[](0),
         triggerConfigUpdates: new TriggerConfig[](0),
         delaysConfig: Delays({configUpdateDelay: 0, configUpdateGracePeriod: 0, unstakeDelay: 0, withdrawDelay: 0})
       })

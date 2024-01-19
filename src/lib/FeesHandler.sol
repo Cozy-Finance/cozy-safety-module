@@ -12,7 +12,7 @@ import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 import {SafeCastLib} from "./SafeCastLib.sol";
 import {MathConstants} from "./MathConstants.sol";
-import {UndrippedRewardPool, IdLookup} from "./structs/Pools.sol";
+import {RewardPool, IdLookup} from "./structs/Pools.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ISafetyModule} from "../interfaces/ISafetyModule.sol";

@@ -19,7 +19,7 @@ import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
-import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {AssetPool, ReservePool, RewardPool} from "../src/lib/structs/Pools.sol";
 import {Slash} from "../src/lib/structs/Slash.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
@@ -194,7 +194,7 @@ contract TriggerHandlerTest is TestBase {
       })
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: (stakeAmount_ + depositAmount_) * 3}));
-    // Mint safety module undripped rewards.
+    // Mint safety module rewards.
     mockAsset.mint(address(component), 3 * (stakeAmount_ + depositAmount_));
 
     Slash[] memory slashes_ = new Slash[](3);
@@ -411,8 +411,8 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
     reservePools.push(reservePool_);
   }
 
-  function mockAddRewardPool(UndrippedRewardPool memory rewardPool_) external {
-    undrippedRewardPools.push(rewardPool_);
+  function mockAddRewardPool(RewardPool memory rewardPool_) external {
+    rewardPools.push(rewardPool_);
   }
 
   function mockAddAssetPool(IERC20 asset_, AssetPool memory assetPool_) external {
@@ -461,13 +461,13 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
 
   function _updateUserRewards(
     uint256, /* userStkTokenBalance_*/
-    mapping(uint16 => ClaimableRewardsData) storage, /* claimableRewardsIndices_ */
+    mapping(uint16 => ClaimableRewardsData) storage, /* claimableRewards_ */
     UserRewardsData[] storage /* userRewards_ */
   ) internal view virtual override {
     __readStub__();
   }
 
-  function _dripRewardPool(UndrippedRewardPool storage /* undrippedRewardPool_ */ ) internal view override {
+  function _dripRewardPool(RewardPool storage /* rewardPool_ */ ) internal view override {
     __readStub__();
   }
 
@@ -488,7 +488,7 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
 
   function _dripAndResetCumulativeRewardsValues(
     ReservePool[] storage, /* reservePools_ */
-    UndrippedRewardPool[] storage /* undrippedRewardPools_ */
+    RewardPool[] storage /* rewardPools_ */
   ) internal view override {
     __readStub__();
   }

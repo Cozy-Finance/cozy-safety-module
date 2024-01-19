@@ -26,8 +26,8 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
   {
     depositTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       rewardAssetAmount_,
-      undrippedRewardPools[rewardPoolId_].depositToken.totalSupply(),
-      undrippedRewardPools[rewardPoolId_].amount
+      rewardPools[rewardPoolId_].depositToken.totalSupply(),
+      rewardPools[rewardPoolId_].undrippedRewards
     );
   }
 
@@ -77,8 +77,8 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
   {
     rewardAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
       depositTokenAmount_,
-      undrippedRewardPools[rewardPoolId_].depositToken.totalSupply(),
-      undrippedRewardPools[rewardPoolId_].amount
+      rewardPools[rewardPoolId_].depositToken.totalSupply(),
+      rewardPools[rewardPoolId_].undrippedRewards
     );
   }
 }

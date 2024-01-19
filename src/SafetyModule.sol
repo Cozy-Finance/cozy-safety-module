@@ -6,7 +6,7 @@ import {IManager} from "./interfaces/IManager.sol";
 import {IDripModel} from "./interfaces/IDripModel.sol";
 import {IReceiptToken} from "./interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "./interfaces/IReceiptTokenFactory.sol";
-import {UndrippedRewardPoolConfig, ReservePoolConfig, UpdateConfigsCalldataParams} from "./lib/structs/Configs.sol";
+import {RewardPoolConfig, ReservePoolConfig, UpdateConfigsCalldataParams} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
 import {TriggerConfig} from "./lib/structs/Trigger.sol";
 import {Configurator} from "./lib/Configurator.sol";
@@ -48,7 +48,7 @@ contract SafetyModule is
     __initGovernable(owner_, pauser_);
 
     ConfiguratorLib.applyConfigUpdates(
-      reservePools, undrippedRewardPools, triggerData, delays, stkTokenToReservePoolIds, receiptTokenFactory, configs_
+      reservePools, rewardPools, triggerData, delays, stkTokenToReservePoolIds, receiptTokenFactory, configs_
     );
   }
 }

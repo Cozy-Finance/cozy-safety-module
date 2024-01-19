@@ -2,11 +2,9 @@
 pragma solidity 0.8.22;
 
 import {DripModelExponential} from "cozy-safety-module-models/DripModelExponential.sol";
-import {
-  UndrippedRewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig
-} from "../src/lib/structs/Configs.sol";
+import {RewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
-import {UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {RewardPool} from "../src/lib/structs/Pools.sol";
 import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
 import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
@@ -39,8 +37,8 @@ abstract contract DripModelIntegrationTestSetup is MockDeployProtocol {
     reservePoolConfigs_[0] =
       ReservePoolConfig({maxSlashPercentage: 0, asset: reserveAsset, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
 
-    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
-    undrippedRewardPoolConfigs_[0] = UndrippedRewardPoolConfig({
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
+    rewardPoolConfigs_[0] = RewardPoolConfig({
       asset: rewardAsset,
       dripModel: IDripModel(address(new DripModelExponential(DEFAULT_DRIP_RATE)))
     });
@@ -62,7 +60,7 @@ abstract contract DripModelIntegrationTestSetup is MockDeployProtocol {
           self,
           UpdateConfigsCalldataParams({
             reservePoolConfigs: reservePoolConfigs_,
-            undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+            rewardPoolConfigs: rewardPoolConfigs_,
             triggerConfigUpdates: triggerConfig_,
             delaysConfig: delaysConfig_
           }),
@@ -100,7 +98,7 @@ contract RewardsDripModelIntegrationTest is DripModelIntegrationTestSetup {
 
   function _setRewardsDripModel(uint256 rate_) internal {
     DripModelExponential rewardsDripModel_ = new DripModelExponential(rate_);
-    (,,,, IDripModel currentRewardsDripModel_,) = safetyModule.undrippedRewardPools(0);
+    (,,,, IDripModel currentRewardsDripModel_,) = safetyModule.rewardPools(0);
     vm.etch(address(currentRewardsDripModel_), address(rewardsDripModel_).code);
   }
 
@@ -113,7 +111,7 @@ contract RewardsDripModelIntegrationTest is DripModelIntegrationTestSetup {
     assertEq(rewardAsset.balanceOf(receiver_), expectedClaimedRewards_);
 
     // Reset reward pool.
-    (uint256 currentAmount_,,,,,) = safetyModule.undrippedRewardPools(0);
+    (uint256 currentAmount_,,,,,) = safetyModule.rewardPools(0);
     if (REWARD_POOL_AMOUNT - currentAmount_ > 0) {
       depositRewards(safetyModule, REWARD_POOL_AMOUNT - currentAmount_, _randomAddress());
     }

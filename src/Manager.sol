@@ -6,7 +6,7 @@ import {IDripModel} from "./interfaces/IDripModel.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
-import {UndrippedRewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig} from "./lib/structs/Configs.sol";
+import {RewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
 import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
 import {Governable} from "./lib/Governable.sol";
@@ -135,7 +135,7 @@ contract Manager is Governable, IManager {
     if (
       !ConfiguratorLib.isValidConfiguration(
         configs_.reservePoolConfigs,
-        configs_.undrippedRewardPoolConfigs,
+        configs_.rewardPoolConfigs,
         configs_.delaysConfig,
         allowedReservePools,
         allowedRewardPools

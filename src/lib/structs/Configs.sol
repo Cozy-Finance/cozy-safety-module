@@ -6,7 +6,7 @@ import {IDripModel} from "../../interfaces/IDripModel.sol";
 import {Delays} from "./Delays.sol";
 import {TriggerConfig} from "./Trigger.sol";
 
-struct UndrippedRewardPoolConfig {
+struct RewardPoolConfig {
   IERC20 asset;
   IDripModel dripModel;
 }
@@ -19,9 +19,9 @@ struct ReservePoolConfig {
 
 /// @notice Metadata for a configuration update.
 struct ConfigUpdateMetadata {
-  // A hash representing queued `UndrippedRewardPoolConfig[]`, `ReservePoolConfig[]` and `Delays` updates. This hash is
+  // A hash representing queued `RewardPoolConfig[]`, `ReservePoolConfig[]` and `Delays` updates. This hash is
   // used to prove that the params used when applying config updates are identical to the queued updates.
-  // This strategy is used instead of storing non-hashed UndrippedRewardPoolConfig[]`, `ReservePoolConfig[]` and
+  // This strategy is used instead of storing non-hashed RewardPoolConfig[]`, `ReservePoolConfig[]` and
   // `Delays` for gas optimization and to avoid dynamic array manipulation. This hash is set to bytes32(0) when there is
   // no config update queued.
   bytes32 queuedConfigUpdateHash;
@@ -35,7 +35,7 @@ struct ConfigUpdateMetadata {
 
 struct UpdateConfigsCalldataParams {
   ReservePoolConfig[] reservePoolConfigs;
-  UndrippedRewardPoolConfig[] undrippedRewardPoolConfigs;
+  RewardPoolConfig[] rewardPoolConfigs;
   TriggerConfig[] triggerConfigUpdates;
   Delays delaysConfig;
 }

@@ -16,7 +16,7 @@ import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
-import {UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {RewardPool} from "../src/lib/structs/Pools.sol";
 import {ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";
@@ -63,8 +63,8 @@ contract StakerUnitTest is TestBase {
     component.mockAddReservePool(initialReservePool_);
     component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
 
-    component.mockAddUndrippedRewardPool(IERC20(address(mockAsset)), cumulativeDrippedRewards_);
-    component.mockSetClaimableRewardIndex(0, 0, initialIndexSnapshot_, cumulativeClaimedRewards_);
+    component.mockAddRewardPool(IERC20(address(mockAsset)), cumulativeDrippedRewards_);
+    component.mockSetClaimableRewardsData(0, 0, initialIndexSnapshot_, cumulativeClaimedRewards_);
 
     deal(address(mockAsset), address(component), initialSafetyModuleBal);
   }
@@ -96,7 +96,7 @@ contract StakerUnitTest is TestBase {
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
-    ClaimableRewardsData memory finalClaimableRewardsData_ = component.getClaimableRewardIndex(0, 0);
+    ClaimableRewardsData memory finalClaimableRewardsData_ = component.getClaimableRewardsData(0, 0);
 
     // 100e18 + 20e18
     assertEq(finalReservePool_.stakeAmount, 120e18);
@@ -144,7 +144,7 @@ contract StakerUnitTest is TestBase {
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
-    ClaimableRewardsData memory finalClaimableRewardsData_ = component.getClaimableRewardIndex(0, 0);
+    ClaimableRewardsData memory finalClaimableRewardsData_ = component.getClaimableRewardsData(0, 0);
 
     // 100e18 + 20e18
     assertEq(finalReservePool_.stakeAmount, 120e18);
@@ -392,12 +392,12 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     assetPools[asset_] = assetPool_;
   }
 
-  function mockAddUndrippedRewardPool(IERC20 rewardAsset_, uint256 cumulativeDrippedRewards_) external {
-    undrippedRewardPools.push(
-      UndrippedRewardPool({
+  function mockAddRewardPool(IERC20 rewardAsset_, uint256 cumulativeDrippedRewards_) external {
+    rewardPools.push(
+      RewardPool({
         asset: rewardAsset_,
         dripModel: IDripModel(address(new MockDripModel(1e18))),
-        amount: 0,
+        undrippedRewards: 0,
         depositToken: IReceiptToken(address(new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6))),
         cumulativeDrippedRewards: cumulativeDrippedRewards_,
         lastDripTime: uint128(block.timestamp)
@@ -405,13 +405,13 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     );
   }
 
-  function mockSetClaimableRewardIndex(
+  function mockSetClaimableRewardsData(
     uint16 reservePoolId_,
-    uint16 undrippedRewardPoolId_,
+    uint16 rewardPoolid_,
     uint256 indexSnapshot_,
     uint256 cumulativeClaimedRewards_
   ) external {
-    claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_] = ClaimableRewardsData({
+    claimableRewards[reservePoolId_][rewardPoolid_] = ClaimableRewardsData({
       indexSnapshot: indexSnapshot_.safeCastTo128(),
       cumulativeClaimedRewards: cumulativeClaimedRewards_
     });
@@ -426,12 +426,12 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     return assetPools[asset_];
   }
 
-  function getClaimableRewardIndex(uint16 reservePoolId_, uint16 undrippedRewardPoolId_)
+  function getClaimableRewardsData(uint16 reservePoolId_, uint16 rewardPoolid_)
     external
     view
     returns (ClaimableRewardsData memory)
   {
-    return claimableRewardsIndices[reservePoolId_][undrippedRewardPoolId_];
+    return claimableRewards[reservePoolId_][rewardPoolid_];
   }
 
   // -------- Overridden abstract function placeholders --------
