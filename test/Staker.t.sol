@@ -43,6 +43,8 @@ contract StakerUnitTest is TestBase {
     uint256 stkTokenAmount_
   );
 
+  uint256 initialSafetyModuleBal = 199e18;
+
   function setUp() public {
     ReservePool memory initialReservePool_ = ReservePool({
       asset: IERC20(address(mockAsset)),
@@ -63,6 +65,8 @@ contract StakerUnitTest is TestBase {
 
     component.mockAddRewardPool(IERC20(address(mockAsset)), cumulativeDrippedRewards_);
     component.mockSetClaimableRewardsData(0, 0, initialIndexSnapshot_, cumulativeClaimedRewards_);
+
+    deal(address(mockAsset), address(component), initialSafetyModuleBal);
   }
 
   function test_stake_StkTokensAndStorageUpdates() external {
@@ -100,7 +104,7 @@ contract StakerUnitTest is TestBase {
     assertEq(finalReservePool_.depositAmount, 99e18);
     // 150e18 + 20e18
     assertEq(finalAssetPool_.amount, 170e18);
-    assertEq(mockAsset.balanceOf(address(component)), 170e18);
+    assertEq(mockAsset.balanceOf(address(component)), 170e18 + initialSafetyModuleBal);
 
     // Because `stkToken.totalSupply() == 0`, the index snapshot and cumulative claimed rewards should not have change.
     assertEq(finalClaimableRewardsData_.indexSnapshot, initialIndexSnapshot_);
@@ -146,7 +150,7 @@ contract StakerUnitTest is TestBase {
     assertEq(finalReservePool_.stakeAmount, 120e18);
     // 150e18 + 20e18
     assertEq(finalAssetPool_.amount, 170e18);
-    assertEq(mockAsset.balanceOf(address(component)), 170e18);
+    assertEq(mockAsset.balanceOf(address(component)), 170e18 + initialSafetyModuleBal);
 
     // Because `stkToken.totalSupply() > 0`, the index snapshot and cumulative claimed rewards should not have change.
     // Since this updates before the user stakes, the `stkToken.totalSupply() == initialStkTokenSupply_`.
@@ -248,7 +252,7 @@ contract StakerUnitTest is TestBase {
     assertEq(finalReservePool_.depositAmount, 99e18);
     // 150e18 + 20e18
     assertEq(finalAssetPool_.amount, 170e18);
-    assertEq(mockAsset.balanceOf(address(component)), 170e18);
+    assertEq(mockAsset.balanceOf(address(component)), 170e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
@@ -290,7 +294,7 @@ contract StakerUnitTest is TestBase {
     assertEq(finalReservePool_.depositAmount, 99e18);
     // 150e18 + 20e18
     assertEq(finalAssetPool_.amount, 170e18);
-    assertEq(mockAsset.balanceOf(address(component)), 170e18);
+    assertEq(mockAsset.balanceOf(address(component)), 170e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
@@ -336,8 +340,8 @@ contract StakerUnitTest is TestBase {
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
 
-    // Mint initial asset balance for safety module.
-    mockAsset.mint(address(component), 150e18);
+    // Set initial asset balance for safety module.
+    deal(address(mockAsset), address(component), 150e18);
     // Mint assets for staker.
     mockAsset.mint(staker_, amountToStake_);
     // Transfer insufficient assets to safety module.
@@ -345,6 +349,28 @@ contract StakerUnitTest is TestBase {
     mockAsset.transfer(address(component), amountToStake_ - 1);
 
     vm.expectRevert(IDepositorErrors.InvalidDeposit.selector);
+    vm.prank(staker_);
+    component.stakeWithoutTransfer(0, amountToStake_, receiver_);
+  }
+
+  function test_stake_RevertZeroShares() external {
+    address staker_ = _randomAddress();
+    address receiver_ = _randomAddress();
+    uint256 amountToStake_ = 0;
+
+    // 0 assets should give 0 shares.
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
+    vm.prank(staker_);
+    component.stake(0, amountToStake_, receiver_, staker_);
+  }
+
+  function test_stakeWithoutTransfer_RevertZeroShares() external {
+    address staker_ = _randomAddress();
+    address receiver_ = _randomAddress();
+    uint256 amountToStake_ = 0;
+
+    // 0 assets should give 0 shares.
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
     vm.prank(staker_);
     component.stakeWithoutTransfer(0, amountToStake_, receiver_);
   }

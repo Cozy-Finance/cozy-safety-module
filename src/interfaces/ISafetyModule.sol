@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "./IERC20.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
+import {RedemptionPreview} from "../lib/structs/Redemptions.sol";
+import {SafetyModuleState} from "../lib/SafetyModuleStates.sol";
 import {IDripModel} from "./IDripModel.sol";
 import {IManager} from "./IManager.sol";
 import {IReceiptToken} from "./IReceiptToken.sol";
@@ -12,6 +14,8 @@ import {RewardPoolConfig, ReservePoolConfig} from "../lib/structs/Configs.sol";
 interface ISafetyModule {
   /// @notice Replaces the constructor for minimal proxies.
   function initialize(address owner_, address pauser_, UpdateConfigsCalldataParams calldata configs_) external;
+
+  function claimRewards(uint16 reservePoolId_, address receiver_) external;
 
   function completeRedemption(uint64 redemptionId_) external returns (uint256 assetAmount_);
 
@@ -64,13 +68,30 @@ interface ISafetyModule {
       uint64 withdrawDelay
     );
 
+  /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
+  /// `reservePools[reservePoolId_].asset` so it can `transferFrom`
+  function depositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
+    external
+    returns (uint256 depositTokenAmount_);
+
+  /// @dev Expects depositer to transfer assets to the SafetyModule beforehand.
   function depositReserveAssetsWithoutTransfer(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
+    external
+    returns (uint256 depositTokenAmount_);
+
+  function depositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_, address from_)
     external
     returns (uint256 depositTokenAmount_);
 
   function depositRewardAssetsWithoutTransfer(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_)
     external
     returns (uint256 depositTokenAmount_);
+
+  function dripFees() external;
+
+  function stake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
+    external
+    returns (uint256 stkTokenAmount_);
 
   /// @notice Stake by minting `stkTokenAmount_` stkTokens to `receiver_`.
   /// @dev Assumes that `amount_` of reserve asset has already been transferred to this contract.
@@ -90,10 +111,17 @@ interface ISafetyModule {
   /// @notice Address of the SafetyModule pauser.
   function pauser() external view returns (address);
 
+  /// @notice Allows an on-chain or off-chain user to simulate the effects of their queued redemption (i.e. view the
+  /// number of reserve assets received) at the current block, given current on-chain conditions.
+  function previewQueuedRedemption(uint64 redemptionId_)
+    external
+    view
+    returns (RedemptionPreview memory redemptionPreview_);
+
   /// @notice Address of the Cozy protocol ReceiptTokenFactory.
   function receiptTokenFactory() external view returns (IReceiptTokenFactory);
 
-  /// @notice Redeem by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
+  /// @notice Redeems by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
   function redeem(uint16 reservePoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
@@ -104,7 +132,7 @@ interface ISafetyModule {
   /// `rewardAssetAmount_` of `rewardPoolId_` reward pool assets to `receiver_`. Reward pool assets can only be redeemed
   /// if they have not been dripped yet.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeemRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeemUndrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
     external
     returns (uint256 rewardAssetAmount_);
 
@@ -133,6 +161,9 @@ interface ISafetyModule {
       uint16 rewardsPoolsWeight,
       uint128 lastFeesDripTime
     );
+
+  /// @notice The state of this SafetyModule.
+  function safetyModuleState() external view returns (SafetyModuleState);
 
   /// @notice Retrieve accounting and metadata about reward pools.
   /// @dev Claimable reward pool IDs are mapped 1:1 with reward pool IDs.

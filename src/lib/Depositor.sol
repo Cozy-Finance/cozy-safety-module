@@ -23,8 +23,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
   );
 
   /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
-  /// `reservePools[reservePoolId_]` so it can
-  /// `transferFrom`
+  /// `reservePools[reservePoolId_].asset` so it can `transferFrom`
   function depositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
     external
     returns (uint256 depositTokenAmount_)
@@ -99,8 +98,12 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     IReceiptToken depositToken_ = reservePool_.depositToken;
 
     depositTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
-      reserveAssetAmount_, depositToken_.totalSupply(), reservePool_.depositAmount
+      reserveAssetAmount_,
+      depositToken_.totalSupply(),
+      reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount
     );
+    if (depositTokenAmount_ == 0) revert RoundsToZero();
+
     // Increment reserve pool accounting only after calculating `depositTokenAmount_` to mint.
     reservePool_.depositAmount += reserveAssetAmount_;
     assetPool_.amount += reserveAssetAmount_;
@@ -124,6 +127,8 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     depositTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       rewardAssetAmount_, depositToken_.totalSupply(), rewardPool_.undrippedRewards
     );
+    if (depositTokenAmount_ == 0) revert RoundsToZero();
+
     // Increment reward pool accounting only after calculating `depositTokenAmount_` to mint.
     rewardPool_.undrippedRewards += rewardAssetAmount_;
     assetPool_.amount += rewardAssetAmount_;

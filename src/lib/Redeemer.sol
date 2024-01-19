@@ -65,7 +65,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   );
 
   /// @dev Emitted when a user redeems rewards.
-  event RedeemedRewards(
+  event RedeemedUndrippedRewards(
     address caller_,
     address indexed receiver_,
     address indexed owner_,
@@ -106,7 +106,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   /// `rewardAssetAmount_` of `rewardPoolId_` reward pool assets to `receiver_`. Reward pool assets can only be redeemed
   /// if they have not been dripped yet.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeemRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeemUndrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
     external
     returns (uint256 rewardAssetAmount_)
   {
@@ -122,7 +122,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     rewardPool_.undrippedRewards -= rewardAssetAmount_;
     rewardPool_.asset.safeTransfer(receiver_, rewardAssetAmount_);
 
-    emit RedeemedRewards(msg.sender, receiver_, owner_, depositToken_, depositTokenAmount_, rewardAssetAmount_);
+    emit RedeemedUndrippedRewards(msg.sender, receiver_, owner_, depositToken_, depositTokenAmount_, rewardAssetAmount_);
   }
 
   /// @notice Completes the redemption request for the specified redemption ID.
@@ -134,12 +134,12 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their redemption (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
-  function previewRedemption(uint16 rewardPoolId_, uint256 receiptTokenAmount_, bool isUnstake_)
+  function previewRedemption(uint16 reservePoolId_, uint256 receiptTokenAmount_, bool isUnstake_)
     external
     view
     returns (uint256 reserveAssetAmount_)
   {
-    ReservePool storage reservePool_ = reservePools[rewardPoolId_];
+    ReservePool storage reservePool_ = reservePools[reservePoolId_];
     IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
     uint256 lastDripTime_ = reservePool_.lastFeesDripTime;
 
@@ -176,7 +176,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     });
   }
 
-  function previewRewardsWithdrawal(uint16 rewardPoolId_, uint256 depositTokenAmount_)
+  function previewUndrippedRewardsRedemption(uint16 rewardPoolId_, uint256 depositTokenAmount_)
     external
     view
     returns (uint256 rewardAssetAmount_)

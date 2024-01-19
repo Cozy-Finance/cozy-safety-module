@@ -14,6 +14,9 @@ import {SafetyModuleFactory} from "../../src/SafetyModuleFactory.sol";
 import {ReceiptToken} from "../../src/ReceiptToken.sol";
 import {StkToken} from "../../src/StkToken.sol";
 import {ReceiptTokenFactory} from "../../src/ReceiptTokenFactory.sol";
+import {ReservePoolConfig, RewardPoolConfig, UpdateConfigsCalldataParams} from "../../src/lib/structs/Configs.sol";
+import {Delays} from "../../src/lib/structs/Delays.sol";
+import {TriggerConfig} from "../../src/lib/structs/Trigger.sol";
 import {MockDripModel} from "./MockDripModel.sol";
 import {TestBase} from "../utils/TestBase.sol";
 
@@ -64,10 +67,22 @@ contract MockDeployer is TestBase {
     );
 
     safetyModuleLogic = ISafetyModule(address(new SafetyModule(computedAddrManager_, computedAddrReceiptTokenFactory_)));
+    safetyModuleLogic.initialize(
+      address(0),
+      address(0),
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: new ReservePoolConfig[](0),
+        rewardPoolConfigs: new RewardPoolConfig[](0),
+        triggerConfigUpdates: new TriggerConfig[](0),
+        delaysConfig: Delays({configUpdateDelay: 0, configUpdateGracePeriod: 0, unstakeDelay: 0, withdrawDelay: 0})
+      })
+    );
     safetyModuleFactory = new SafetyModuleFactory(computedAddrManager_, computedAddrSafetyModuleLogic_);
 
     depositTokenLogic = new ReceiptToken();
     stkTokenLogic = new StkToken();
+    depositTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
     receiptTokenFactory = new ReceiptTokenFactory(depositTokenLogic_, stkTokenLogic_);
   }
 }

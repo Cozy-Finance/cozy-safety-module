@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
+import {ReservePool} from "./structs/Pools.sol";
 
 abstract contract SafetyModuleInspector is SafetyModuleCommon {
   function convertToReserveDepositTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
@@ -10,10 +11,11 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
     view
     returns (uint256 depositTokenAmount_)
   {
+    ReservePool memory reservePool_ = reservePools[reservePoolId_];
     depositTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       reserveAssetAmount_,
-      reservePools[reservePoolId_].depositToken.totalSupply(),
-      reservePools[reservePoolId_].depositAmount
+      reservePool_.depositToken.totalSupply(),
+      reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount
     );
   }
 
@@ -34,8 +36,11 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
     view
     returns (uint256 stakeTokenAmount_)
   {
+    ReservePool memory reservePool_ = reservePools[reservePoolId_];
     stakeTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
-      reserveAssetAmount_, reservePools[reservePoolId_].stkToken.totalSupply(), reservePools[reservePoolId_].stakeAmount
+      reserveAssetAmount_,
+      reservePool_.stkToken.totalSupply(),
+      reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount
     );
   }
 
@@ -44,8 +49,11 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
     view
     returns (uint256 reserveAssetAmount_)
   {
+    ReservePool memory reservePool_ = reservePools[reservePoolId_];
     reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
-      stakeTokenAmount_, reservePools[reservePoolId_].stkToken.totalSupply(), reservePools[reservePoolId_].stakeAmount
+      stakeTokenAmount_,
+      reservePool_.stkToken.totalSupply(),
+      reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount
     );
   }
 
@@ -54,10 +62,11 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
     view
     returns (uint256 reserveAssetAmount_)
   {
+    ReservePool memory reservePool_ = reservePools[reservePoolId_];
     reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
       depositTokenAmount_,
-      reservePools[reservePoolId_].depositToken.totalSupply(),
-      reservePools[reservePoolId_].depositAmount
+      reservePool_.depositToken.totalSupply(),
+      reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount
     );
   }
 

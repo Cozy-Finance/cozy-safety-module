@@ -1043,7 +1043,7 @@ contract WithdrawUnitTest is RedeemerUnitTest {
   }
 }
 
-contract RedeemRewards is TestBase {
+contract RedeemedUndrippedRewards is TestBase {
   using SafeCastLib for uint256;
 
   IReceiptToken depositToken;
@@ -1052,7 +1052,7 @@ contract RedeemRewards is TestBase {
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
 
   /// @dev Emitted when a user redeems rewards.
-  event RedeemedRewards(
+  event RedeemedUndrippedRewards(
     address caller_,
     address indexed receiver_,
     address indexed owner_,
@@ -1084,7 +1084,7 @@ contract RedeemRewards is TestBase {
     internal
     returns (uint256 rewardAssetAmount_)
   {
-    return component.redeemRewards(rewardPoolId_, depositTokenAmount_, receiver_, owner_);
+    return component.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, owner_);
   }
 
   function _assertRewardPoolAccounting(uint16 reservePoolId_, uint256 poolAssetAmount_) internal {
@@ -1116,14 +1116,14 @@ contract RedeemRewards is TestBase {
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
   }
 
-  function test_redeemRewards_redeemAll() public {
+  function test_redeemUndrippedRewards_redeemAll() public {
     (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
       _setupDefaultSingleUserFixture(0);
 
     _expectEmit();
     emit Transfer(owner_, address(0), depositTokenAmount_);
     _expectEmit();
-    emit RedeemedRewards(owner_, receiver_, owner_, depositToken, depositTokenAmount_, rewardAssetAmount_);
+    emit RedeemedUndrippedRewards(owner_, receiver_, owner_, depositToken, depositTokenAmount_, rewardAssetAmount_);
 
     vm.prank(owner_);
     (uint256 resultRewardAssetAmount_) = _redeem(0, depositTokenAmount_, receiver_, owner_);
@@ -1134,14 +1134,14 @@ contract RedeemRewards is TestBase {
     _assertRewardPoolAccounting(0, 0);
   }
 
-  function test_redeemRewards_redeemPartial() public {
+  function test_redeemUndrippedRewards_redeemPartial() public {
     (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
       _setupDefaultSingleUserFixture(0);
 
     _expectEmit();
     emit Transfer(owner_, address(0), depositTokenAmount_ / 2);
     _expectEmit();
-    emit RedeemedRewards(owner_, receiver_, owner_, depositToken, depositTokenAmount_ / 2, rewardAssetAmount_ / 2);
+    emit RedeemedUndrippedRewards(owner_, receiver_, owner_, depositToken, depositTokenAmount_ / 2, rewardAssetAmount_ / 2);
 
     vm.prank(owner_);
     (uint256 resultRewardAssetAmount_) = _redeem(0, depositTokenAmount_ / 2, receiver_, owner_);
@@ -1152,7 +1152,7 @@ contract RedeemRewards is TestBase {
     _assertRewardPoolAccounting(0, rewardAssetAmount_ / 2);
   }
 
-  function test_redeemRewards_withDrip() public {
+  function test_redeemUndrippedRewards_withDrip() public {
     (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
       _setupDefaultSingleUserFixture(0);
 
@@ -1162,7 +1162,7 @@ contract RedeemRewards is TestBase {
     _expectEmit();
     emit Transfer(owner_, address(0), depositTokenAmount_ / 2);
     _expectEmit();
-    emit RedeemedRewards(owner_, receiver_, owner_, depositToken, depositTokenAmount_ / 2, rewardAssetAmount_ / 4);
+    emit RedeemedUndrippedRewards(owner_, receiver_, owner_, depositToken, depositTokenAmount_ / 2, rewardAssetAmount_ / 4);
 
     vm.prank(owner_);
     (uint256 resultRewardAssetAmount_) = _redeem(0, depositTokenAmount_ / 2, receiver_, owner_);
@@ -1173,7 +1173,7 @@ contract RedeemRewards is TestBase {
     _assertRewardPoolAccounting(0, rewardAssetAmount_ / 4);
   }
 
-  function test_redeemRewards_cannotRedeemIfRoundsDownToZeroAssets() external {
+  function test_redeemUndrippedRewards_cannotRedeemIfRoundsDownToZeroAssets() external {
     address owner_ = _randomAddress();
     address receiver_ = _randomAddress();
     uint256 rewardAssetAmount_ = 1;
@@ -1185,7 +1185,7 @@ contract RedeemRewards is TestBase {
     _redeem(0, 2, receiver_, owner_);
   }
 
-  function test_redeemRewards_canRedeemAllInstantly_ThroughAllowance() external {
+  function test_redeemUndrippedRewards_canRedeemAllInstantly_ThroughAllowance() external {
     (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
       _setupDefaultSingleUserFixture(0);
     address spender_ = _randomAddress();
@@ -1193,7 +1193,7 @@ contract RedeemRewards is TestBase {
     depositToken.approve(spender_, depositTokenAmount_ + 1); // Allowance is 1 extra.
 
     _expectEmit();
-    emit RedeemedRewards(spender_, receiver_, owner_, depositToken, depositTokenAmount_, rewardAssetAmount_);
+    emit RedeemedUndrippedRewards(spender_, receiver_, owner_, depositToken, depositTokenAmount_, rewardAssetAmount_);
 
     vm.prank(spender_);
     _redeem(0, depositTokenAmount_, receiver_, owner_);
@@ -1202,7 +1202,7 @@ contract RedeemRewards is TestBase {
     _assertRewardPoolAccounting(0, 0);
   }
 
-  function test_redeemRewards_cannotRedeem_ThroughAllowance_WithInsufficientAllowance() external {
+  function test_redeemUndrippedRewards_cannotRedeem_ThroughAllowance_WithInsufficientAllowance() external {
     (address owner_, address receiver_,, uint256 depositTokenAmount_) = _setupDefaultSingleUserFixture(0);
     address spender_ = _randomAddress();
     vm.prank(owner_);
@@ -1213,7 +1213,7 @@ contract RedeemRewards is TestBase {
     _redeem(0, depositTokenAmount_, receiver_, owner_);
   }
 
-  function test_redeemRewards_cannotRedeem_InsufficientDepositTokenBalance() external {
+  function test_redeemUndrippedRewards_cannotRedeem_InsufficientDepositTokenBalance() external {
     (address owner_, address receiver_,, uint256 depositTokenAmount_) = _setupDefaultSingleUserFixture(0);
 
     _expectPanic(PANIC_MATH_UNDEROVERFLOW);
@@ -1221,7 +1221,7 @@ contract RedeemRewards is TestBase {
     _redeem(0, depositTokenAmount_ + 1, receiver_, owner_);
   }
 
-  function test_redeemRewards_cannotRedeem_InvalidRewardPoolId() external {
+  function test_redeemUndrippedRewards_cannotRedeem_InvalidRewardPoolId() external {
     (address owner_, address receiver_,, uint256 depositTokenAmount_) = _setupDefaultSingleUserFixture(0);
 
     _expectPanic(PANIC_ARRAY_OUT_OF_BOUNDS);
@@ -1229,7 +1229,7 @@ contract RedeemRewards is TestBase {
     _redeem(1, depositTokenAmount_, receiver_, owner_);
   }
 
-  function test_redeemRewards_previewRewardsRedemption_withDrip() external {
+  function test_redeemUndrippedRewards_previewRewardsRedemption_withDrip() external {
     (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
       _setupDefaultSingleUserFixture(0);
 
@@ -1237,7 +1237,7 @@ contract RedeemRewards is TestBase {
     vm.warp(100);
     component.mockSetNextRewardsDripAmount(rewardAssetAmount_ / 2);
 
-    uint256 previewRewardAssetAmount_ = component.previewRewardsWithdrawal(0, depositTokenAmount_);
+    uint256 previewRewardAssetAmount_ = component.previewUndrippedRewardsRedemption(0, depositTokenAmount_);
 
     vm.prank(owner_);
     uint256 resultRewardAssetAmount_ = _redeem(0, depositTokenAmount_, receiver_, owner_);
@@ -1248,7 +1248,7 @@ contract RedeemRewards is TestBase {
     _assertRewardPoolAccounting(0, rewardAssetAmount_ / 2 - resultRewardAssetAmount_);
   }
 
-  function test_redeemRewards_previewRewardsRedemption_fullyDripped() external {
+  function test_redeemUndrippedRewards_previewRewardsRedemption_fullyDripped() external {
     (address owner_, address receiver_, uint256 rewardAssetAmount_, uint256 depositTokenAmount_) =
       _setupDefaultSingleUserFixture(0);
 
@@ -1257,21 +1257,21 @@ contract RedeemRewards is TestBase {
     component.mockSetNextRewardsDripAmount(rewardAssetAmount_);
 
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
-    component.previewRewardsWithdrawal(0, depositTokenAmount_);
+    component.previewUndrippedRewardsRedemption(0, depositTokenAmount_);
 
     vm.prank(owner_);
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
     _redeem(0, depositTokenAmount_, receiver_, owner_);
   }
 
-  function test_redeemRewards_previewRewardsRedemption_roundsDownToZero() external {
+  function test_redeemUndrippedRewards_previewRewardsRedemption_roundsDownToZero() external {
     address owner_ = _randomAddress();
     uint256 reserveAssetAmount_ = 1;
     uint256 receiptTokenAmount_ = 3;
     _deposit(0, owner_, reserveAssetAmount_, receiptTokenAmount_);
 
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
-    component.previewRewardsWithdrawal(0, 2);
+    component.previewUndrippedRewardsRedemption(0, 2);
   }
 }
 

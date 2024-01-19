@@ -434,7 +434,7 @@ contract CozyRouter {
     depositTokenAmount_ = safetyModule_.convertToRewardDepositTokenAmount(rewardPoolId_, rewardAssetAmount_);
     if (depositTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
     // Caller must first approve the CozyRouter to spend the deposit tokens.
-    safetyModule_.redeemRewards(rewardPoolId_, depositTokenAmount_, receiver_, msg.sender);
+    safetyModule_.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, msg.sender);
   }
 
   // @notice Removes assets from a `safetyModule_` reward pool. Burns `depositTokenAmount_` from owner and
@@ -450,7 +450,7 @@ contract CozyRouter {
   ) external payable returns (uint256 assetsReceived_) {
     _assertAddressNotZero(receiver_);
     // Caller must first approve the CozyRouter to spend the deposit tokens.
-    assetsReceived_ = safetyModule_.redeemRewards(poolId_, depositTokenAmount_, receiver_, msg.sender);
+    assetsReceived_ = safetyModule_.redeemUndrippedRewards(poolId_, depositTokenAmount_, receiver_, msg.sender);
     if (assetsReceived_ < minAssetsReceived_) revert SlippageExceeded();
   }
 

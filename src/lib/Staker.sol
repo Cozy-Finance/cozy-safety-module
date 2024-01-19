@@ -29,8 +29,7 @@ abstract contract Staker is SafetyModuleCommon {
   );
 
   /// @notice Stake by minting `stkTokenAmount_` stkTokens to `receiver_` after depositing exactly `reserveAssetAmount_`
-  /// of
-  /// the reserve asset.
+  /// of the reserve asset.
   /// @dev Assumes that `from_` has already approved this contract to transfer `amount_` of reserve asset.
   function stake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
     external
@@ -76,8 +75,10 @@ abstract contract Staker is SafetyModuleCommon {
     IReceiptToken stkToken_ = reservePool_.stkToken;
 
     stkTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
-      reserveAssetAmount_, stkToken_.totalSupply(), reservePool_.stakeAmount
+      reserveAssetAmount_, stkToken_.totalSupply(), reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount
     );
+    if (stkTokenAmount_ == 0) revert RoundsToZero();
+
     // Increment reserve pool accounting only after calculating `stkTokenAmount_` to mint.
     reservePool_.stakeAmount += reserveAssetAmount_;
     assetPool_.amount += reserveAssetAmount_;
