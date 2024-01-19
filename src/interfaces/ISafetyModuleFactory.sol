@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {IERC20} from "./IERC20.sol";
 import {IManager} from "./IManager.sol";
 import {ISafetyModule} from "./ISafetyModule.sol";
-import {UndrippedRewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig} from "../lib/structs/Configs.sol";
+import {RewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig} from "../lib/structs/Configs.sol";
 import {Delays} from "../lib/structs/Delays.sol";
 
 interface ISafetyModuleFactory {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {UndrippedRewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
+import {RewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
 import {
   UserRewardsData,
   PreviewClaimableRewardsData,
@@ -41,24 +41,22 @@ abstract contract TestAssertions is Test {
     assertEq(actual_.maxSlashPercentage, expected_.maxSlashPercentage, "ReservePool.maxSlashPercentage");
   }
 
-  function assertEq(UndrippedRewardPool[] memory actual_, UndrippedRewardPool[] memory expected_) internal {
+  function assertEq(RewardPool[] memory actual_, RewardPool[] memory expected_) internal {
     assertEq(actual_.length, expected_.length);
     for (uint256 i = 0; i < actual_.length; i++) {
       assertEq(actual_[i], expected_[i]);
     }
   }
 
-  function assertEq(UndrippedRewardPool memory actual_, UndrippedRewardPool memory expected_) internal {
-    assertEq(address(actual_.asset), address(expected_.asset), "UndrippedRewardPool.asset");
-    assertEq(address(actual_.dripModel), address(expected_.dripModel), "UndrippedRewardPool.dripModel");
-    assertEq(address(actual_.depositToken), address(expected_.depositToken), "UndrippedRewardPool.depositToken");
-    assertEq(actual_.amount, expected_.amount, "UndrippedRewardPool.amount");
+  function assertEq(RewardPool memory actual_, RewardPool memory expected_) internal {
+    assertEq(address(actual_.asset), address(expected_.asset), "RewardPool.asset");
+    assertEq(address(actual_.dripModel), address(expected_.dripModel), "RewardPool.dripModel");
+    assertEq(address(actual_.depositToken), address(expected_.depositToken), "RewardPool.depositToken");
+    assertEq(actual_.amount, expected_.amount, "RewardPool.amount");
     assertEq(
-      actual_.cumulativeDrippedRewards,
-      expected_.cumulativeDrippedRewards,
-      "UndrippedRewardPool.cumulativeDrippedRewards"
+      actual_.cumulativeDrippedRewards, expected_.cumulativeDrippedRewards, "RewardPool.cumulativeDrippedRewards"
     );
-    assertEq(actual_.lastDripTime, expected_.lastDripTime, "UndrippedRewardPool.lastDripTime");
+    assertEq(actual_.lastDripTime, expected_.lastDripTime, "RewardPool.lastDripTime");
   }
 
   function assertEq(UserRewardsData[] memory actual_, UserRewardsData[] memory expected_) internal {
@@ -69,8 +67,8 @@ abstract contract TestAssertions is Test {
   }
 
   function assertEq(UserRewardsData memory actual_, UserRewardsData memory expected_) internal {
-    assertEq(actual_.accruedRewards, expected_.accruedRewards, "UndrippedRewardPool.accruedRewards");
-    assertEq(actual_.indexSnapshot, expected_.indexSnapshot, "UndrippedRewardPool.indexSnapshot");
+    assertEq(actual_.accruedRewards, expected_.accruedRewards, "RewardPool.accruedRewards");
+    assertEq(actual_.indexSnapshot, expected_.indexSnapshot, "RewardPool.indexSnapshot");
   }
 
   function assertEq(SafetyModuleState actual_, SafetyModuleState expected_) internal {

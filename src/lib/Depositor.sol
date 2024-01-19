@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import {IDepositorErrors} from "../interfaces/IDepositorErrors.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
-import {ReservePool, AssetPool, UndrippedRewardPool} from "./structs/Pools.sol";
+import {ReservePool, AssetPool, RewardPool} from "./structs/Pools.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
@@ -60,7 +60,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     external
     returns (uint256 depositTokenAmount_)
   {
-    UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[rewardPoolId_];
+    RewardPool storage rewardsPool_ = undrippedRewardPools[rewardPoolId_];
 
     IERC20 underlyingToken_ = rewardsPool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
@@ -78,7 +78,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     external
     returns (uint256 depositTokenAmount_)
   {
-    UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[rewardPoolId_];
+    RewardPool storage rewardsPool_ = undrippedRewardPools[rewardPoolId_];
     IERC20 underlyingToken_ = rewardsPool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
 
@@ -114,7 +114,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     uint256 rewardAssetAmount_,
     address receiver_,
     AssetPool storage assetPool_,
-    UndrippedRewardPool storage rewardPool_
+    RewardPool storage rewardPool_
   ) internal returns (uint256 depositTokenAmount_) {
     _assertValidDepositState();
     _assertValidDepositBalance(token_, assetPool_.amount, rewardAssetAmount_);

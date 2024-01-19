@@ -17,7 +17,7 @@ import {RedemptionLib} from "../src/lib/RedemptionLib.sol";
 import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
-import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {AssetPool, ReservePool, RewardPool} from "../src/lib/structs/Pools.sol";
 import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {RedemptionPreview} from "../src/lib/structs/Redemptions.sol";
 import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
@@ -211,7 +211,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
       })
     );
     component.mockAddRewardPool(
-      UndrippedRewardPool({
+      RewardPool({
         asset: IERC20(address(mockAsset)),
         amount: 0,
         dripModel: IDripModel(address(0)),
@@ -1088,7 +1088,7 @@ contract RedeemUndrippedRewards is TestBase {
   }
 
   function _assertRewardPoolAccounting(uint16 reservePoolId_, uint256 poolAssetAmount_) internal {
-    UndrippedRewardPool memory rewardPool_ = component.getUndrippedRewardPool(reservePoolId_);
+    RewardPool memory rewardPool_ = component.getRewardPool(reservePoolId_);
     assertEq(rewardPool_.amount, poolAssetAmount_, "rewardPool_.amount");
   }
 
@@ -1104,7 +1104,7 @@ contract RedeemUndrippedRewards is TestBase {
     vm.stopPrank();
 
     component.mockAddRewardPool(
-      UndrippedRewardPool({
+      RewardPool({
         asset: IERC20(address(mockAsset)),
         amount: 0,
         dripModel: IDripModel(address(0)),
@@ -1350,7 +1350,7 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
   function mockDepositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmountDeposited_) public {
     if (rewardAssetAmountDeposited_ > 0) {
-      UndrippedRewardPool storage rewardPool_ = undrippedRewardPools[rewardPoolId_];
+      RewardPool storage rewardPool_ = undrippedRewardPools[rewardPoolId_];
       MockERC20(address(rewardPool_.asset)).mint(address(this), rewardAssetAmountDeposited_);
       rewardPool_.amount += rewardAssetAmountDeposited_;
       assetPools[rewardPool_.asset].amount += rewardAssetAmountDeposited_;
@@ -1401,7 +1401,7 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     reservePools.push(reservePool_);
   }
 
-  function mockAddRewardPool(UndrippedRewardPool memory rewardPool_) external {
+  function mockAddRewardPool(RewardPool memory rewardPool_) external {
     undrippedRewardPools.push(rewardPool_);
   }
 
@@ -1434,7 +1434,7 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     return reservePools[reservePoolId_];
   }
 
-  function getUndrippedRewardPool(uint16 rewardPoolId_) external view returns (UndrippedRewardPool memory) {
+  function getRewardPool(uint16 rewardPoolId_) external view returns (RewardPool memory) {
     return undrippedRewardPools[rewardPoolId_];
   }
 
@@ -1474,12 +1474,12 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
   // Mock drip of rewards based on mocked next amount.
   function dripRewards() public override {
-    UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[0];
+    RewardPool storage rewardPool_ = undrippedRewardPools[0];
     uint256 totalDrippedRewards_ = mockNextRewardsDripAmount;
 
-    if (totalDrippedRewards_ > 0) undrippedRewardPool_.amount -= totalDrippedRewards_;
+    if (totalDrippedRewards_ > 0) rewardPool_.amount -= totalDrippedRewards_;
 
-    undrippedRewardPool_.lastDripTime = uint128(block.timestamp);
+    rewardPool_.lastDripTime = uint128(block.timestamp);
   }
 
   function dripFees() public override {
@@ -1495,10 +1495,10 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     reservePool_.lastFeesDripTime = uint128(block.timestamp);
   }
 
-  function _dripRewardPool(UndrippedRewardPool storage undrippedRewardPool_) internal override {
+  function _dripRewardPool(RewardPool storage rewardPool_) internal override {
     uint256 totalDrippedRewards_ = mockNextRewardsDripAmount;
-    if (totalDrippedRewards_ > 0) undrippedRewardPool_.amount -= totalDrippedRewards_;
-    undrippedRewardPool_.lastDripTime = uint128(block.timestamp);
+    if (totalDrippedRewards_ > 0) rewardPool_.amount -= totalDrippedRewards_;
+    rewardPool_.lastDripTime = uint128(block.timestamp);
   }
 
   function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel /* dripModel_*/ ) internal override {
@@ -1562,7 +1562,7 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
   function _dripAndResetCumulativeRewardsValues(
     ReservePool[] storage, /* reservePools_ */
-    UndrippedRewardPool[] storage /* undrippedRewardPools_ */
+    RewardPool[] storage /* undrippedRewardPools_ */
   ) internal view override {
     __readStub__();
   }

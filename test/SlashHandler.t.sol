@@ -19,7 +19,7 @@ import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
-import {AssetPool, ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {AssetPool, ReservePool, RewardPool} from "../src/lib/structs/Pools.sol";
 import {Slash} from "../src/lib/structs/Slash.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
@@ -411,7 +411,7 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
     reservePools.push(reservePool_);
   }
 
-  function mockAddRewardPool(UndrippedRewardPool memory rewardPool_) external {
+  function mockAddRewardPool(RewardPool memory rewardPool_) external {
     undrippedRewardPools.push(rewardPool_);
   }
 
@@ -467,7 +467,7 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
     __readStub__();
   }
 
-  function _dripRewardPool(UndrippedRewardPool storage /* undrippedRewardPool_ */ ) internal view override {
+  function _dripRewardPool(RewardPool storage /* rewardPool_ */ ) internal view override {
     __readStub__();
   }
 
@@ -488,7 +488,7 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
 
   function _dripAndResetCumulativeRewardsValues(
     ReservePool[] storage, /* reservePools_ */
-    UndrippedRewardPool[] storage /* undrippedRewardPools_ */
+    RewardPool[] storage /* undrippedRewardPools_ */
   ) internal view override {
     __readStub__();
   }

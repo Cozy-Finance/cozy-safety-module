@@ -11,7 +11,7 @@ import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {StateChanger} from "../src/lib/StateChanger.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
-import {ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {ReservePool, RewardPool} from "../src/lib/structs/Pools.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
@@ -475,7 +475,7 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     __readStub__();
   }
 
-  function _dripRewardPool(UndrippedRewardPool storage /*undrippedRewardPool_*/ ) internal override {
+  function _dripRewardPool(RewardPool storage /*undrippedRewardPool_*/ ) internal override {
     __readStub__();
   }
 
@@ -492,7 +492,7 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
 
   function _dripAndResetCumulativeRewardsValues(
     ReservePool[] storage, /*reservePools_*/
-    UndrippedRewardPool[] storage /*undrippedRewardPools_*/
+    RewardPool[] storage /*undrippedRewardPools_*/
   ) internal override {
     __readStub__();
   }

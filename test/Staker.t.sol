@@ -16,7 +16,7 @@ import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
-import {UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {RewardPool} from "../src/lib/structs/Pools.sol";
 import {ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";
@@ -368,7 +368,7 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
 
   function mockAddUndrippedRewardPool(IERC20 rewardAsset_, uint256 cumulativeDrippedRewards_) external {
     undrippedRewardPools.push(
-      UndrippedRewardPool({
+      RewardPool({
         asset: rewardAsset_,
         dripModel: IDripModel(address(new MockDripModel(1e18))),
         amount: 0,

@@ -15,11 +15,11 @@ import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {
   ReservePoolConfig,
   TriggerConfig,
-  UndrippedRewardPoolConfig,
+  RewardPoolConfig,
   UpdateConfigsCalldataParams
 } from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
-import {ReservePool, UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {ReservePool, RewardPool} from "../src/lib/structs/Pools.sol";
 import {TriggerMetadata} from "../src/lib/structs/Trigger.sol";
 import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
@@ -90,15 +90,13 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
     });
     wethReservePoolId = 1;
 
-    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](2);
-    undrippedRewardPoolConfigs_[0] = UndrippedRewardPoolConfig({
+    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](2);
+    undrippedRewardPoolConfigs_[0] = RewardPoolConfig({
       asset: IERC20(address(weth)),
       dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))
     });
-    undrippedRewardPoolConfigs_[1] = UndrippedRewardPoolConfig({
-      asset: rewardAssetA,
-      dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))
-    });
+    undrippedRewardPoolConfigs_[1] =
+      RewardPoolConfig({asset: rewardAssetA, dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))});
     wethRewardPoolId = 0;
 
     Delays memory delaysConfig_ =
@@ -509,9 +507,9 @@ contract CozyRouterDepositTest is CozyRouterTestSetup {
       assertEq(reservePool_.depositToken.balanceOf(user_), shares);
       assertEq(reservePool_.depositAmount, assets_);
     } else {
-      UndrippedRewardPool memory undrippedRewardPool_ = getUndrippedRewardPool(safetyModule_, poolId_);
-      assertEq(undrippedRewardPool_.depositToken.balanceOf(user_), shares);
-      assertEq(undrippedRewardPool_.amount, assets_);
+      RewardPool memory rewardPool_ = getRewardPool(safetyModule_, poolId_);
+      assertEq(rewardPool_.depositToken.balanceOf(user_), shares);
+      assertEq(rewardPool_.amount, assets_);
     }
   }
 
@@ -643,7 +641,7 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     // Owner should have proper number of deposit tokens.
     IERC20 depositToken_ = isReserveDeposit_
       ? getReservePool(safetyModule_, poolId_).depositToken
-      : getUndrippedRewardPool(safetyModule_, poolId_).depositToken;
+      : getRewardPool(safetyModule_, poolId_).depositToken;
     assertEq(depositToken_.balanceOf(owner_), ownerShares_);
     assertEq(depositToken_.balanceOf(owner_), wrappedAssetDepositAmount_); // 1:1 exchange rate for initial deposit.
   }
@@ -697,7 +695,7 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
       false, mockConnector, safetyModule, 1, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
     );
 
-    UndrippedRewardPool memory rewardPool_ = getUndrippedRewardPool(safetyModule, 1);
+    RewardPool memory rewardPool_ = getRewardPool(safetyModule, 1);
     assertEq(rewardPool_.amount, wrappedAssetDepositAmount_);
   }
 
@@ -866,7 +864,7 @@ contract CozyRouterWithdrawTest is CozyRouterTestSetup {
 
     IERC20 depositToken_ = isReserveWithdraw_
       ? getReservePool(safetyModule_, poolId_).depositToken
-      : getUndrippedRewardPool(safetyModule_, poolId_).depositToken;
+      : getRewardPool(safetyModule_, poolId_).depositToken;
 
     // Approve WETH withdrawal request, then router initiates it.
     depositToken_.approve(address(router), depositTokens_);
@@ -936,7 +934,7 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
     // Approve for test redemptions.
     IERC20 depositToken_ = isReserveDeposit_
       ? getReservePool(safetyModule_, poolId_).depositToken
-      : getUndrippedRewardPool(safetyModule_, poolId_).depositToken;
+      : getRewardPool(safetyModule_, poolId_).depositToken;
     depositToken_.approve(address(router), depositTokenAmount_);
     vm.stopPrank();
   }
@@ -1134,7 +1132,7 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
     uint16 poolId_ = isReserveDeposit_ ? wethReservePoolId : wethRewardPoolId;
     IERC20 depositToken_ = isReserveDeposit_
       ? getReservePool(safetyModule, poolId_).depositToken
-      : getUndrippedRewardPool(safetyModule, poolId_).depositToken;
+      : getRewardPool(safetyModule, poolId_).depositToken;
 
     // Anyone can do arbitrary deposit operations with the excess ether.
     if (isReserveDeposit_) {
@@ -1155,7 +1153,7 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
 
     uint256 poolAmount_ = isReserveDeposit_
       ? getReservePool(safetyModule, poolId_).depositAmount
-      : getUndrippedRewardPool(safetyModule, poolId_).amount;
+      : getRewardPool(safetyModule, poolId_).amount;
 
     assertEq(weth.balanceOf(address(safetyModule)) - poolAmount_, 0);
 
@@ -1361,11 +1359,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] =
       ReservePoolConfig({maxSlashPercentage: 0, asset: reserveAssetA, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
-    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
-    undrippedRewardPoolConfigs_[0] = UndrippedRewardPoolConfig({
-      asset: rewardAssetA,
-      dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))
-    });
+    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](1);
+    undrippedRewardPoolConfigs_[0] =
+      RewardPoolConfig({asset: rewardAssetA, dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))});
     Delays memory delaysConfig_ =
       Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
     TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](3);

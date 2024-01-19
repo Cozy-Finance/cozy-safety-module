@@ -6,7 +6,7 @@ import {IDripModel} from "../interfaces/IDripModel.sol";
 
 /// @dev Single asset safety module. Is an LFT.
 contract SafetyModule {
-  struct UndrippedRewardPool {
+  struct RewardPool {
     uint128 amount;
     IDripModel dripModel;
     uint128 lastDripTime;
@@ -25,7 +25,7 @@ contract SafetyModule {
 
   mapping(IERC20 asset_ => uint256 amount_) public claimableRewardPools;
 
-  mapping(IERC20 asset_ => UndrippedRewardPool undrippedRewardPool_) public undrippedRewardPools;
+  mapping(IERC20 asset_ => RewardPool rewardPool_) public undrippedRewardPools;
 
   /// @dev Delay before a staker and unstake
   uint128 public unstakeDelay;

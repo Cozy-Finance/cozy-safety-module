@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import {ReservePoolConfig, UndrippedRewardPoolConfig} from "../lib/structs/Configs.sol";
+import {ReservePoolConfig, RewardPoolConfig} from "../lib/structs/Configs.sol";
 import {Delays} from "../lib/structs/Delays.sol";
 import {TriggerConfig} from "../lib/structs/Trigger.sol";
 
@@ -9,7 +9,7 @@ interface IConfiguratorEvents {
   /// @dev Emitted when a safety module owner queues a new configuration.
   event ConfigUpdatesQueued(
     ReservePoolConfig[] reservePoolConfigs,
-    UndrippedRewardPoolConfig[] undrippedRewardPoolConfigs,
+    RewardPoolConfig[] undrippedRewardPoolConfigs,
     TriggerConfig[] triggerConfigUpdates,
     Delays delaysConfig,
     uint256 updateTime,
@@ -19,7 +19,7 @@ interface IConfiguratorEvents {
   /// @dev Emitted when a safety module's queued configuration updates are applied.
   event ConfigUpdatesFinalized(
     ReservePoolConfig[] reservePoolConfigs,
-    UndrippedRewardPoolConfig[] undrippedRewardPoolConfigs,
+    RewardPoolConfig[] undrippedRewardPoolConfigs,
     TriggerConfig[] triggerConfigUpdates,
     Delays delaysConfig
   );
@@ -30,7 +30,7 @@ interface IConfiguratorEvents {
   );
 
   /// @notice Emitted when an undripped reward pool is created.
-  event UndrippedRewardPoolCreated(
+  event RewardPoolCreated(
     uint16 indexed undrippedRewardPoolId, address rewardAssetAddress, address depositTokenAddress
   );
 }

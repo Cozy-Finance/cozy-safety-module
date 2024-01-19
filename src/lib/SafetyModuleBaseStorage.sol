@@ -6,7 +6,7 @@ import {IManager} from "../interfaces/IManager.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
-import {ReservePool, AssetPool, IdLookup, UndrippedRewardPool} from "./structs/Pools.sol";
+import {ReservePool, AssetPool, IdLookup, RewardPool} from "./structs/Pools.sol";
 import {Trigger} from "./structs/Trigger.sol";
 import {UserRewardsData, ClaimableRewardsData} from "./structs/Rewards.sol";
 import {Delays} from "./structs/Delays.sol";
@@ -17,7 +17,7 @@ abstract contract SafetyModuleBaseStorage {
   ReservePool[] public reservePools;
 
   /// @dev Undripped reward pool index in this array is its ID
-  UndrippedRewardPool[] public undrippedRewardPools;
+  RewardPool[] public undrippedRewardPools;
 
   /// @notice Maps a reserve pool id to an undripped reward pool id to claimable reward index
   mapping(uint16 => mapping(uint16 => ClaimableRewardsData)) public claimableRewardsIndices;

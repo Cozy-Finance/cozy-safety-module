@@ -8,13 +8,10 @@ import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IConfiguratorErrors} from "../interfaces/IConfiguratorErrors.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
 import {IManager} from "../interfaces/IManager.sol";
-import {ReservePool, UndrippedRewardPool, IdLookup} from "./structs/Pools.sol";
+import {ReservePool, RewardPool, IdLookup} from "./structs/Pools.sol";
 import {Delays} from "./structs/Delays.sol";
 import {
-  ConfigUpdateMetadata,
-  ReservePoolConfig,
-  UndrippedRewardPoolConfig,
-  UpdateConfigsCalldataParams
+  ConfigUpdateMetadata, ReservePoolConfig, RewardPoolConfig, UpdateConfigsCalldataParams
 } from "./structs/Configs.sol";
 import {TriggerConfig, Trigger} from "./structs/Trigger.sol";
 import {SafetyModuleState, TriggerState} from "./SafetyModuleStates.sol";
@@ -28,7 +25,7 @@ library ConfiguratorLib {
   /// @dev Emitted when a safety module owner queues a new configuration.
   event ConfigUpdatesQueued(
     ReservePoolConfig[] reservePoolConfigs,
-    UndrippedRewardPoolConfig[] undrippedRewardPoolConfigs,
+    RewardPoolConfig[] undrippedRewardPoolConfigs,
     TriggerConfig[] triggerConfigs,
     Delays delaysConfig,
     uint256 updateTime,
@@ -38,7 +35,7 @@ library ConfiguratorLib {
   /// @dev Emitted when a safety module's queued configuration updates are applied.
   event ConfigUpdatesFinalized(
     ReservePoolConfig[] reservePoolConfigs,
-    UndrippedRewardPoolConfig[] undrippedRewardPoolConfigs,
+    RewardPoolConfig[] undrippedRewardPoolConfigs,
     TriggerConfig[] triggerConfigUpdates,
     Delays delaysConfig
   );
@@ -49,7 +46,7 @@ library ConfiguratorLib {
   );
 
   /// @notice Emitted when an undripped reward pool is created.
-  event UndrippedRewardPoolCreated(
+  event RewardPoolCreated(
     uint16 indexed undrippedRewardPoolId, address rewardAssetAddress, address depositTokenAddress
   );
 
@@ -69,7 +66,7 @@ library ConfiguratorLib {
   function updateConfigs(
     ConfigUpdateMetadata storage lastConfigUpdate_,
     ReservePool[] storage reservePools_,
-    UndrippedRewardPool[] storage undrippedRewardPools_,
+    RewardPool[] storage undrippedRewardPools_,
     mapping(ITrigger => Trigger) storage triggerData_,
     Delays storage delays_,
     UpdateConfigsCalldataParams calldata configUpdates_,
@@ -123,7 +120,7 @@ library ConfiguratorLib {
     ConfigUpdateMetadata storage lastConfigUpdate_,
     SafetyModuleState safetyModuleState_,
     ReservePool[] storage reservePools_,
-    UndrippedRewardPool[] storage undrippedRewardPools_,
+    RewardPool[] storage undrippedRewardPools_,
     mapping(ITrigger => Trigger) storage triggerData_,
     Delays storage delays_,
     mapping(IReceiptToken => IdLookup) storage stkTokenToReservePoolIds_,
@@ -160,7 +157,7 @@ library ConfiguratorLib {
   /// @notice Returns true if the provided configs are valid for the safety module, false otherwise.
   function isValidUpdate(
     ReservePool[] storage reservePools_,
-    UndrippedRewardPool[] storage undrippedRewardPools_,
+    RewardPool[] storage undrippedRewardPools_,
     mapping(ITrigger => Trigger) storage triggerData_,
     UpdateConfigsCalldataParams calldata configUpdates_,
     IManager manager_
@@ -178,10 +175,10 @@ library ConfiguratorLib {
 
     // Validate number of reserve and rewards pools. It is only possible to add new pools, not remove existing ones.
     uint256 numExistingReservePools_ = reservePools_.length;
-    uint256 numExistingUndrippedRewardPools_ = undrippedRewardPools_.length;
+    uint256 numExistingRewardPools_ = undrippedRewardPools_.length;
     if (
       configUpdates_.reservePoolConfigs.length < numExistingReservePools_
-        || configUpdates_.undrippedRewardPoolConfigs.length < numExistingUndrippedRewardPools_
+        || configUpdates_.undrippedRewardPoolConfigs.length < numExistingRewardPools_
     ) return false;
 
     // Validate existing reserve pools.
@@ -190,7 +187,7 @@ library ConfiguratorLib {
     }
 
     // Validate existing undripped reward pools.
-    for (uint16 i = 0; i < numExistingUndrippedRewardPools_; i++) {
+    for (uint16 i = 0; i < numExistingRewardPools_; i++) {
       if (undrippedRewardPools_[i].asset != configUpdates_.undrippedRewardPoolConfigs[i].asset) return false;
     }
 
@@ -206,16 +203,16 @@ library ConfiguratorLib {
   /// @dev Does not include safety module-specific checks, e.g. checks based on existing reserve and reward pools.
   function isValidConfiguration(
     ReservePoolConfig[] calldata reservePoolConfigs_,
-    UndrippedRewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
+    RewardPoolConfig[] calldata undrippedRewardPoolConfigs_,
     Delays calldata delaysConfig_,
     uint256 maxReservePools_,
-    uint256 maxUndrippedRewardPools_
+    uint256 maxRewardPools_
   ) internal pure returns (bool) {
     // Validate number of reserve pools.
     if (reservePoolConfigs_.length > maxReservePools_) return false;
 
     // Validate number of undripped reward pools.
-    if (undrippedRewardPoolConfigs_.length > maxUndrippedRewardPools_) return false;
+    if (undrippedRewardPoolConfigs_.length > maxRewardPools_) return false;
 
     // Validate delays.
     if (
@@ -236,7 +233,7 @@ library ConfiguratorLib {
   /// @notice Apply queued updates to safety module config.
   function applyConfigUpdates(
     ReservePool[] storage reservePools_,
-    UndrippedRewardPool[] storage undrippedRewardPools_,
+    RewardPool[] storage undrippedRewardPools_,
     mapping(ITrigger => Trigger) storage triggerData_,
     Delays storage delays_,
     mapping(IReceiptToken => IdLookup) storage stkTokenToReservePoolIds_,
@@ -339,9 +336,9 @@ library ConfiguratorLib {
 
   /// @dev Initializes a new undripped reward pool when it is added to the safety module.
   function initializeUndrippedRewardPool(
-    UndrippedRewardPool[] storage undrippedRewardPools_,
+    RewardPool[] storage undrippedRewardPools_,
     IReceiptTokenFactory receiptTokenFactory_,
-    UndrippedRewardPoolConfig calldata undrippedRewardPoolConfig_
+    RewardPoolConfig calldata undrippedRewardPoolConfig_
   ) internal {
     uint16 undrippedRewardPoolId_ = uint16(undrippedRewardPools_.length);
 
@@ -350,7 +347,7 @@ library ConfiguratorLib {
     );
 
     undrippedRewardPools_.push(
-      UndrippedRewardPool({
+      RewardPool({
         asset: undrippedRewardPoolConfig_.asset,
         amount: 0,
         cumulativeDrippedRewards: 0,
@@ -360,7 +357,7 @@ library ConfiguratorLib {
       })
     );
 
-    emit UndrippedRewardPoolCreated(
+    emit RewardPoolCreated(
       undrippedRewardPoolId_, address(undrippedRewardPoolConfig_.asset), address(rewardDepositToken_)
     );
   }

@@ -2,11 +2,9 @@
 pragma solidity 0.8.22;
 
 import {DripModelExponential} from "cozy-safety-module-models/DripModelExponential.sol";
-import {
-  UndrippedRewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig
-} from "../src/lib/structs/Configs.sol";
+import {RewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
-import {UndrippedRewardPool} from "../src/lib/structs/Pools.sol";
+import {RewardPool} from "../src/lib/structs/Pools.sol";
 import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
 import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
@@ -39,8 +37,8 @@ abstract contract DripModelIntegrationTestSetup is MockDeployProtocol {
     reservePoolConfigs_[0] =
       ReservePoolConfig({maxSlashPercentage: 0, asset: reserveAsset, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
 
-    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
-    undrippedRewardPoolConfigs_[0] = UndrippedRewardPoolConfig({
+    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](1);
+    undrippedRewardPoolConfigs_[0] = RewardPoolConfig({
       asset: rewardAsset,
       dripModel: IDripModel(address(new DripModelExponential(DEFAULT_DRIP_RATE)))
     });

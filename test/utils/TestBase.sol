@@ -6,7 +6,7 @@ import {IDripModel} from "../../src/interfaces/IDripModel.sol";
 import {IReceiptToken} from "../../src/interfaces/IReceiptToken.sol";
 import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
 import {Delays} from "../../src/lib/structs/Delays.sol";
-import {UndrippedRewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
+import {RewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
 import {Test} from "forge-std/Test.sol";
 import {TestAssertions} from "./TestAssertions.sol";
 
@@ -126,10 +126,10 @@ contract TestBase is Test, TestAssertions {
     });
   }
 
-  function getUndrippedRewardPool(ISafetyModule safetyModule_, uint256 undrippedRewardPoolId_)
+  function getRewardPool(ISafetyModule safetyModule_, uint256 undrippedRewardPoolId_)
     internal
     view
-    returns (UndrippedRewardPool memory)
+    returns (RewardPool memory)
   {
     (
       uint256 amount,
@@ -139,7 +139,7 @@ contract TestBase is Test, TestAssertions {
       IDripModel dripModel,
       IReceiptToken depositToken
     ) = safetyModule_.undrippedRewardPools(undrippedRewardPoolId_);
-    return UndrippedRewardPool({
+    return RewardPool({
       amount: amount,
       asset: asset,
       dripModel: dripModel,
@@ -163,11 +163,7 @@ contract TestBase is Test, TestAssertions {
     copied_.lastFeesDripTime = original_.lastFeesDripTime;
   }
 
-  function copyUndrippedRewardPool(UndrippedRewardPool memory original_)
-    internal
-    pure
-    returns (UndrippedRewardPool memory copied_)
-  {
+  function copyRewardPool(RewardPool memory original_) internal pure returns (RewardPool memory copied_) {
     copied_.asset = original_.asset;
     copied_.amount = original_.amount;
     copied_.cumulativeDrippedRewards = original_.cumulativeDrippedRewards;

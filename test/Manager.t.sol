@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {
-  UpdateConfigsCalldataParams, ReservePoolConfig, UndrippedRewardPoolConfig
-} from "../src/lib/structs/Configs.sol";
+import {UpdateConfigsCalldataParams, ReservePoolConfig, RewardPoolConfig} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
 import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
@@ -27,8 +25,8 @@ abstract contract ManagerTestSetup {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0, asset: asset_, rewardsPoolsWeight: 1e4});
 
-    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
-    undrippedRewardPoolConfigs_[0] = UndrippedRewardPoolConfig({asset: asset_, dripModel: IDripModel(address(0xBEEF))});
+    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](1);
+    undrippedRewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(0xBEEF))});
 
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
     triggerConfigUpdates_[0] =
@@ -122,10 +120,9 @@ contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
   function test_createSafetyModule_revertTooManyRewardPools() public {
     UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
 
-    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ =
-      new UndrippedRewardPoolConfig[](ALLOWED_REWARD_POOLS + 1);
+    RewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new RewardPoolConfig[](ALLOWED_REWARD_POOLS + 1);
     for (uint256 i = 0; i < ALLOWED_REWARD_POOLS + 1; i++) {
-      undrippedRewardPoolConfigs_[i] = UndrippedRewardPoolConfig({
+      undrippedRewardPoolConfigs_[i] = RewardPoolConfig({
         asset: IERC20(address(new MockERC20("MockAsset", "MOCK", 18))),
         dripModel: IDripModel(_randomAddress())
       });

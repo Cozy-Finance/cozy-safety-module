@@ -5,13 +5,10 @@ import {ConfiguratorLib} from "./ConfiguratorLib.sol";
 import {Governable} from "./Governable.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {Delays} from "./structs/Delays.sol";
-import {ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
+import {ReservePool, RewardPool} from "./structs/Pools.sol";
 import {ClaimableRewardsData} from "./structs/Rewards.sol";
 import {
-  ConfigUpdateMetadata,
-  ReservePoolConfig,
-  UndrippedRewardPoolConfig,
-  UpdateConfigsCalldataParams
+  ConfigUpdateMetadata, ReservePoolConfig, RewardPoolConfig, UpdateConfigsCalldataParams
 } from "./structs/Configs.sol";
 import {TriggerConfig} from "./structs/Trigger.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
@@ -52,7 +49,7 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
     // So, before finalizing, we drip rewards, update claimable reward indices and reset the cumulative rewards values
     // to 0.
     ReservePool[] storage reservePools_ = reservePools;
-    UndrippedRewardPool[] storage undrippedRewardPools_ = undrippedRewardPools;
+    RewardPool[] storage undrippedRewardPools_ = undrippedRewardPools;
     _dripAndResetCumulativeRewardsValues(reservePools_, undrippedRewardPools_);
 
     ConfiguratorLib.finalizeUpdateConfigs(
