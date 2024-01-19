@@ -138,12 +138,12 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their redemption (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
-  function previewRedemption(uint16 rewardPoolId_, uint256 receiptTokenAmount_, bool isUnstake_)
+  function previewRedemption(uint16 reservePoolId_, uint256 receiptTokenAmount_, bool isUnstake_)
     external
     view
     returns (uint256 reserveAssetAmount_)
   {
-    ReservePool storage reservePool_ = reservePools[rewardPoolId_];
+    ReservePool storage reservePool_ = reservePools[reservePoolId_];
     IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
     uint256 lastDripTime_ = reservePool_.lastFeesDripTime;
 
@@ -180,7 +180,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     });
   }
 
-  function previewUndrippedRewardsWithdrawal(uint16 rewardPoolId_, uint256 depositTokenAmount_)
+  function previewUndrippedRewardsRedemption(uint16 rewardPoolId_, uint256 depositTokenAmount_)
     external
     view
     returns (uint256 rewardAssetAmount_)

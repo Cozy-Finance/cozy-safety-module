@@ -114,7 +114,9 @@ contract RewardsDripModelIntegrationTest is DripModelIntegrationTestSetup {
 
     // Reset reward pool.
     (uint256 currentAmount_,,,,,) = safetyModule.undrippedRewardPools(0);
-    depositRewards(safetyModule, REWARD_POOL_AMOUNT - currentAmount_, _randomAddress());
+    if (REWARD_POOL_AMOUNT - currentAmount_ > 0) {
+      depositRewards(safetyModule, REWARD_POOL_AMOUNT - currentAmount_, _randomAddress());
+    }
   }
 
   function _testSeveralRewardsDrips(uint256 rate_, uint256[] memory expectedClaimedRewards_) internal {
@@ -187,7 +189,9 @@ contract FeesDripModelIntegration is DripModelIntegrationTestSetup {
 
     // Reset reserve pool.
     (uint256 currentAmount_,,,,,,,,,,) = safetyModule.reservePools(0);
-    stake(safetyModule, RESERVE_POOL_AMOUNT - currentAmount_, _randomAddress());
+    if (RESERVE_POOL_AMOUNT - currentAmount_ > 0) {
+      stake(safetyModule, RESERVE_POOL_AMOUNT - currentAmount_, _randomAddress());
+    }
   }
 
   function _testSeveralRewardsDrips(uint256 rate_, uint256[] memory expectedClaimedFees_) internal {
