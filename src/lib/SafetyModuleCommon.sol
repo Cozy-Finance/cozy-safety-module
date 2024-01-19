@@ -29,7 +29,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     virtual;
 
   // @dev Returns the next amount of rewards/fees to be dripped given a base amount and a drip model.
-  function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_, uint256 deltaT_)
+  function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_)
     internal
     view
     virtual
