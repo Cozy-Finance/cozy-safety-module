@@ -401,7 +401,7 @@ contract SafetyModuleHandler is TestBase {
     countCall("completeRedemption")
     advanceTime(seed_)
   {
-    uint64 redemptionId_ = _pickRedemptionId();
+    uint64 redemptionId_ = _pickRedemptionId(seed_);
     if (redemptionId_ == type(uint64).max) {
       invalidCalls["completeRedemption"] += 1;
       return;
@@ -682,9 +682,14 @@ contract SafetyModuleHandler is TestBase {
     return addr_;
   }
 
-  function _pickRedemptionId() internal view returns (uint64 redemptionId_) {
-    for (uint256 i = 0; i < ghost_redemptions.length; i++) {
+  function _pickRedemptionId(uint256 seed_) internal view returns (uint64 redemptionId_) {
+    uint16 numRedemptions_ = uint16(ghost_redemptions.length);
+    uint16 initIndex_ = uint16(bound(seed_, 0, numRedemptions_));
+    uint16 indicesVisited_ = 0;
+
+    for (uint16 i = initIndex_; indicesVisited_ < numRedemptions_; i = uint16((i + 1) % numRedemptions_)) {
       if (!ghost_redemptions[i].completed) return ghost_redemptions[i].id;
+      indicesVisited_++;
     }
 
     // If no uncompleted pending redemption is found, we return type(uint64).max.
@@ -765,22 +770,52 @@ contract SafetyModuleHandler is TestBase {
 
   modifier useActorWithReseveDeposits(uint256 seed_) {
     currentActor = actorsWithReserveDeposits.rand(seed_);
-    // TODO: Determine which reserve pool to use in a smarter manner to better support redeem calls.
-    currentReservePoolId = uint16(bound(seed_, 0, numReservePools - 1));
+
+    uint16 initIndex_ = uint16(bound(seed_, 0, numReservePools));
+    uint16 indicesVisited_ = 0;
+
+    // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
+    for (uint16 i = initIndex_; indicesVisited_ < numReservePools; i = uint16((i + 1) % numReservePools)) {
+      if (ghost_actorReserveDepositCount[currentActor][i] > 0) {
+        currentReservePoolId = i;
+        break;
+      }
+      indicesVisited_++;
+    }
     _;
   }
 
   modifier useActorWithRewardDeposits(uint256 seed_) {
     currentActor = actorsWithRewardDeposits.rand(seed_);
-    // TODO: Determine which reserve pool to use in a smarter manner to better support redeem calls.
-    currentRewardPoolId = uint16(bound(seed_, 0, numRewardPools - 1));
+
+    uint16 initIndex_ = uint16(bound(seed_, 0, numRewardPools));
+    uint16 indicesVisited_ = 0;
+
+    // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
+    for (uint16 i = initIndex_; indicesVisited_ < numRewardPools; i = uint16((i + 1) % numRewardPools)) {
+      if (ghost_actorRewardDepositCount[currentActor][i] > 0) {
+        currentRewardPoolId = i;
+        break;
+      }
+      indicesVisited_++;
+    }
     _;
   }
 
   modifier useActorWithStakes(uint256 seed_) {
     currentActor = actorsWithStakes.rand(seed_);
-    // TODO: Determine which reserve pool to use in a smarter manner to better support unstake and claimRewards calls.
-    currentReservePoolId = uint16(bound(seed_, 0, numReservePools - 1));
+
+    uint16 initIndex_ = uint16(bound(seed_, 0, numReservePools));
+    uint16 indicesVisited_ = 0;
+
+    // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
+    for (uint16 i = initIndex_; indicesVisited_ < numReservePools; i = uint16((i + 1) % numReservePools)) {
+      if (ghost_actorStakeCount[currentActor][i] > 0) {
+        currentReservePoolId = i;
+        break;
+      }
+      indicesVisited_++;
+    }
     _;
   }
 
