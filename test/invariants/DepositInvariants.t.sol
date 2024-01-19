@@ -8,7 +8,7 @@ import {InvariantTestBase, InvariantTestWithSingleReservePoolAndSingleRewardPool
 abstract contract DepositInvariants is InvariantTestBase {
   using FixedPointMathLib for uint256;
 
-  function invariant_depositTokenTotalSupplyIncreasesOnReserveDeposit()
+  function invariant_reserveDepositTokenTotalSupplyIncreasesOnReserveDeposit()
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
@@ -41,7 +41,8 @@ abstract contract DepositInvariants is InvariantTestBase {
       } else {
         require(
           currentTotalSupply_ == totalSupplyBeforeDepositReserves_[reservePoolId_],
-          string.concat("Invariant Violated: A reserve pool's total supply must not change when a deposit occurs in another reserve pool.",
+          string.concat(
+            "Invariant Violated: A reserve pool's total supply must not change when a deposit occurs in another reserve pool.",
             " reservePoolId_: ",
             Strings.toString(reservePoolId_),
             ", currentTotalSupply_: ",

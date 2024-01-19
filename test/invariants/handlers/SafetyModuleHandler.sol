@@ -117,14 +117,14 @@ contract SafetyModuleHandler is TestBase {
   // -------- Functions under test --------
   // --------------------------------------
 
-  function depositReserveAssets(uint256 assetAmount_)
+  function depositReserveAssets(uint256 assetAmount_, uint256 seed_)
     public
     virtual
     createActor
     createActorWithReserveDeposits
-    useValidReservePoolId(_randomUint256())
+    useValidReservePoolId(seed_)
     countCall("depositReserveAssets")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _depositReserveAssets(assetAmount_, "depositReserveAssets");
@@ -132,13 +132,13 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function depositReserveAssetsWithExistingActor(uint256 assetAmount_)
+  function depositReserveAssetsWithExistingActor(uint256 assetAmount_, uint256 seed_)
     public
     virtual
-    useActor(_randomUint256())
-    useValidReservePoolId(_randomUint256())
+    useActor(seed_)
+    useValidReservePoolId(seed_)
     countCall("depositReserveAssetsWithExistingActor")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _depositReserveAssets(assetAmount_, "depositReserveAssetsWithExistingActor");
@@ -146,14 +146,14 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function depositReserveAssetsWithoutTransfer(uint256 assetAmount_)
+  function depositReserveAssetsWithoutTransfer(uint256 assetAmount_, uint256 seed_)
     public
     virtual
     createActor
     createActorWithReserveDeposits
-    useValidReservePoolId(_randomUint256())
+    useValidReservePoolId(seed_)
     countCall("depositReserveAssetsWithoutTransfer")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _depositReserveAssetsWithoutTransfer(assetAmount_, "depositReserveAssetsWithoutTransfer");
@@ -161,13 +161,13 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function depositReserveAssetsWithoutTransferWithExistingActor(uint256 assetAmount_)
+  function depositReserveAssetsWithoutTransferWithExistingActor(uint256 assetAmount_, uint256 seed_)
     public
     virtual
-    useActor(_randomUint256())
-    useValidReservePoolId(_randomUint256())
+    useActor(seed_)
+    useValidReservePoolId(seed_)
     countCall("depositReserveAssetsWithoutTransferWithExistingActor")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _depositReserveAssetsWithoutTransfer(assetAmount_, "depositReserveAssetsWithoutTransferWithExistingActor");
@@ -175,14 +175,14 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function depositRewardAssets(uint256 assetAmount_)
+  function depositRewardAssets(uint256 assetAmount_, uint256 seed_)
     public
     virtual
     createActor
     createActorWithRewardDeposits
-    useValidRewardPoolId(_randomUint256())
+    useValidRewardPoolId(seed_)
     countCall("depositRewardAssets")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _depositRewardAssets(assetAmount_, "depositRewardAssets");
@@ -190,13 +190,13 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function depositRewardAssetsWithExistingActor(uint256 assetAmount_)
+  function depositRewardAssetsWithExistingActor(uint256 assetAmount_, uint256 seed_)
     public
     virtual
-    useActor(_randomUint256())
-    useValidRewardPoolId(_randomUint256())
+    useActor(seed_)
+    useValidRewardPoolId(seed_)
     countCall("depositRewardAssetsWithExistingActor")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _depositRewardAssets(assetAmount_, "depositRewardAssetsWithExistingActor");
@@ -204,14 +204,14 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function depositRewardAssetsWithoutTransfer(uint256 assetAmount_)
+  function depositRewardAssetsWithoutTransfer(uint256 assetAmount_, uint256 seed_)
     public
     virtual
     createActor
     createActorWithRewardDeposits
-    useValidRewardPoolId(_randomUint256())
+    useValidRewardPoolId(seed_)
     countCall("depositRewardAssetsWithoutTransfer")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _depositRewardAssetsWithoutTransfer(assetAmount_, "depositRewardAssetsWithoutTransfer");
@@ -219,13 +219,13 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function depositRewardAssetsWithoutTransferWithExistingActor(uint256 assetAmount_)
+  function depositRewardAssetsWithoutTransferWithExistingActor(uint256 assetAmount_, uint256 seed_)
     public
     virtual
-    useActor(_randomUint256())
-    useValidRewardPoolId(_randomUint256())
+    useActor(seed_)
+    useValidRewardPoolId(seed_)
     countCall("depositRewardAssetsWithoutTransferWithExistingActor")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _depositRewardAssetsWithoutTransfer(assetAmount_, "depositRewardAssetsWithoutTransferWithExistingActor");
@@ -233,14 +233,14 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function stake(uint256 assetAmount_)
+  function stake(uint256 assetAmount_, uint256 seed_)
     public
     virtual
     createActor
     createActorWithStakes
-    useValidReservePoolId(_randomUint256())
+    useValidReservePoolId(seed_)
     countCall("stake")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _stake(assetAmount_, "stake");
@@ -248,13 +248,13 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function stakeWithExistingActor(uint256 assetAmount_)
+  function stakeWithExistingActor(uint256 assetAmount_, uint256 seed_)
     public
     virtual
-    useActor(_randomUint256())
-    useValidReservePoolId(_randomUint256())
+    useActor(seed_)
+    useValidReservePoolId(seed_)
     countCall("stakeWithExistingActor")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _stake(assetAmount_, "stakeWithExistingActor");
@@ -262,14 +262,14 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function stakeWithoutTransfer(uint256 assetAmount_)
+  function stakeWithoutTransfer(uint256 assetAmount_, uint256 seed_)
     public
     virtual
     createActor
     createActorWithStakes
-    useValidReservePoolId(_randomUint256())
+    useValidReservePoolId(seed_)
     countCall("stakeWithoutTransfer")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _stakeWithoutTransfer(assetAmount_, "stakeWithoutTransfer");
@@ -277,13 +277,13 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function stakeWithoutTransferWithExistingActor(uint256 assetAmount_)
+  function stakeWithoutTransferWithExistingActor(uint256 assetAmount_, uint256 seed_)
     public
     virtual
-    useActor(_randomUint256())
-    useValidReservePoolId(_randomUint256())
+    useActor(seed_)
+    useValidReservePoolId(seed_)
     countCall("stakeWithoutTransferWithExistingActor")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
     returns (address actor_)
   {
     _stakeWithoutTransfer(assetAmount_, "stakeWithoutTransferWithExistingActor");
@@ -291,12 +291,12 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function redeem(uint256 depositTokenRedeemAmount_, address receiver_)
+  function redeem(uint256 depositTokenRedeemAmount_, address receiver_, uint256 seed_)
     public
     virtual
-    useActorWithReseveDeposits(_randomUint256())
+    useActorWithReseveDeposits(seed_)
     countCall("redeem")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
   {
     IERC20 depositToken_ = getReservePool(safetyModule, currentReservePoolId).depositToken;
     uint256 actorDepositTokenBalance_ = depositToken_.balanceOf(currentActor);
@@ -317,12 +317,12 @@ contract SafetyModuleHandler is TestBase {
     ghost_redemptions.push(GhostRedemption(redemptionId_, assetAmount_, depositTokenRedeemAmount_, false));
   }
 
-  function redeemUndrippedRewards(uint256 depositTokenRedeemAmount_, address receiver_)
+  function redeemUndrippedRewards(uint256 depositTokenRedeemAmount_, address receiver_, uint256 seed_)
     public
     virtual
-    useActorWithRewardDeposits(_randomUint256())
+    useActorWithRewardDeposits(seed_)
     countCall("redeemUndrippedRewards")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
   {
     IERC20 depositToken_ = getUndrippedRewardPool(safetyModule, currentRewardPoolId).depositToken;
     uint256 actorDepositTokenBalance_ = depositToken_.balanceOf(currentActor);
@@ -342,12 +342,12 @@ contract SafetyModuleHandler is TestBase {
     ghost_rewardPoolCumulative[currentRewardPoolId].redeemSharesAmount += depositTokenRedeemAmount_;
   }
 
-  function unstake(uint256 stkTokenUnstakeAmount_, address receiver_)
+  function unstake(uint256 stkTokenUnstakeAmount_, address receiver_, uint256 seed_)
     public
     virtual
-    useActorWithStakes(_randomUint256())
+    useActorWithStakes(seed_)
     countCall("unstake")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
   {
     IERC20 stkToken_ = getReservePool(safetyModule, currentReservePoolId).stkToken;
     uint256 actorStkTokenBalance_ = stkToken_.balanceOf(currentActor);
@@ -368,11 +368,11 @@ contract SafetyModuleHandler is TestBase {
     ghost_redemptions.push(GhostRedemption(redemptionId_, assetAmount_, stkTokenUnstakeAmount_, false));
   }
 
-  function claimRewards(address receiver_)
+  function claimRewards(address receiver_, uint256 seed_)
     public
-    useActorWithStakes(_randomUint256())
+    useActorWithStakes(seed_)
     countCall("claimRewards")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
   {
     IERC20 stkToken_ = getReservePool(safetyModule, currentReservePoolId).stkToken;
     uint256 actorStkTokenBalance_ = stkToken_.balanceOf(currentActor);
@@ -386,11 +386,11 @@ contract SafetyModuleHandler is TestBase {
     vm.stopPrank();
   }
 
-  function completeRedemption(address caller_)
+  function completeRedemption(address caller_, uint256 seed_)
     public
     virtual
     countCall("completeRedemption")
-    advanceTime(_randomUint256())
+    advanceTime(seed_)
   {
     uint64 redemptionId_ = _pickRedemptionId();
     if (redemptionId_ == type(uint64).max) {
@@ -408,7 +408,7 @@ contract SafetyModuleHandler is TestBase {
     ghost_redemptions[redemptionId_].completed = true;
   }
 
-  function dripFees(address caller_) public virtual countCall("dripFees") advanceTime(_randomUint256()) {
+  function dripFees(address caller_, uint256 seed_) public virtual countCall("dripFees") advanceTime(seed_) {
     vm.startPrank(caller_);
     safetyModule.dripFees();
     vm.stopPrank();
@@ -421,7 +421,7 @@ contract SafetyModuleHandler is TestBase {
   function depositReserveAssetsWithExistingActorWithoutCountingCall(uint256 assets_) external returns (address) {
     uint256 invalidCallsBefore_ = invalidCalls["depositReserveAssetsWithExistingActor"];
 
-    address actor_ = depositReserveAssetsWithExistingActor(assets_);
+    address actor_ = depositReserveAssetsWithExistingActor(assets_, _randomUint256());
 
     calls["depositReserveAssetsWithExistingActor"] -= 1; // depositWithExistingActor increments by 1.
     if (invalidCallsBefore_ < invalidCalls["depositReserveAssetsWithExistingActor"]) {
@@ -650,6 +650,7 @@ contract SafetyModuleHandler is TestBase {
     vm.warp(currentTimestamp);
     byAmount_ = uint64(bound(byAmount_, 1, SECONDS_IN_A_YEAR));
     skip(byAmount_);
+    currentTimestamp += byAmount_;
     totalTimeAdvanced += byAmount_;
     _;
   }
