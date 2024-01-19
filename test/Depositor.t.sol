@@ -66,6 +66,7 @@ abstract contract DepositorUnitTest is TestBase {
     component.mockAddReservePool(initialReservePool_);
     component.mockAddUndrippedRewardPool(initialUndrippedRewardPool_);
     component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
+    deal(address(mockAsset), address(component), initialSafetyModuleBal);
   }
 
   function _deposit(
@@ -137,7 +138,7 @@ abstract contract DepositorUnitTest is TestBase {
     }
     // 200e18 + 10e18
     assertEq(finalAssetPool_.amount, 210e18);
-    assertEq(mockAsset.balanceOf(address(component)), 210e18);
+    assertEq(mockAsset.balanceOf(address(component)), 210e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(depositor_), 0);
     assertEq(mockDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
@@ -193,7 +194,7 @@ abstract contract DepositorUnitTest is TestBase {
     }
     // 200e18 + 20e18
     assertEq(finalAssetPool_.amount, 220e18);
-    assertEq(mockAsset.balanceOf(address(component)), 220e18);
+    assertEq(mockAsset.balanceOf(address(component)), 220e18 + initialSafetyModuleBal);
     assertEq(mockAsset.balanceOf(depositor_), 0);
     assertEq(mockDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
   }
@@ -294,7 +295,7 @@ abstract contract DepositorUnitTest is TestBase {
     }
     // 200e18 + 10e18
     assertEq(finalAssetPool_.amount, 210e18);
-    assertEq(mockAsset.balanceOf(address(component)), 210e18);
+    assertEq(mockAsset.balanceOf(address(component)), 210e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(depositor_), 0);
     assertEq(mockDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
@@ -349,7 +350,7 @@ abstract contract DepositorUnitTest is TestBase {
     }
     // 200e18 + 20e18
     assertEq(finalAssetPool_.amount, 220e18);
-    assertEq(mockAsset.balanceOf(address(component)), 220e18);
+    assertEq(mockAsset.balanceOf(address(component)), 220e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(depositor_), 0);
     assertEq(mockDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
@@ -389,7 +390,7 @@ abstract contract DepositorUnitTest is TestBase {
   function testFuzz_depositReserveAssetsWithoutTransfer_RevertInsufficientAssetsAvailable(uint256 amountToDeposit_)
     external
   {
-    amountToDeposit_ = bound(amountToDeposit_, 1, type(uint256).max);
+    amountToDeposit_ = bound(amountToDeposit_, 1, type(uint128).max);
     address depositor_ = _randomAddress();
     address receiver_ = _randomAddress();
 
@@ -399,8 +400,18 @@ abstract contract DepositorUnitTest is TestBase {
     vm.prank(depositor_);
     mockAsset.transfer(address(component), amountToDeposit_ - 1);
 
-    if (amountToDeposit_ - 1 < initialSafetyModuleBal) _expectPanic(PANIC_MATH_UNDEROVERFLOW);
-    else vm.expectRevert(IDepositorErrors.InvalidDeposit.selector);
+    vm.expectRevert(IDepositorErrors.InvalidDeposit.selector);
+    vm.prank(depositor_);
+    _deposit(depositType, true, 0, amountToDeposit_, receiver_, address(0));
+  }
+
+  function test_deposit_RevertZeroShares() external {
+    address depositor_ = _randomAddress();
+    address receiver_ = _randomAddress();
+    uint256 amountToDeposit_ = 0;
+
+    // 0 assets should give 0 shares.
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
     vm.prank(depositor_);
     _deposit(depositType, true, 0, amountToDeposit_, receiver_, address(0));
   }

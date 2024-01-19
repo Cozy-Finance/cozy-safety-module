@@ -33,6 +33,8 @@ contract StakerUnitTest is TestBase {
     uint256 stkTokenAmount_
   );
 
+  uint256 initialSafetyModuleBal = 199e18;
+
   function setUp() public {
     ReservePool memory initialReservePool_ = ReservePool({
       asset: IERC20(address(mockAsset)),
@@ -50,6 +52,7 @@ contract StakerUnitTest is TestBase {
     component.mockAddReservePool(initialReservePool_);
     component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
     component.mockAddUndrippedRewardPool(IERC20(address(mockAsset)));
+    deal(address(mockAsset), address(component), initialSafetyModuleBal);
   }
 
   function test_stake_StkTokensAndStorageUpdates() external {
@@ -85,7 +88,7 @@ contract StakerUnitTest is TestBase {
     assertEq(finalReservePool_.depositAmount, 99e18);
     // 150e18 + 20e18
     assertEq(finalAssetPool_.amount, 170e18);
-    assertEq(mockAsset.balanceOf(address(component)), 170e18);
+    assertEq(mockAsset.balanceOf(address(component)), 170e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
@@ -125,7 +128,7 @@ contract StakerUnitTest is TestBase {
     assertEq(finalReservePool_.stakeAmount, 120e18);
     // 150e18 + 20e18
     assertEq(finalAssetPool_.amount, 170e18);
-    assertEq(mockAsset.balanceOf(address(component)), 170e18);
+    assertEq(mockAsset.balanceOf(address(component)), 170e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
@@ -218,7 +221,7 @@ contract StakerUnitTest is TestBase {
     assertEq(finalReservePool_.depositAmount, 99e18);
     // 150e18 + 20e18
     assertEq(finalAssetPool_.amount, 170e18);
-    assertEq(mockAsset.balanceOf(address(component)), 170e18);
+    assertEq(mockAsset.balanceOf(address(component)), 170e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
@@ -260,7 +263,7 @@ contract StakerUnitTest is TestBase {
     assertEq(finalReservePool_.depositAmount, 99e18);
     // 150e18 + 20e18
     assertEq(finalAssetPool_.amount, 170e18);
-    assertEq(mockAsset.balanceOf(address(component)), 170e18);
+    assertEq(mockAsset.balanceOf(address(component)), 170e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
@@ -306,8 +309,8 @@ contract StakerUnitTest is TestBase {
     address staker_ = _randomAddress();
     address receiver_ = _randomAddress();
 
-    // Mint initial asset balance for safety module.
-    mockAsset.mint(address(component), 150e18);
+    // Set initial asset balance for safety module.
+    deal(address(mockAsset), address(component), 150e18);
     // Mint assets for staker.
     mockAsset.mint(staker_, amountToStake_);
     // Transfer insufficient assets to safety module.
@@ -315,6 +318,28 @@ contract StakerUnitTest is TestBase {
     mockAsset.transfer(address(component), amountToStake_ - 1);
 
     vm.expectRevert(IDepositorErrors.InvalidDeposit.selector);
+    vm.prank(staker_);
+    component.stakeWithoutTransfer(0, amountToStake_, receiver_);
+  }
+
+  function test_stake_RevertZeroShares() external {
+    address staker_ = _randomAddress();
+    address receiver_ = _randomAddress();
+    uint256 amountToStake_ = 0;
+
+    // 0 assets should give 0 shares.
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
+    vm.prank(staker_);
+    component.stake(0, amountToStake_, receiver_, staker_);
+  }
+
+  function test_stakeWithoutTransfer_RevertZeroShares() external {
+    address staker_ = _randomAddress();
+    address receiver_ = _randomAddress();
+    uint256 amountToStake_ = 0;
+
+    // 0 assets should give 0 shares.
+    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
     vm.prank(staker_);
     component.stakeWithoutTransfer(0, amountToStake_, receiver_);
   }

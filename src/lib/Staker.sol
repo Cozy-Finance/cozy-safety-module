@@ -74,8 +74,10 @@ abstract contract Staker is SafetyModuleCommon {
     IReceiptToken stkToken_ = reservePool_.stkToken;
 
     stkTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
-      reserveAssetAmount_, stkToken_.totalSupply(), reservePool_.stakeAmount
+      reserveAssetAmount_, stkToken_.totalSupply(), reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount
     );
+    if (stkTokenAmount_ == 0) revert RoundsToZero();
+
     // Increment reserve pool accounting only after calculating `stkTokenAmount_` to mint.
     reservePool_.stakeAmount += reserveAssetAmount_;
     assetPool_.amount += reserveAssetAmount_;
