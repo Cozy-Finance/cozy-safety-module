@@ -211,10 +211,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     return RewardDrip({
       rewardAsset: undrippedRewardPool_.asset,
       amount: _getNextDripAmount(
-        undrippedRewardPool_.amount,
-        undrippedRewardPool_.dripModel,
-        undrippedRewardPool_.lastDripTime,
-        block.timestamp - undrippedRewardPool_.lastDripTime
+        undrippedRewardPool_.amount, undrippedRewardPool_.dripModel, undrippedRewardPool_.lastDripTime
         )
     });
   }
@@ -258,14 +255,13 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     return PreviewClaimableRewards({reservePoolId: reservePoolId_, claimableRewardsData: claimableRewardsData_});
   }
 
-  function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_, uint256 deltaT_)
+  function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_)
     internal
     view
     override
     returns (uint256)
   {
-    if (deltaT_ == 0) return 0;
-    uint256 dripFactor_ = dripModel_.dripFactor(lastDripTime_, deltaT_);
+    uint256 dripFactor_ = dripModel_.dripFactor(lastDripTime_);
     if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
 
     return _computeNextDripAmount(totalBaseAmount_, dripFactor_);

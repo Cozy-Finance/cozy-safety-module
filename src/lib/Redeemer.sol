@@ -119,8 +119,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       depositTokenAmount_,
       undrippedRewardPool_.dripModel,
       undrippedRewardPool_.amount,
-      undrippedRewardPool_.lastDripTime,
-      block.timestamp - undrippedRewardPool_.lastDripTime
+      undrippedRewardPool_.lastDripTime
     );
 
     depositToken_.burn(msg.sender, owner_, depositTokenAmount_);
@@ -153,8 +152,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       receiptTokenAmount_,
       feeDripModel_,
       isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount,
-      lastDripTime_,
-      block.timestamp - lastDripTime_
+      lastDripTime_
     );
   }
 
@@ -195,8 +193,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       depositTokenAmount_,
       undrippedRewardPool_.dripModel,
       undrippedRewardPool_.amount,
-      lastDripTime_,
-      block.timestamp - lastDripTime_
+      lastDripTime_
     );
   }
 
@@ -205,11 +202,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 receiptTokenAmount_,
     IDripModel dripModel_,
     uint256 totalPoolAmount_,
-    uint256 lastDripTime_,
-    uint256 deltaT_
+    uint256 lastDripTime_
   ) internal view returns (uint256 assetAmount_) {
-    uint256 nextTotalPoolAmount_ =
-      totalPoolAmount_ - _getNextDripAmount(totalPoolAmount_, dripModel_, lastDripTime_, deltaT_);
+    uint256 nextTotalPoolAmount_ = totalPoolAmount_ - _getNextDripAmount(totalPoolAmount_, dripModel_, lastDripTime_);
 
     assetAmount_ = nextTotalPoolAmount_ == 0
       ? 0
