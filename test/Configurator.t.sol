@@ -32,6 +32,7 @@ import {TriggerConfig, Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
+import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "../src/lib/Stub.sol";
 
@@ -587,9 +588,11 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     // Create valid config update.
     Delays memory delayConfig_ = _generateValidDelays();
-    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](2);
-    rewardPoolConfigs_[0] = RewardPoolConfig({asset: rewardPool1.asset, dripModel: IDripModel(_randomAddress())});
-    rewardPoolConfigs_[1] = RewardPoolConfig({asset: rewardPool2.asset, dripModel: IDripModel(_randomAddress())});
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](3);
+    rewardPoolConfigs_[0] =
+      RewardPoolConfig({asset: rewardPool1.asset, dripModel: IDripModel(new MockDripModel(_randomUint256()))});
+    rewardPoolConfigs_[1] =
+      RewardPoolConfig({asset: rewardPool2.asset, dripModel: IDripModel(new MockDripModel(_randomUint256()))});
     rewardPoolConfigs_[2] = _generateValidRewardPoolConfig();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](3);
     reservePoolConfigs_[0] = ReservePoolConfig({
@@ -1071,12 +1074,12 @@ contract TestableConfigurator is Configurator, TestableConfiguratorEvents {
     __readStub__();
   }
 
-  function _getNextDripAmount(
-    uint256, /* totalBaseAmount_ */
-    IDripModel, /* dripModel_ */
-    uint256, /* lastDripTime_ */
-    uint256 /* deltaT_ */
-  ) internal view override returns (uint256) {
+  function _getNextDripAmount(uint256, /* totalBaseAmount_ */ IDripModel, /* dripModel_ */ uint256 /* lastDripTime_ */ )
+    internal
+    view
+    override
+    returns (uint256)
+  {
     __readStub__();
   }
 

@@ -66,10 +66,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
   }
 
   function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
-    uint256 deltaT_ = block.timestamp - reservePool_.lastFeesDripTime;
-    if (deltaT_ == 0) return;
-
-    uint256 dripFactor_ = dripModel_.dripFactor(reservePool_.lastFeesDripTime, deltaT_);
+    uint256 dripFactor_ = dripModel_.dripFactor(reservePool_.lastFeesDripTime);
     if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
 
     uint256 drippedFromStakeAmount_ =

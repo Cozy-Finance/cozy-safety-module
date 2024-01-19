@@ -468,12 +468,12 @@ contract TestableDepositor is Depositor {
     __readStub__();
   }
 
-  function _getNextDripAmount(
-    uint256, /* totalBaseAmount_ */
-    IDripModel, /* dripModel_ */
-    uint256, /* lastDripTime_ */
-    uint256 /* deltaT_ */
-  ) internal view override returns (uint256) {
+  function _getNextDripAmount(uint256, /* totalBaseAmount_ */ IDripModel, /* dripModel_ */ uint256 /* lastDripTime_ */ )
+    internal
+    view
+    override
+    returns (uint256)
+  {
     __readStub__();
   }
 

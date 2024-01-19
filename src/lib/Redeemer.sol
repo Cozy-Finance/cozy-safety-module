@@ -115,12 +115,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     IReceiptToken depositToken_ = rewardPool_.depositToken;
     rewardAssetAmount_ = _previewRedemption(
-      depositToken_,
-      depositTokenAmount_,
-      rewardPool_.dripModel,
-      rewardPool_.undrippedRewards,
-      rewardPool_.lastDripTime,
-      block.timestamp - rewardPool_.lastDripTime
+      depositToken_, depositTokenAmount_, rewardPool_.dripModel, rewardPool_.undrippedRewards, rewardPool_.lastDripTime
     );
 
     depositToken_.burn(msg.sender, owner_, depositTokenAmount_);
@@ -153,8 +148,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       receiptTokenAmount_,
       feeDripModel_,
       isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount,
-      lastDripTime_,
-      block.timestamp - lastDripTime_
+      lastDripTime_
     );
   }
 
@@ -191,12 +185,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 lastDripTime_ = rewardPool_.lastDripTime;
 
     rewardAssetAmount_ = _previewRedemption(
-      rewardPool_.depositToken,
-      depositTokenAmount_,
-      rewardPool_.dripModel,
-      rewardPool_.undrippedRewards,
-      lastDripTime_,
-      block.timestamp - lastDripTime_
+      rewardPool_.depositToken, depositTokenAmount_, rewardPool_.dripModel, rewardPool_.undrippedRewards, lastDripTime_
     );
   }
 
@@ -205,11 +194,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 receiptTokenAmount_,
     IDripModel dripModel_,
     uint256 totalPoolAmount_,
-    uint256 lastDripTime_,
-    uint256 deltaT_
+    uint256 lastDripTime_
   ) internal view returns (uint256 assetAmount_) {
-    uint256 nextTotalPoolAmount_ =
-      totalPoolAmount_ - _getNextDripAmount(totalPoolAmount_, dripModel_, lastDripTime_, deltaT_);
+    uint256 nextTotalPoolAmount_ = totalPoolAmount_ - _getNextDripAmount(totalPoolAmount_, dripModel_, lastDripTime_);
 
     assetAmount_ = nextTotalPoolAmount_ == 0
       ? 0

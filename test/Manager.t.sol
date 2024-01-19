@@ -17,8 +17,10 @@ import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {MockDeployProtocol} from "./utils/MockDeployProtocol.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
+import {MockDripModel} from "./utils/MockDripModel.sol";
+import {TestBase} from "./utils/TestBase.sol";
 
-abstract contract ManagerTestSetup {
+abstract contract ManagerTestSetup is TestBase {
   function _defaultSetUp() internal returns (UpdateConfigsCalldataParams memory updateConfigsCalldataParams_) {
     IERC20 asset_ = IERC20(address(new MockERC20("MockAsset", "MOCK", 18)));
 
@@ -26,7 +28,8 @@ abstract contract ManagerTestSetup {
     reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0, asset: asset_, rewardsPoolsWeight: 1e4});
 
     RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
-    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(0xBEEF))});
+    rewardPoolConfigs_[0] =
+      RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(new MockDripModel(_randomUint256())))});
 
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
     triggerConfigUpdates_[0] =

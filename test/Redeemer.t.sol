@@ -1509,12 +1509,12 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
     reservePool_.lastFeesDripTime = uint128(block.timestamp);
   }
 
-  function _getNextDripAmount(
-    uint256, /* totalBaseAmount_ */
-    IDripModel, /* dripModel_ */
-    uint256 lastDripTime_,
-    uint256 /* deltaT_ */
-  ) internal view override returns (uint256) {
+  function _getNextDripAmount(uint256, /* totalBaseAmount_ */ IDripModel, /* dripModel_ */ uint256 lastDripTime_)
+    internal
+    view
+    override
+    returns (uint256)
+  {
     if (mockNextDripType == DripType.REWARDS) {
       return block.timestamp - lastDripTime_ == 0 ? 0 : mockNextRewardsDripAmount;
     } else if (mockNextDripType == DripType.DEPOSITS) {

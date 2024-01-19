@@ -10,12 +10,8 @@ contract MockDripModel is IDripModel {
     dripFactorConstant = dripFactorConstant_;
   }
 
-  function dripFactor(uint256, /* lastDripTime_ */ uint256 /* timeSinceLastDrip_ */ )
-    external
-    view
-    override
-    returns (uint256)
-  {
+  function dripFactor(uint256 lastDripTime_) external view override returns (uint256) {
+    if (block.timestamp - lastDripTime_ == 0) return 0;
     return dripFactorConstant;
   }
 }
