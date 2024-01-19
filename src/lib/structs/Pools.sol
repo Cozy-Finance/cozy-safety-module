@@ -30,10 +30,15 @@ struct ReservePool {
   /// e.g. stkTokenA = 10%, means they're eligible for up to 10% of each pool, scaled to their balance of stkTokenA
   /// wrt totalSupply.
   uint16 rewardsPoolsWeight;
+  uint128 lastFeesDripTime;
 }
 
 struct UndrippedRewardPool {
   uint256 amount;
+  /// @dev The cumulative amount of rewards dripped to the pool since the last weight change. On a call to
+  /// `finalizeConfigUpdates`, if the associated config update changes the rewards weights, this value is reset to 0.
+  uint256 cumulativeDrippedRewards;
+  uint128 lastDripTime;
   IERC20 asset;
   IDripModel dripModel;
   IReceiptToken depositToken;

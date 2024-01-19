@@ -7,6 +7,7 @@ import {IDepositorErrors} from "../interfaces/IDepositorErrors.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {ReservePool, AssetPool} from "./structs/Pools.sol";
+import {ClaimableRewardsData} from "./structs/Rewards.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {SafeCastLib} from "./SafeCastLib.sol";
 import {SafeERC20} from "./SafeERC20.sol";
@@ -83,9 +84,9 @@ abstract contract Staker is SafetyModuleCommon {
     assetPool_.amount += reserveAssetAmount_;
 
     // Update user rewards before minting any new stkTokens.
-    _updateUserRewards(
-      stkToken_.balanceOf(receiver_), claimableRewardsIndices[reservePoolId_], userRewards[reservePoolId_][receiver_]
-    );
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsData_ = claimableRewardsIndices[reservePoolId_];
+    _applyPendingDrippedRewards(reservePool_, claimableRewardsData_);
+    _updateUserRewards(stkToken_.balanceOf(receiver_), claimableRewardsData_, userRewards[reservePoolId_][receiver_]);
 
     stkToken_.mint(receiver_, stkTokenAmount_);
     emit Staked(msg.sender, receiver_, stkToken_, reserveAssetAmount_, stkTokenAmount_);

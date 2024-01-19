@@ -100,7 +100,7 @@ contract RewardsDripModelIntegrationTest is DripModelIntegrationTestSetup {
 
   function _setRewardsDripModel(uint256 rate_) internal {
     DripModelExponential rewardsDripModel_ = new DripModelExponential(rate_);
-    (,, IDripModel currentRewardsDripModel_,) = safetyModule.undrippedRewardPools(0);
+    (,,,, IDripModel currentRewardsDripModel_,) = safetyModule.undrippedRewardPools(0);
     vm.etch(address(currentRewardsDripModel_), address(rewardsDripModel_).code);
   }
 
@@ -113,10 +113,8 @@ contract RewardsDripModelIntegrationTest is DripModelIntegrationTestSetup {
     assertEq(rewardAsset.balanceOf(receiver_), expectedClaimedRewards_);
 
     // Reset reward pool.
-    (uint256 currentAmount_,,,) = safetyModule.undrippedRewardPools(0);
-    if (REWARD_POOL_AMOUNT - currentAmount_ > 0) {
-      depositRewards(safetyModule, REWARD_POOL_AMOUNT - currentAmount_, _randomAddress());
-    }
+    (uint256 currentAmount_,,,,,) = safetyModule.undrippedRewardPools(0);
+    if (REWARD_POOL_AMOUNT - currentAmount_ > 0) depositRewards(safetyModule, REWARD_POOL_AMOUNT - currentAmount_, _randomAddress());
   }
 
   function _testSeveralRewardsDrips(uint256 rate_, uint256[] memory expectedClaimedRewards_) internal {
@@ -188,10 +186,8 @@ contract FeesDripModelIntegration is DripModelIntegrationTestSetup {
     assertEq(reserveAsset.balanceOf(receiver_), expectedClaimedFees_);
 
     // Reset reserve pool.
-    (uint256 currentAmount_,,,,,,,,,) = safetyModule.reservePools(0);
-    if (RESERVE_POOL_AMOUNT - currentAmount_ > 0) {
-      stake(safetyModule, RESERVE_POOL_AMOUNT - currentAmount_, _randomAddress());
-    }
+    (uint256 currentAmount_,,,,,,,,,,) = safetyModule.reservePools(0);
+    if (RESERVE_POOL_AMOUNT - currentAmount_ > 0) stake(safetyModule, RESERVE_POOL_AMOUNT - currentAmount_, _randomAddress());
   }
 
   function _testSeveralRewardsDrips(uint256 rate_, uint256[] memory expectedClaimedFees_) internal {

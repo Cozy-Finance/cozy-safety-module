@@ -15,6 +15,7 @@ import {Depositor} from "./lib/Depositor.sol";
 import {Redeemer} from "./lib/Redeemer.sol";
 import {SlashHandler} from "./lib/SlashHandler.sol";
 import {Staker} from "./lib/Staker.sol";
+import {SafeCastLib} from "./lib/SafeCastLib.sol";
 import {SafetyModuleBaseStorage} from "./lib/SafetyModuleBaseStorage.sol";
 import {SafetyModuleInspector} from "./lib/SafetyModuleInspector.sol";
 import {SafetyModuleState} from "./lib/SafetyModuleStates.sol";
@@ -49,8 +50,5 @@ contract SafetyModule is
     ConfiguratorLib.applyConfigUpdates(
       reservePools, undrippedRewardPools, triggerData, delays, stkTokenToReservePoolIds, receiptTokenFactory, configs_
     );
-
-    dripTimes.lastFeesDripTime = uint128(block.timestamp);
-    dripTimes.lastRewardsDripTime = uint128(block.timestamp);
   }
 }
