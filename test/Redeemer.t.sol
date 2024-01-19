@@ -1543,7 +1543,7 @@ contract TestableRedeemer is Redeemer, TestableRedeemerEvents {
 
   function _updateUserRewards(
     uint256, /* userStkTokenBalance */
-    mapping(uint16 => ClaimableRewardsData) storage, /* claimableRewardsIndices_ */
+    mapping(uint16 => ClaimableRewardsData) storage, /* claimableRewards_ */
     UserRewardsData[] storage /* userRewards_ */
   ) internal view override {
     __readStub__();

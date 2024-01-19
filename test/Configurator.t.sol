@@ -1117,7 +1117,7 @@ contract TestableConfigurator is Configurator, TestableConfiguratorEvents {
 
   function _updateUserRewards(
     uint256, /*userStkTokenBalance_*/
-    mapping(uint16 => ClaimableRewardsData) storage, /*claimableRewardsIndices_*/
+    mapping(uint16 => ClaimableRewardsData) storage, /*claimableRewards_*/
     UserRewardsData[] storage /*userRewards_*/
   ) internal view override {
     __readStub__();

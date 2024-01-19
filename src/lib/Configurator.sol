@@ -44,7 +44,7 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
   function finalizeUpdateConfigs(UpdateConfigsCalldataParams calldata configUpdates_) external {
     // A config update may change the rewards weights, which breaks the invariants that we use to do claimable rewards
     // accounting. It may no longer hold that:
-    //    claimableRewardsIndices[reservePool][rewardPool].cumulativeClaimedRewards <=
+    //    claimableRewards[reservePool][rewardPool].cumulativeClaimedRewards <=
     //        rewardPools[rewardPool].cumulativeDrippedRewards*reservePools[reservePool].rewardsPoolsWeight
     // So, before finalizing, we drip rewards, update claimable reward indices and reset the cumulative rewards values
     // to 0.

@@ -461,7 +461,7 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
 
   function _updateUserRewards(
     uint256, /* userStkTokenBalance_*/
-    mapping(uint16 => ClaimableRewardsData) storage, /* claimableRewardsIndices_ */
+    mapping(uint16 => ClaimableRewardsData) storage, /* claimableRewards_ */
     UserRewardsData[] storage /* userRewards_ */
   ) internal view virtual override {
     __readStub__();

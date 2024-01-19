@@ -62,7 +62,7 @@ contract StakerUnitTest is TestBase {
     component.mockAddAssetPool(IERC20(address(mockAsset)), initialAssetPool_);
 
     component.mockAddRewardPool(IERC20(address(mockAsset)), cumulativeDrippedRewards_);
-    component.mockSetClaimableRewardIndex(0, 0, initialIndexSnapshot_, cumulativeClaimedRewards_);
+    component.mockSetClaimableRewardsData(0, 0, initialIndexSnapshot_, cumulativeClaimedRewards_);
   }
 
   function test_stake_StkTokensAndStorageUpdates() external {
@@ -92,7 +92,7 @@ contract StakerUnitTest is TestBase {
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
-    ClaimableRewardsData memory finalClaimableRewardsData_ = component.getClaimableRewardIndex(0, 0);
+    ClaimableRewardsData memory finalClaimableRewardsData_ = component.getClaimableRewardsData(0, 0);
 
     // 100e18 + 20e18
     assertEq(finalReservePool_.stakeAmount, 120e18);
@@ -140,7 +140,7 @@ contract StakerUnitTest is TestBase {
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
-    ClaimableRewardsData memory finalClaimableRewardsData_ = component.getClaimableRewardIndex(0, 0);
+    ClaimableRewardsData memory finalClaimableRewardsData_ = component.getClaimableRewardsData(0, 0);
 
     // 100e18 + 20e18
     assertEq(finalReservePool_.stakeAmount, 120e18);
@@ -379,13 +379,13 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     );
   }
 
-  function mockSetClaimableRewardIndex(
+  function mockSetClaimableRewardsData(
     uint16 reservePoolId_,
     uint16 rewardPoolid_,
     uint256 indexSnapshot_,
     uint256 cumulativeClaimedRewards_
   ) external {
-    claimableRewardsIndices[reservePoolId_][rewardPoolid_] = ClaimableRewardsData({
+    claimableRewards[reservePoolId_][rewardPoolid_] = ClaimableRewardsData({
       indexSnapshot: indexSnapshot_.safeCastTo128(),
       cumulativeClaimedRewards: cumulativeClaimedRewards_
     });
@@ -400,12 +400,12 @@ contract TestableStaker is Staker, Depositor, RewardsHandler {
     return assetPools[asset_];
   }
 
-  function getClaimableRewardIndex(uint16 reservePoolId_, uint16 rewardPoolid_)
+  function getClaimableRewardsData(uint16 reservePoolId_, uint16 rewardPoolid_)
     external
     view
     returns (ClaimableRewardsData memory)
   {
-    return claimableRewardsIndices[reservePoolId_][rewardPoolid_];
+    return claimableRewards[reservePoolId_][rewardPoolid_];
   }
 
   // -------- Overridden abstract function placeholders --------

@@ -20,7 +20,7 @@ abstract contract SafetyModuleBaseStorage {
   RewardPool[] public rewardPools;
 
   /// @notice Maps a reserve pool id to an reward pool id to claimable reward index
-  mapping(uint16 => mapping(uint16 => ClaimableRewardsData)) public claimableRewardsIndices;
+  mapping(uint16 => mapping(uint16 => ClaimableRewardsData)) public claimableRewards;
 
   /// @notice Maps a reserve pool id to a user address to a user reward pool accounting struct.
   mapping(uint16 => mapping(address => UserRewardsData[])) public userRewards;

@@ -469,7 +469,7 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
 
   function _updateUserRewards(
     uint256, /*userStkTokenBalance_*/
-    mapping(uint16 => ClaimableRewardsData) storage, /*claimableRewardsIndices_*/
+    mapping(uint16 => ClaimableRewardsData) storage, /*claimableRewards*/
     UserRewardsData[] storage /*userRewards_*/
   ) internal override {
     __readStub__();
