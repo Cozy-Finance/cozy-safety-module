@@ -1055,11 +1055,11 @@ contract TestableRewardsHandler is RewardsHandler, Staker, Depositor {
     assetPools[asset_] = assetPool_;
   }
 
-  function mockSetClaimableRewardsData(uint16 reservePoolId_, uint16 rewardPoolid_, uint128 claimableRewardIndex_)
+  function mockSetClaimableRewardsData(uint16 reservePoolId_, uint16 rewardPoolid_, uint128 claimableRewardsIndex_)
     external
   {
     claimableRewards[reservePoolId_][rewardPoolid_] =
-      ClaimableRewardsData({indexSnapshot: claimableRewardIndex_, cumulativeClaimedRewards: 0});
+      ClaimableRewardsData({indexSnapshot: claimableRewardsIndex_, cumulativeClaimedRewards: 0});
   }
 
   function mockRegisterStkToken(uint16 reservePoolId_, IReceiptToken stkToken_) external {
