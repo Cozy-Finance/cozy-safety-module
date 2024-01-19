@@ -8,6 +8,7 @@ import {SafetyModuleState} from "../../../src/lib/SafetyModuleStates.sol";
 import {RedemptionPreview} from "../../../src/lib/structs/Redemptions.sol";
 import {IERC20} from "../../../src/interfaces/IERC20.sol";
 import {ISafetyModule} from "../../../src/interfaces/ISafetyModule.sol";
+import {ITrigger} from "../../../src/interfaces/ITrigger.sol";
 import {AddressSet, AddressSetLib} from "../utils/AddressSet.sol";
 import {TestBase} from "../../utils/TestBase.sol";
 
@@ -27,6 +28,8 @@ contract SafetyModuleHandler is TestBase {
   uint256 numReservePools;
   uint256 numRewardPools;
 
+  ITrigger[] public triggers;
+
   mapping(string => uint256) public calls;
   mapping(string => uint256) public invalidCalls;
 
@@ -43,6 +46,8 @@ contract SafetyModuleHandler is TestBase {
   uint16 public currentReservePoolId;
 
   uint16 public currentRewardPoolId;
+
+  ITrigger public currentTrigger;
 
   uint256 public currentTimestamp;
 
@@ -99,6 +104,7 @@ contract SafetyModuleHandler is TestBase {
     IERC20 asset_,
     uint256 numReservePools_,
     uint256 numRewardPools_,
+    ITrigger[] memory triggers_,
     uint256 currentTimestamp_
   ) {
     safetyModule = safetyModule_;
@@ -109,6 +115,7 @@ contract SafetyModuleHandler is TestBase {
     pauser = safetyModule_.pauser();
     owner = safetyModule_.owner();
     currentTimestamp = currentTimestamp_;
+    triggers = triggers_;
 
     vm.label(address(safetyModule), "safetyModule");
   }
@@ -414,6 +421,32 @@ contract SafetyModuleHandler is TestBase {
     vm.stopPrank();
   }
 
+  function pause(uint256 seed_) public virtual countCall("pause") advanceTime(seed_) {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
+      invalidCalls["pause"] += 1;
+      return;
+    }
+    vm.prank(pauser);
+    safetyModule.pause();
+  }
+
+  function unpause(uint256 seed_) public virtual countCall("unpause") advanceTime(seed_) {
+    if (safetyModule.safetyModuleState() != SafetyModuleState.PAUSED) {
+      invalidCalls["unpause"] += 1;
+      return;
+    }
+    vm.prank(owner);
+    safetyModule.unpause();
+  }
+
+  function trigger(uint256 seed_) public virtual countCall("trigger") advanceTime(seed_) {
+    if (safetyModule.triggerData(currentTrigger).triggered) {
+      invalidCalls["trigger"] += 1;
+      return;
+    }
+    safetyModule.trigger(currentTrigger);
+  }
+
   // ----------------------------------
   // -------- Helper functions --------
   // ----------------------------------
@@ -463,6 +496,9 @@ contract SafetyModuleHandler is TestBase {
     console2.log("claimRewards", calls["claimRewards"]);
     console2.log("completeRedemption", calls["completeRedemption"]);
     console2.log("dripFees", calls["dripFees"]);
+    console2.log("pause", calls["pause"]);
+    console2.log("unpause", calls["unpause"]);
+    console2.log("trigger", calls["trigger"]);
     console2.log("----------------------------------------------------------------------------");
     console2.log("Invalid calls:");
     console2.log("");
@@ -490,6 +526,9 @@ contract SafetyModuleHandler is TestBase {
     console2.log("claimRewards", invalidCalls["claimRewards"]);
     console2.log("completeRedemption", invalidCalls["completeRedemption"]);
     console2.log("dripFees", invalidCalls["dripFees"]);
+    console2.log("pause", invalidCalls["pause"]);
+    console2.log("unpause", invalidCalls["unpause"]);
+    console2.log("trigger", invalidCalls["trigger"]);
   }
 
   function _depositReserveAssets(uint256 assetAmount_, string memory callName_) internal {
@@ -690,6 +729,11 @@ contract SafetyModuleHandler is TestBase {
 
   modifier useValidRewardPoolId(uint256 seed_) {
     currentRewardPoolId = uint16(bound(seed_, 0, numRewardPools - 1));
+    _;
+  }
+
+  modifier useValidTrigger(uint256 seed_) {
+    currentTrigger = triggers[bound(seed_, 0, triggers.length - 1)];
     _;
   }
 

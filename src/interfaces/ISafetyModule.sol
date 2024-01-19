@@ -4,11 +4,13 @@ pragma solidity ^0.8.0;
 import {IERC20} from "./IERC20.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
 import {RedemptionPreview} from "../lib/structs/Redemptions.sol";
+import {Trigger} from "../lib/structs/Trigger.sol";
 import {SafetyModuleState} from "../lib/SafetyModuleStates.sol";
 import {IDripModel} from "./IDripModel.sol";
 import {IManager} from "./IManager.sol";
 import {IReceiptToken} from "./IReceiptToken.sol";
 import {IReceiptTokenFactory} from "./IReceiptTokenFactory.sol";
+import {ITrigger} from "./ITrigger.sol";
 import {UndrippedRewardPoolConfig, ReservePoolConfig} from "../lib/structs/Configs.sol";
 
 interface ISafetyModule {
@@ -164,6 +166,10 @@ interface ISafetyModule {
 
   /// @notice The state of this SafetyModule.
   function safetyModuleState() external view returns (SafetyModuleState);
+
+  function trigger(ITrigger trigger_) external;
+
+  function triggerData(ITrigger trigger_) external view returns (Trigger memory);
 
   /// @notice Retrieve accounting and metadata about undripped reward pools.
   /// @dev Claimable reward pool IDs are mapped 1:1 with undripped reward pool IDs.
