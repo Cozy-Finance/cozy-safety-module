@@ -4,11 +4,14 @@ pragma solidity ^0.8.0;
 import {IERC20} from "./IERC20.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
 import {RedemptionPreview} from "../lib/structs/Redemptions.sol";
+import {Slash} from "../lib/structs/Slash.sol";
+import {Trigger} from "../lib/structs/Trigger.sol";
 import {SafetyModuleState} from "../lib/SafetyModuleStates.sol";
 import {IDripModel} from "./IDripModel.sol";
 import {IManager} from "./IManager.sol";
 import {IReceiptToken} from "./IReceiptToken.sol";
 import {IReceiptTokenFactory} from "./IReceiptTokenFactory.sol";
+import {ITrigger} from "./ITrigger.sol";
 import {RewardPoolConfig, ReservePoolConfig} from "../lib/structs/Configs.sol";
 
 interface ISafetyModule {
@@ -89,6 +92,16 @@ interface ISafetyModule {
 
   function dripFees() external;
 
+  /// @notice The number of slashes that must occur before the safety module can be active.
+  /// @dev This value is incremented when a trigger occurs, and decremented when a slash from a trigger assigned payout
+  /// handler occurs. When this value is non-zero, the safety module is triggered (or paused).
+  function numPendingSlashes() external returns (uint16);
+
+  /// @dev Maps payout handlers to the number of times they are allowed to call slash at the current block.
+  function payoutHandlerNumPendingSlashes(address payoutHandler_) external returns (uint256);
+
+  function slash(Slash[] memory slashes_, address receiver_) external;
+
   function stake(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
     external
     returns (uint256 stkTokenAmount_);
@@ -164,6 +177,10 @@ interface ISafetyModule {
 
   /// @notice The state of this SafetyModule.
   function safetyModuleState() external view returns (SafetyModuleState);
+
+  function trigger(ITrigger trigger_) external;
+
+  function triggerData(ITrigger trigger_) external view returns (Trigger memory);
 
   /// @notice Retrieve accounting and metadata about reward pools.
   /// @dev Claimable reward pool IDs are mapped 1:1 with reward pool IDs.

@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
 import {InvariantTestBase, InvariantTestWithSingleReservePoolAndSingleRewardPool} from "./utils/InvariantTestBase.sol";
 
 abstract contract DepositInvariants is InvariantTestBase {
@@ -12,6 +13,9 @@ abstract contract DepositInvariants is InvariantTestBase {
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
+    // Can't deposit if the safety module is paused.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) return;
+
     uint256[] memory totalSupplyBeforeDepositReserves_ = new uint256[](numReservePools);
     for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       totalSupplyBeforeDepositReserves_[reservePoolId_] =

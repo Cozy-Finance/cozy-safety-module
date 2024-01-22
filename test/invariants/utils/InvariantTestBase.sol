@@ -37,6 +37,7 @@ abstract contract InvariantBaseDeploy is TestBase, MockDeployer {
 
   uint256 public numReservePools;
   uint256 public numRewardPools;
+  ITrigger[] public triggers;
 
   function _initSafetyModule() internal virtual;
 }
@@ -53,7 +54,7 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
   }
 
   function _fuzzedSelectors() internal pure virtual returns (bytes4[] memory) {
-    bytes4[] memory selectors = new bytes4[](17);
+    bytes4[] memory selectors = new bytes4[](21);
     selectors[0] = SafetyModuleHandler.depositReserveAssets.selector;
     selectors[1] = SafetyModuleHandler.depositReserveAssetsWithExistingActor.selector;
     selectors[2] = SafetyModuleHandler.depositReserveAssetsWithoutTransfer.selector;
@@ -71,6 +72,10 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
     selectors[14] = SafetyModuleHandler.claimRewards.selector;
     selectors[15] = SafetyModuleHandler.completeRedemption.selector;
     selectors[16] = SafetyModuleHandler.dripFees.selector;
+    selectors[17] = SafetyModuleHandler.pause.selector;
+    selectors[18] = SafetyModuleHandler.unpause.selector;
+    selectors[19] = SafetyModuleHandler.trigger.selector;
+    selectors[20] = SafetyModuleHandler.slash.selector;
     // TODO: This causes tests to fail - something missing from/in redeemUndrippedRewards potentially causing issues.
     // selectors[17] = SafetyModuleHandler.redeemUndrippedRewards.selector;
     return selectors;
@@ -78,7 +83,7 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
 
   function _initHandler() internal {
     safetyModuleHandler =
-      new SafetyModuleHandler(manager, safetyModule, asset, numReservePools, numRewardPools, block.timestamp);
+      new SafetyModuleHandler(manager, safetyModule, asset, numReservePools, numRewardPools, triggers, block.timestamp);
     targetSelector(FuzzSelector({addr: address(safetyModuleHandler), selectors: _fuzzedSelectors()}));
     targetContract(address(safetyModuleHandler));
   }
@@ -108,17 +113,15 @@ abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is Invar
   function _initSafetyModule() internal override {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] =
-      ReservePoolConfig({maxSlashPercentage: 0, asset: asset, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
+      ReservePoolConfig({maxSlashPercentage: 0.5e18, asset: asset, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
 
     RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
     rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset, dripModel: dripDecayModel});
 
+    triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
+
     TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](1);
-    triggerConfig_[0] = TriggerConfig({
-      trigger: ITrigger(new MockTrigger(TriggerState.ACTIVE)),
-      payoutHandler: _randomAddress(),
-      exists: true
-    });
+    triggerConfig_[0] = TriggerConfig({trigger: triggers[0], payoutHandler: _randomAddress(), exists: true});
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
