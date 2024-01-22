@@ -7,7 +7,7 @@ import {IReceiptToken as IStkAsset} from "../interfaces/IReceiptToken.sol";
 
 /// @dev Multiple asset SafetyModule.
 contract SafetyModule {
-  struct UndrippedRewardPool {
+  struct RewardPool {
     uint128 amount;
     IDripModel dripModel;
     uint128 lastDripTime;
@@ -28,7 +28,7 @@ contract SafetyModule {
 
   mapping(IERC20 asset_ => uint256 amount_) public claimableRewardPools;
 
-  mapping(IERC20 asset_ => UndrippedRewardPool undrippedRewardPool_) public undrippedRewardPools;
+  mapping(IERC20 asset_ => RewardPool rewardPool_) public rewardPools;
 
   mapping(IStkAsset asset_ => uint256 reserveAssetPoolId) public stkAssetToReserveAssetPoolId;
 

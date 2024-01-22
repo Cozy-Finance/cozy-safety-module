@@ -5,13 +5,10 @@ import {ConfiguratorLib} from "./ConfiguratorLib.sol";
 import {Governable} from "./Governable.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {Delays} from "./structs/Delays.sol";
-import {ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
+import {ReservePool, RewardPool} from "./structs/Pools.sol";
 import {ClaimableRewardsData} from "./structs/Rewards.sol";
 import {
-  ConfigUpdateMetadata,
-  ReservePoolConfig,
-  UndrippedRewardPoolConfig,
-  UpdateConfigsCalldataParams
+  ConfigUpdateMetadata, ReservePoolConfig, RewardPoolConfig, UpdateConfigsCalldataParams
 } from "./structs/Configs.sol";
 import {TriggerConfig} from "./structs/Trigger.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
@@ -24,14 +21,14 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
   /// @param configUpdates_ The new configs. Includes:
   /// - reservePoolConfigs: The array of new reserve pool configs, sorted by associated ID. The array may also
   /// include config for new reserve pools.
-  /// - undrippedRewardPoolConfigs: The array of new undripped reward pool configs, sorted by associated ID. The
+  /// - rewardPoolConfigs: The array of new reward pool configs, sorted by associated ID. The
   /// array may also include config for new reward pools.
   /// - triggerConfigUpdates: The array of trigger config updates. It only needs to include config for updates to
   /// existing triggers or new triggers.
   /// - delaysConfig: The new delays config.
   function updateConfigs(UpdateConfigsCalldataParams calldata configUpdates_) external onlyOwner {
     ConfiguratorLib.updateConfigs(
-      lastConfigUpdate, reservePools, undrippedRewardPools, triggerData, delays, configUpdates_, cozyManager
+      lastConfigUpdate, reservePools, rewardPools, triggerData, delays, configUpdates_, cozyManager
     );
   }
 
@@ -39,7 +36,7 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
   /// @param configUpdates_ The new configs. Includes:
   /// - reservePoolConfigs: The array of new reserve pool configs, sorted by associated ID. The array may also
   /// include config for new reserve pools.
-  /// - undrippedRewardPoolConfigs: The array of new undripped reward pool configs, sorted by associated ID. The
+  /// - rewardPoolConfigs: The array of new reward pool configs, sorted by associated ID. The
   /// array may also include config for new reward pools.
   /// - triggerConfigUpdates: The array of trigger config updates. It only needs to include config for updates to
   /// existing triggers or new triggers.
@@ -47,19 +44,19 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
   function finalizeUpdateConfigs(UpdateConfigsCalldataParams calldata configUpdates_) external {
     // A config update may change the rewards weights, which breaks the invariants that we use to do claimable rewards
     // accounting. It may no longer hold that:
-    //    claimableRewardsIndices[reservePool][rewardPool].cumulativeClaimedRewards <=
-    //        undrippedRewardsPool[rewardPool].cumulativeDrippedRewards*reservePools[reservePool].rewardsPoolsWeight
+    //    claimableRewards[reservePool][rewardPool].cumulativeClaimedRewards <=
+    //        rewardPools[rewardPool].cumulativeDrippedRewards*reservePools[reservePool].rewardsPoolsWeight
     // So, before finalizing, we drip rewards, update claimable reward indices and reset the cumulative rewards values
     // to 0.
     ReservePool[] storage reservePools_ = reservePools;
-    UndrippedRewardPool[] storage undrippedRewardPools_ = undrippedRewardPools;
-    _dripAndResetCumulativeRewardsValues(reservePools_, undrippedRewardPools_);
+    RewardPool[] storage rewardPools_ = rewardPools;
+    _dripAndResetCumulativeRewardsValues(reservePools_, rewardPools_);
 
     ConfiguratorLib.finalizeUpdateConfigs(
       lastConfigUpdate,
       safetyModuleState,
       reservePools_,
-      undrippedRewardPools_,
+      rewardPools_,
       triggerData,
       delays,
       stkTokenToReservePoolIds,

@@ -14,9 +14,7 @@ import {SafetyModuleFactory} from "../../src/SafetyModuleFactory.sol";
 import {ReceiptToken} from "../../src/ReceiptToken.sol";
 import {StkToken} from "../../src/StkToken.sol";
 import {ReceiptTokenFactory} from "../../src/ReceiptTokenFactory.sol";
-import {
-  ReservePoolConfig, UndrippedRewardPoolConfig, UpdateConfigsCalldataParams
-} from "../../src/lib/structs/Configs.sol";
+import {ReservePoolConfig, RewardPoolConfig, UpdateConfigsCalldataParams} from "../../src/lib/structs/Configs.sol";
 import {Delays} from "../../src/lib/structs/Delays.sol";
 import {TriggerConfig} from "../../src/lib/structs/Trigger.sol";
 import {MockDripModel} from "./MockDripModel.sol";
@@ -74,7 +72,7 @@ contract MockDeployer is TestBase {
       address(0),
       UpdateConfigsCalldataParams({
         reservePoolConfigs: new ReservePoolConfig[](0),
-        undrippedRewardPoolConfigs: new UndrippedRewardPoolConfig[](0),
+        rewardPoolConfigs: new RewardPoolConfig[](0),
         triggerConfigUpdates: new TriggerConfig[](0),
         delaysConfig: Delays({configUpdateDelay: 0, configUpdateGracePeriod: 0, unstakeDelay: 0, withdrawDelay: 0})
       })

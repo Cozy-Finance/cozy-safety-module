@@ -84,9 +84,9 @@ abstract contract Staker is SafetyModuleCommon {
     assetPool_.amount += reserveAssetAmount_;
 
     // Update user rewards before minting any new stkTokens.
-    mapping(uint16 => ClaimableRewardsData) storage claimableRewardsData_ = claimableRewardsIndices[reservePoolId_];
-    _applyPendingDrippedRewards(reservePool_, claimableRewardsData_);
-    _updateUserRewards(stkToken_.balanceOf(receiver_), claimableRewardsData_, userRewards[reservePoolId_][receiver_]);
+    mapping(uint16 => ClaimableRewardsData) storage claimableRewards_ = claimableRewards[reservePoolId_];
+    _applyPendingDrippedRewards(reservePool_, claimableRewards_);
+    _updateUserRewards(stkToken_.balanceOf(receiver_), claimableRewards_, userRewards[reservePoolId_][receiver_]);
 
     stkToken_.mint(receiver_, stkTokenAmount_);
     emit Staked(msg.sender, receiver_, stkToken_, reserveAssetAmount_, stkTokenAmount_);

@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import {IDepositorErrors} from "../interfaces/IDepositorErrors.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
-import {ReservePool, AssetPool, UndrippedRewardPool} from "./structs/Pools.sol";
+import {ReservePool, AssetPool, RewardPool} from "./structs/Pools.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
@@ -59,7 +59,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     external
     returns (uint256 depositTokenAmount_)
   {
-    UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[rewardPoolId_];
+    RewardPool storage rewardsPool_ = rewardPools[rewardPoolId_];
 
     IERC20 underlyingToken_ = rewardsPool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
@@ -77,7 +77,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     external
     returns (uint256 depositTokenAmount_)
   {
-    UndrippedRewardPool storage rewardsPool_ = undrippedRewardPools[rewardPoolId_];
+    RewardPool storage rewardsPool_ = rewardPools[rewardPoolId_];
     IERC20 underlyingToken_ = rewardsPool_.asset;
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
 
@@ -117,7 +117,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     uint256 rewardAssetAmount_,
     address receiver_,
     AssetPool storage assetPool_,
-    UndrippedRewardPool storage rewardPool_
+    RewardPool storage rewardPool_
   ) internal returns (uint256 depositTokenAmount_) {
     _assertValidDepositState();
     _assertValidDepositBalance(token_, assetPool_.amount, rewardAssetAmount_);
@@ -125,12 +125,12 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     IReceiptToken depositToken_ = rewardPool_.depositToken;
 
     depositTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
-      rewardAssetAmount_, depositToken_.totalSupply(), rewardPool_.amount
+      rewardAssetAmount_, depositToken_.totalSupply(), rewardPool_.undrippedRewards
     );
     if (depositTokenAmount_ == 0) revert RoundsToZero();
 
     // Increment reward pool accounting only after calculating `depositTokenAmount_` to mint.
-    rewardPool_.amount += rewardAssetAmount_;
+    rewardPool_.undrippedRewards += rewardAssetAmount_;
     assetPool_.amount += rewardAssetAmount_;
 
     depositToken_.mint(receiver_, depositTokenAmount_);

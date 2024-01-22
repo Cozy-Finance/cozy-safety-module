@@ -340,7 +340,7 @@ contract SafetyModuleHandler is TestBase {
     countCall("redeemUndrippedRewards")
     advanceTime(seed_)
   {
-    IERC20 depositToken_ = getUndrippedRewardPool(safetyModule, currentRewardPoolId).depositToken;
+    IERC20 depositToken_ = getRewardPool(safetyModule, currentRewardPoolId).depositToken;
     uint256 actorDepositTokenBalance_ = depositToken_.balanceOf(currentActor);
     if (actorDepositTokenBalance_ == 0 || safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) {
       invalidCalls["redeemUndrippedRewards"] += 1;
@@ -712,7 +712,7 @@ contract SafetyModuleHandler is TestBase {
           return _randomAddress();
         }
         if (addr_ == address(getReservePool(ISafetyModule(address(safetyModule)), i).stkToken)) return _randomAddress();
-        if (addr_ == address(getUndrippedRewardPool(ISafetyModule(address(safetyModule)), j).depositToken)) {
+        if (addr_ == address(getRewardPool(ISafetyModule(address(safetyModule)), j).depositToken)) {
           return _randomAddress();
         }
       }

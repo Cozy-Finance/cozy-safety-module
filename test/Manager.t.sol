@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {
-  UpdateConfigsCalldataParams, ReservePoolConfig, UndrippedRewardPoolConfig
-} from "../src/lib/structs/Configs.sol";
+import {UpdateConfigsCalldataParams, ReservePoolConfig, RewardPoolConfig} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
 import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
@@ -29,9 +27,9 @@ abstract contract ManagerTestSetup is TestBase {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0, asset: asset_, rewardsPoolsWeight: 1e4});
 
-    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ = new UndrippedRewardPoolConfig[](1);
-    undrippedRewardPoolConfigs_[0] =
-      UndrippedRewardPoolConfig({asset: asset_, dripModel: IDripModel(address(new MockDripModel(_randomUint256())))});
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
+    rewardPoolConfigs_[0] =
+      RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(new MockDripModel(_randomUint256())))});
 
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
     triggerConfigUpdates_[0] =
@@ -42,7 +40,7 @@ abstract contract ManagerTestSetup is TestBase {
 
     updateConfigsCalldataParams_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
-      undrippedRewardPoolConfigs: undrippedRewardPoolConfigs_,
+      rewardPoolConfigs: rewardPoolConfigs_,
       triggerConfigUpdates: triggerConfigUpdates_,
       delaysConfig: delaysConfig_
     });
@@ -64,7 +62,7 @@ contract ManagerTestSetupWithSafetyModules is MockDeployProtocol, ManagerTestSet
     asset = IERC20(address(mockAsset));
     UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
     updateConfigsCalldataParams_.reservePoolConfigs[0].asset = asset;
-    updateConfigsCalldataParams_.undrippedRewardPoolConfigs[0].asset = asset;
+    updateConfigsCalldataParams_.rewardPoolConfigs[0].asset = asset;
     safetyModuleA =
       manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
     safetyModuleB =
@@ -125,15 +123,14 @@ contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
   function test_createSafetyModule_revertTooManyRewardPools() public {
     UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
 
-    UndrippedRewardPoolConfig[] memory undrippedRewardPoolConfigs_ =
-      new UndrippedRewardPoolConfig[](ALLOWED_REWARD_POOLS + 1);
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](ALLOWED_REWARD_POOLS + 1);
     for (uint256 i = 0; i < ALLOWED_REWARD_POOLS + 1; i++) {
-      undrippedRewardPoolConfigs_[i] = UndrippedRewardPoolConfig({
+      rewardPoolConfigs_[i] = RewardPoolConfig({
         asset: IERC20(address(new MockERC20("MockAsset", "MOCK", 18))),
         dripModel: IDripModel(_randomAddress())
       });
     }
-    updateConfigsCalldataParams_.undrippedRewardPoolConfigs = undrippedRewardPoolConfigs_;
+    updateConfigsCalldataParams_.rewardPoolConfigs = rewardPoolConfigs_;
 
     vm.expectRevert(Manager.InvalidConfiguration.selector);
     manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());

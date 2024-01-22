@@ -8,7 +8,7 @@ import {IRedemptionErrors} from "../interfaces/IRedemptionErrors.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
-import {AssetPool, ReservePool, UndrippedRewardPool} from "./structs/Pools.sol";
+import {AssetPool, ReservePool, RewardPool} from "./structs/Pools.sol";
 import {MathConstants} from "./MathConstants.sol";
 import {PendingRedemptionAccISFs, Redemption, RedemptionPreview} from "./structs/Redemptions.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
@@ -64,7 +64,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint64 redemptionId_
   );
 
-  /// @dev Emitted when a user redeems undripped rewards.
+  /// @dev Emitted when a user redeems rewards.
   event RedeemedUndrippedRewards(
     address caller_,
     address indexed receiver_,
@@ -110,21 +110,17 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     external
     returns (uint256 rewardAssetAmount_)
   {
-    UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
-    _dripRewardPool(undrippedRewardPool_);
+    RewardPool storage rewardPool_ = rewardPools[rewardPoolId_];
+    _dripRewardPool(rewardPool_);
 
-    IReceiptToken depositToken_ = undrippedRewardPool_.depositToken;
+    IReceiptToken depositToken_ = rewardPool_.depositToken;
     rewardAssetAmount_ = _previewRedemption(
-      depositToken_,
-      depositTokenAmount_,
-      undrippedRewardPool_.dripModel,
-      undrippedRewardPool_.amount,
-      undrippedRewardPool_.lastDripTime
+      depositToken_, depositTokenAmount_, rewardPool_.dripModel, rewardPool_.undrippedRewards, rewardPool_.lastDripTime
     );
 
     depositToken_.burn(msg.sender, owner_, depositTokenAmount_);
-    undrippedRewardPool_.amount -= rewardAssetAmount_;
-    undrippedRewardPool_.asset.safeTransfer(receiver_, rewardAssetAmount_);
+    rewardPool_.undrippedRewards -= rewardAssetAmount_;
+    rewardPool_.asset.safeTransfer(receiver_, rewardAssetAmount_);
 
     emit RedeemedUndrippedRewards(msg.sender, receiver_, owner_, depositToken_, depositTokenAmount_, rewardAssetAmount_);
   }
@@ -185,15 +181,11 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     view
     returns (uint256 rewardAssetAmount_)
   {
-    UndrippedRewardPool storage undrippedRewardPool_ = undrippedRewardPools[rewardPoolId_];
-    uint256 lastDripTime_ = undrippedRewardPool_.lastDripTime;
+    RewardPool storage rewardPool_ = rewardPools[rewardPoolId_];
+    uint256 lastDripTime_ = rewardPool_.lastDripTime;
 
     rewardAssetAmount_ = _previewRedemption(
-      undrippedRewardPool_.depositToken,
-      depositTokenAmount_,
-      undrippedRewardPool_.dripModel,
-      undrippedRewardPool_.amount,
-      lastDripTime_
+      rewardPool_.depositToken, depositTokenAmount_, rewardPool_.dripModel, rewardPool_.undrippedRewards, lastDripTime_
     );
   }
 
