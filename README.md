@@ -1,66 +1,24 @@
-## Foundry
+# Cozy Safety Module
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Founders of projects need a way to manage the risk of shortfalls in their protocols and companies. Some examples:
 
-Foundry consists of:
+- Lending protocol reserves or safety modules to pay out when there is bad debt, hacks, or other issues leading to insolvency (e.g. MakerDAO, Aave)
+- General protocol protection to cover any losses due to hacks or exploits
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+Most of these projects currently implicitly back their projects with balance sheet capital or native tokens. The Cozy Safety Module protocol makes it easy for project leaders (whether teams or DAOs) to set up and manage a safety module.
 
-## Documentation
+## Development
 
-https://book.getfoundry.sh/
+### Getting Started
 
-## Usage
+This repo is built using [Foundry](https://github.com/gakonst/foundry).
 
-### Build
+## Definitions and Standards
 
-```shell
-$ forge build
-```
+Definitions of terms used:
+- `zoc`: A number with 4 decimals.
+- `wad`: A number with 18 decimals.
 
-### Test
+Throughout the code the following standards are used:
+- All token quantities in function inputs and return values are denominated in the same units (i.e. same number of decimals) as the underlying `asset` of the related asset pool.
 
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
