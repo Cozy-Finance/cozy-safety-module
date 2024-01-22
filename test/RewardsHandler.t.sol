@@ -27,7 +27,7 @@ import {MockStkToken} from "./utils/MockStkToken.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
-import "../src/lib/Stub.sol";
+import "./utils/Stub.sol";
 
 contract RewardsHandlerUnitTest is TestBase {
   using FixedPointMathLib for uint256;
