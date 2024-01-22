@@ -1,66 +1,17 @@
-## Foundry
+# Cozy Safety Module
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Development
 
-Foundry consists of:
+### Getting Started
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+This repo is built using [Foundry](https://github.com/gakonst/foundry).
 
-## Documentation
+## Definitions and Standards
 
-https://book.getfoundry.sh/
+Definitions of terms used:
+- `zoc`: A number with 4 decimals.
+- `wad`: A number with 18 decimals.
 
-## Usage
+Throughout the code the following standards are used:
+- All token quantities in function inputs and return values are denominated in the same units (i.e. same number of decimals) as the underlying `asset` of the related asset pool.
 
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
