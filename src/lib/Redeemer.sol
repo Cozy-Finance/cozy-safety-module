@@ -147,7 +147,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken,
       receiptTokenAmount_,
       feeDripModel_,
-      isUnstake_ ? reservePool_.stakeAmount : reservePool_.depositAmount,
+      isUnstake_
+        ? reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount
+        : reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount,
       lastDripTime_
     );
   }
@@ -219,14 +221,18 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   ) internal returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
     IReceiptToken receiptToken_ = isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken;
 
-    reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
-      receiptTokenAmount_,
-      receiptToken_.totalSupply(),
-      isUnstake_
+    {
+      uint256 assetsAvailableForRedemption_ = isUnstake_
         ? (reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount)
-        : (reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount)
-    );
-    if (reserveAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
+        : (reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount);
+      if (assetsAvailableForRedemption_ == 0) revert NoAssetsToRedeem();
+
+      reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
+        receiptTokenAmount_, receiptToken_.totalSupply(), assetsAvailableForRedemption_
+      );
+      if (reserveAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in
+        // conversion.
+    }
 
     redemptionId_ = _queueRedemption(
       owner_,

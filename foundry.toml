@@ -4,8 +4,8 @@ out = "out"
 libs = ["lib"]
 solc_version = "0.8.22"
 evm_version = "paris" # Needed to deploy on chains that don't support PUSH0 (e.g. Optimism, Arbitrum)
-optimizer = true
-optimizer_runs = 1000
+via-ir = true
+optimizer-runs = 1
 remappings = [
   "@openzeppelin/=lib/openzeppelin-contracts",
   "openzeppelin-contracts/contracts=lib/openzeppelin-contracts/contracts/",
@@ -18,6 +18,10 @@ fs_permissions = [{ access = "read", path = "./script/input"}]
 
 [profile.default.fuzz]
 runs = 1024
+
+[profile.lite]
+optimizer = false # Speed up compilation for faster builds.
+via-ir = false # Speed up compilation for faster builds.
 
 [profile.default.fmt]
 bracket_spacing = false

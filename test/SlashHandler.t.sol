@@ -25,7 +25,7 @@ import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
-import "../src/lib/Stub.sol";
+import "./utils/Stub.sol";
 
 contract TriggerHandlerTest is TestBase {
   using FixedPointMathLib for uint256;

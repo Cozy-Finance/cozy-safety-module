@@ -15,7 +15,7 @@ import {MathConstants} from "../src/lib/MathConstants.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
-import "../src/lib/Stub.sol";
+import "./utils/Stub.sol";
 
 enum DepositType {
   RESERVE,

@@ -34,7 +34,7 @@ import {MockERC20} from "./utils/MockERC20.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
-import "../src/lib/Stub.sol";
+import "./utils/Stub.sol";
 
 contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
   TestableConfigurator component;

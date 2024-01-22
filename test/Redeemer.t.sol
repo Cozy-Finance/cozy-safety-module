@@ -26,7 +26,7 @@ import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
-import "../src/lib/Stub.sol";
+import "./utils/Stub.sol";
 
 abstract contract ReedemerUnitTestBase is TestBase {
   using SafeCastLib for uint256;
@@ -760,7 +760,7 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
 
     uint256 scale_;
     if (oldReservePoolAmount_ >= slashAmount_ && oldReservePoolAmount_ != 0) {
-      scale_ = MathConstants.WAD - slashAmount_.divWadDown(oldReservePoolAmount_);
+      scale_ = MathConstants.WAD - slashAmount_.divWadUp(oldReservePoolAmount_);
     }
     uint256[] memory accs_ = _getPendingAccISFs(0);
     if (accs_[0] > RedemptionLib.NEW_ACCUM_INV_SCALING_FACTOR_THRESHOLD) assertEq(accs_.length, 2, "accs_.length");
@@ -1141,7 +1141,9 @@ contract RedeemedUndrippedRewards is TestBase {
     _expectEmit();
     emit Transfer(owner_, address(0), depositTokenAmount_ / 2);
     _expectEmit();
-    emit RedeemedUndrippedRewards(owner_, receiver_, owner_, depositToken, depositTokenAmount_ / 2, rewardAssetAmount_ / 2);
+    emit RedeemedUndrippedRewards(
+      owner_, receiver_, owner_, depositToken, depositTokenAmount_ / 2, rewardAssetAmount_ / 2
+    );
 
     vm.prank(owner_);
     (uint256 resultRewardAssetAmount_) = _redeem(0, depositTokenAmount_ / 2, receiver_, owner_);
@@ -1162,7 +1164,9 @@ contract RedeemedUndrippedRewards is TestBase {
     _expectEmit();
     emit Transfer(owner_, address(0), depositTokenAmount_ / 2);
     _expectEmit();
-    emit RedeemedUndrippedRewards(owner_, receiver_, owner_, depositToken, depositTokenAmount_ / 2, rewardAssetAmount_ / 4);
+    emit RedeemedUndrippedRewards(
+      owner_, receiver_, owner_, depositToken, depositTokenAmount_ / 2, rewardAssetAmount_ / 4
+    );
 
     vm.prank(owner_);
     (uint256 resultRewardAssetAmount_) = _redeem(0, depositTokenAmount_ / 2, receiver_, owner_);
