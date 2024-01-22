@@ -152,7 +152,7 @@ library RedemptionLib {
     //      scalingFactor = 1 - slashAmount_ / oldPoolAmount_
     if (slashAmount_ > oldPoolAmount_) return 0;
     if (oldPoolAmount_ == 0) return 0;
-    return MathConstants.WAD - slashAmount_.divWadDown(oldPoolAmount_);
+    return MathConstants.WAD - slashAmount_.divWadUp(oldPoolAmount_);
   }
 
   /// @dev Gets the amount of time remaining that must elapse before a queued redemption can be completed.
