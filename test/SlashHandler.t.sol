@@ -13,6 +13,7 @@ import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ISlashHandlerErrors} from "../src/interfaces/ISlashHandlerErrors.sol";
+import {ISlashHandlerEvents} from "../src/interfaces/ISlashHandlerEvents.sol";
 import {SlashHandler} from "../src/lib/SlashHandler.sol";
 import {Redeemer} from "../src/lib/Redeemer.sol";
 import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
@@ -27,7 +28,7 @@ import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "./utils/Stub.sol";
 
-contract TriggerHandlerTest is TestBase {
+contract SlashHandlerTest is TestBase {
   using FixedPointMathLib for uint256;
   using SafeCastLib for uint256;
 
@@ -80,6 +81,8 @@ contract TriggerHandlerTest is TestBase {
     if (slashAmount_ > 0) {
       _expectEmit();
       emit IERC20.Transfer(address(component), receiver_, slashAmount_);
+      _expectEmit();
+      emit ISlashHandlerEvents.Slashed(mockPayoutHandler, receiver_, 0, slashAmount_);
     }
     vm.prank(mockPayoutHandler);
     component.slash(slashes_, receiver_);

@@ -8,11 +8,13 @@ import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {ISlashHandlerErrors} from "../interfaces/ISlashHandlerErrors.sol";
+import {ISlashHandlerEvents} from "../interfaces/ISlashHandlerEvents.sol";
+import {IStateChangerEvents} from "../interfaces/IStateChangerEvents.sol";
 import {Slash} from "./structs/Slash.sol";
 import {Trigger} from "./structs/Trigger.sol";
 import {ReservePool} from "./structs/Pools.sol";
 
-abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
+abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlashHandlerEvents {
   using FixedPointMathLib for uint256;
   using SafeERC20 for IERC20;
 
@@ -28,7 +30,10 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
     // is returned to the ACTIVE state.
     numPendingSlashes -= 1;
     payoutHandlerNumPendingSlashes[msg.sender] -= 1;
-    if (numPendingSlashes == 0) safetyModuleState = SafetyModuleState.ACTIVE;
+    if (numPendingSlashes == 0) {
+      safetyModuleState = SafetyModuleState.ACTIVE;
+      emit IStateChangerEvents.SafetyModuleStateUpdated(SafetyModuleState.ACTIVE);
+    }
 
     // Create a bitmap to track which reserve pools have already been slashed.
     uint256 alreadySlashed_ = 0;
@@ -73,6 +78,7 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors {
 
       // Transfer the slashed assets to the receiver.
       reserveAsset_.safeTransfer(receiver_, slash_.amount);
+      emit Slashed(msg.sender, receiver_, slash_.reservePoolId, slash_.amount);
     }
   }
 
