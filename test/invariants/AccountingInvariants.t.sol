@@ -10,11 +10,6 @@ import {InvariantTestBase, InvariantTestWithSingleReservePoolAndSingleRewardPool
 abstract contract AccountingInvariants is InvariantTestBase {
   using FixedPointMathLib for uint256;
 
-  struct AssetPoolData {
-    uint256 amount;
-    IERC20 asset;
-  }
-
   function invariant_reserveDepositAmountGtePendingRedemptionAmounts() public syncCurrentTimestamp(safetyModuleHandler) {
     for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
@@ -71,23 +66,6 @@ abstract contract AccountingInvariants is InvariantTestBase {
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
-    // for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
-    //   ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
-    //   accountingSums[reservePool_.asset] += (reservePool_.depositAmount + reservePool_.stakeAmount +
-    // reservePool_.feeAmount);
-    // }
-    // for (uint16 rewardPoolId_; rewardPoolId_ < numRewardPools; rewardPoolId_++) {
-    //   RewardPool memory rewardPool_ = getRewardPool(safetyModule, rewardPoolId_);
-    //   accountingSums[rewardPool_.asset] += rewardPool_.undrippedRewards;
-    // }
-
-    // for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
-    //   for (uint16 rewardPoolId_; rewardPoolId_ < numRewardPools; rewardPoolId_++) {
-    //     RewardPool memory rewardPool_ = getRewardPool(safetyModule, rewardPoolId_);
-    //     accountingSums[rewardPool_.asset] += rewardPool_.cumulativeDrippedRewards;
-    //   }
-    // }
-
     ReservePool memory reservePool_ = getReservePool(safetyModule, 0);
     RewardPool memory rewardPool_ = getRewardPool(safetyModule, 0);
 
