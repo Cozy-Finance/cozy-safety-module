@@ -3,11 +3,17 @@ pragma solidity 0.8.22;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {ReservePool} from "../../src/lib/structs/Pools.sol";
+import {ReservePool, RewardPool} from "../../src/lib/structs/Pools.sol";
+import {IERC20} from "../../src/interfaces/IERC20.sol";
 import {InvariantTestBase, InvariantTestWithSingleReservePoolAndSingleRewardPool} from "./utils/InvariantTestBase.sol";
 
 abstract contract AccountingInvariants is InvariantTestBase {
   using FixedPointMathLib for uint256;
+
+  struct AssetPoolData {
+    uint256 amount;
+    IERC20 asset;
+  }
 
   function invariant_reserveDepositAmountGtePendingRedemptionAmounts() public syncCurrentTimestamp(safetyModuleHandler) {
     for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
@@ -39,6 +45,69 @@ abstract contract AccountingInvariants is InvariantTestBase {
         )
       );
     }
+  }
+
+  function invariant_internalAssetPoolAmountEqualsERC20BalanceOfSafetyModule()
+    public
+    syncCurrentTimestamp(safetyModuleHandler)
+  {
+    uint256 internalAssetPoolAmount_ = safetyModule.assetPools(IERC20(address(asset))).amount;
+    uint256 erc20AssetBalance_ = asset.balanceOf(address(safetyModule));
+    require(
+      internalAssetPoolAmount_ == erc20AssetBalance_,
+      string.concat(
+        "Invariant Violated: The internal asset pool amount for an asset must equal the asset's ERC20 balance of the safety module.",
+        " internalAssetPoolAmount_: ",
+        Strings.toString(internalAssetPoolAmount_),
+        ", asset.balanceOf(address(safetyModule)): ",
+        Strings.toString(erc20AssetBalance_)
+      )
+    );
+  }
+
+  mapping(IERC20 => uint256) internal accountingSums;
+
+  function invariant_internalAssetPoolAmountEqualsSumOfInternalAmounts()
+    public
+    syncCurrentTimestamp(safetyModuleHandler)
+  {
+    // for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    //   ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
+    //   accountingSums[reservePool_.asset] += (reservePool_.depositAmount + reservePool_.stakeAmount +
+    // reservePool_.feeAmount);
+    // }
+    // for (uint16 rewardPoolId_; rewardPoolId_ < numRewardPools; rewardPoolId_++) {
+    //   RewardPool memory rewardPool_ = getRewardPool(safetyModule, rewardPoolId_);
+    //   accountingSums[rewardPool_.asset] += rewardPool_.undrippedRewards;
+    // }
+
+    // for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    //   for (uint16 rewardPoolId_; rewardPoolId_ < numRewardPools; rewardPoolId_++) {
+    //     RewardPool memory rewardPool_ = getRewardPool(safetyModule, rewardPoolId_);
+    //     accountingSums[rewardPool_.asset] += rewardPool_.cumulativeDrippedRewards;
+    //   }
+    // }
+
+    ReservePool memory reservePool_ = getReservePool(safetyModule, 0);
+    RewardPool memory rewardPool_ = getRewardPool(safetyModule, 0);
+
+    accountingSums[reservePool_.asset] +=
+      (reservePool_.depositAmount + reservePool_.stakeAmount + reservePool_.feeAmount);
+    accountingSums[rewardPool_.asset] += (rewardPool_.undrippedRewards + rewardPool_.cumulativeDrippedRewards);
+
+    // TODO iterate over each asset and check the invariant applies for each.
+    require(
+      safetyModule.assetPools(IERC20(address(asset))).amount == accountingSums[asset],
+      string.concat(
+        "Invariant Violated: The internal asset pool amount for an asset must equal the sum of the internal pool amounts.",
+        " safetyModule.assetPools(IERC20(address(asset))).amount): ",
+        Strings.toString(safetyModule.assetPools(IERC20(address(asset))).amount),
+        ", accountingSums[asset]: ",
+        Strings.toString(accountingSums[asset]),
+        ", asset.balanceOf(safetyModule): ",
+        Strings.toString(asset.balanceOf(address(safetyModule)))
+      )
+    );
   }
 }
 
