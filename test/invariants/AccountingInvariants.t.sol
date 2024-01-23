@@ -70,10 +70,9 @@ abstract contract AccountingInvariants is InvariantTestBase {
     ReservePool memory reservePool_ = getReservePool(safetyModule, 0);
     RewardPool memory rewardPool_ = getRewardPool(safetyModule, 0);
 
-    accountingSum +=
-      (reservePool_.depositAmount + reservePool_.stakeAmount + reservePool_.feeAmount);
+    accountingSum += (reservePool_.depositAmount + reservePool_.stakeAmount + reservePool_.feeAmount);
     accountingSum += (rewardPool_.undrippedRewards + rewardPool_.cumulativeDrippedRewards);
-    accountingSum -= safetyModuleHandler.ghost_rewardsClaimed(reservePool_.asset);
+    accountingSum -= safetyModuleHandler.ghost_rewardsClaimed(IERC20(address(asset)));
 
     // TODO iterate over each asset and check the invariant applies for each.
     require(
