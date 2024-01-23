@@ -85,7 +85,7 @@ abstract contract AccountingInvariants is InvariantTestBase {
         Strings.toString(accountingSum),
         ", asset.balanceOf(safetyModule): ",
         Strings.toString(asset.balanceOf(address(safetyModule))),
-        ", safetyModuleHandler.rewardsClaimed(reservePool_.asset): ",
+        ", safetyModuleHandler.ghost_rewardsClaimed(reservePool_.asset): ",
         Strings.toString(safetyModuleHandler.ghost_rewardsClaimed(reservePool_.asset))
       )
     );
