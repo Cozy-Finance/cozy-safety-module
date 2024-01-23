@@ -972,6 +972,24 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     assertEq(redemptionPreview_.owner, owner_, "owner");
     assertEq(redemptionPreview_.receiver, receiver_, "receiver");
   }
+
+  function test_redeem_revertNoAssetsToRedeem() public {
+    address ownerA_ = _randomAddress();
+    uint256 amount_ = _randomUint256();
+
+    // Reverts with no assets to redeem if there are no assets in the pool.
+    vm.expectRevert(IRedemptionErrors.NoAssetsToRedeem.selector);
+    vm.prank(ownerA_);
+    _redeem(0, amount_, ownerA_, ownerA_);
+
+    (address ownerB_,,, uint256 receiptTokenAmount_,) = _setupDefaultSingleUserFixture(0);
+    vm.prank(ownerB_);
+    _redeem(0, receiptTokenAmount_, ownerB_, ownerB_);
+    // Reverts with no assets to redeem if try to double redeem.
+    vm.expectRevert(IRedemptionErrors.NoAssetsToRedeem.selector);
+    vm.prank(ownerB_);
+    _redeem(0, receiptTokenAmount_, ownerB_, ownerB_);
+  }
 }
 
 contract UnstakeUnitTest is RedeemerUnitTest {
