@@ -41,3 +41,8 @@ abstract contract AccountingInvariants is InvariantTestBase {
     }
   }
 }
+
+contract AccountingInvariantsSingleReservePoolSingleRewardPool is
+  AccountingInvariants,
+  InvariantTestWithSingleReservePoolAndSingleRewardPool
+{}
