@@ -120,6 +120,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     depositToken_.burn(msg.sender, owner_, depositTokenAmount_);
     rewardPool_.undrippedRewards -= rewardAssetAmount_;
+    assetPools[rewardPool_.asset].amount -= rewardAssetAmount_;
     rewardPool_.asset.safeTransfer(receiver_, rewardAssetAmount_);
 
     emit RedeemedUndrippedRewards(msg.sender, receiver_, owner_, depositToken_, depositTokenAmount_, rewardAssetAmount_);

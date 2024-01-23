@@ -972,6 +972,24 @@ abstract contract RedeemerUnitTest is ReedemerUnitTestBase {
     assertEq(redemptionPreview_.owner, owner_, "owner");
     assertEq(redemptionPreview_.receiver, receiver_, "receiver");
   }
+
+  function test_redeem_revertNoAssetsToRedeem() public {
+    address ownerA_ = _randomAddress();
+    uint256 amount_ = _randomUint256();
+
+    // Reverts with no assets to redeem if there are no assets in the pool.
+    vm.expectRevert(IRedemptionErrors.NoAssetsToRedeem.selector);
+    vm.prank(ownerA_);
+    _redeem(0, amount_, ownerA_, ownerA_);
+
+    (address ownerB_,,, uint256 receiptTokenAmount_,) = _setupDefaultSingleUserFixture(0);
+    vm.prank(ownerB_);
+    _redeem(0, receiptTokenAmount_, ownerB_, ownerB_);
+    // Reverts with no assets to redeem if try to double redeem.
+    vm.expectRevert(IRedemptionErrors.NoAssetsToRedeem.selector);
+    vm.prank(ownerB_);
+    _redeem(0, receiptTokenAmount_, ownerB_, ownerB_);
+  }
 }
 
 contract UnstakeUnitTest is RedeemerUnitTest {
@@ -1043,7 +1061,7 @@ contract WithdrawUnitTest is RedeemerUnitTest {
   }
 }
 
-contract RedeemedUndrippedRewards is TestBase {
+contract RedeemedUndrippedRewardsTest is TestBase {
   using SafeCastLib for uint256;
 
   IReceiptToken depositToken;
@@ -1132,6 +1150,9 @@ contract RedeemedUndrippedRewards is TestBase {
     assertEq(depositToken.balanceOf(owner_), 0, "deposit tokens balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
     _assertRewardPoolAccounting(0, 0);
+
+    (uint256 assetPoolBal_) = component.assetPools(IERC20(address(mockAsset)));
+    assertEq(assetPoolBal_, 0);
   }
 
   function test_redeemUndrippedRewards_redeemPartial() public {
@@ -1152,6 +1173,9 @@ contract RedeemedUndrippedRewards is TestBase {
     assertEq(depositToken.balanceOf(owner_), depositTokenAmount_ / 2, "deposit tokens balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
     _assertRewardPoolAccounting(0, rewardAssetAmount_ / 2);
+
+    (uint256 assetPoolBal_) = component.assetPools(IERC20(address(mockAsset)));
+    assertEq(assetPoolBal_, rewardAssetAmount_ / 2);
   }
 
   function test_redeemUndrippedRewards_withDrip() public {
@@ -1175,6 +1199,9 @@ contract RedeemedUndrippedRewards is TestBase {
     assertEq(depositToken.balanceOf(owner_), depositTokenAmount_ / 2, "deposit tokens balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
     _assertRewardPoolAccounting(0, rewardAssetAmount_ / 4);
+
+    (uint256 assetPoolBal_) = component.assetPools(IERC20(address(mockAsset)));
+    assertEq(assetPoolBal_, rewardAssetAmount_ - resultRewardAssetAmount_);
   }
 
   function test_redeemUndrippedRewards_cannotRedeemIfRoundsDownToZeroAssets() external {
@@ -1204,6 +1231,9 @@ contract RedeemedUndrippedRewards is TestBase {
     assertEq(depositToken.allowance(owner_, spender_), 1, "depositToken allowance"); // Only 1 allowance left because of
       // subtraction.
     _assertRewardPoolAccounting(0, 0);
+
+    (uint256 assetPoolBal_) = component.assetPools(IERC20(address(mockAsset)));
+    assertEq(assetPoolBal_, 0);
   }
 
   function test_redeemUndrippedRewards_cannotRedeem_ThroughAllowance_WithInsufficientAllowance() external {
