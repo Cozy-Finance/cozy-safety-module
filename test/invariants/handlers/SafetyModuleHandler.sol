@@ -376,7 +376,13 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
-    uint256 initAssetBalance_ = asset.balanceOf(receiver_);
+    {
+      uint16[] memory reservePoolIds_ = new uint16[](1);
+      reservePoolIds_[0] = currentReservePoolId;
+      PreviewClaimableRewardsData[] memory reservePoolClaimableRewards_ = safetyModule.previewClaimableRewards(reservePoolIds_, currentActor)[0].claimableRewardsData;
+      PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ = reservePoolClaimableRewards_[0];
+      ghost_rewardsClaimed[asset] += rewardPoolClaimableRewards_.amount;
+    }
 
     stkTokenUnstakeAmount_ = bound(stkTokenUnstakeAmount_, 1, actorStkTokenBalance_);
     vm.startPrank(currentActor);
@@ -384,14 +390,6 @@ contract SafetyModuleHandler is TestBase {
     (uint64 redemptionId_, uint256 assetAmount_) =
       safetyModule.unstake(currentReservePoolId, stkTokenUnstakeAmount_, receiver_, currentActor);
     vm.stopPrank();
-
-    {
-      // Rewards are claimed on unstake.
-      uint256 rewardsClaimed_ = safetyModule.safetyModuleState() == SafetyModuleState.PAUSED
-        ? asset.balanceOf(receiver_) - (initAssetBalance_ + assetAmount_)
-        : asset.balanceOf(receiver_) - initAssetBalance_;
-      ghost_rewardsClaimed[asset] += rewardsClaimed_;
-    }
 
     ghost_reservePoolCumulative[currentReservePoolId].unstakeAssetAmount += assetAmount_;
     ghost_reservePoolCumulative[currentReservePoolId].unstakeSharesAmount += stkTokenUnstakeAmount_;
@@ -411,13 +409,17 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
-    uint256 initAssetBalance_ = asset.balanceOf(receiver_);
+    {
+      uint16[] memory reservePoolIds_ = new uint16[](1);
+      reservePoolIds_[0] = currentReservePoolId;
+      PreviewClaimableRewardsData[] memory reservePoolClaimableRewards_ = safetyModule.previewClaimableRewards(reservePoolIds_, currentActor)[0].claimableRewardsData;
+      PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ = reservePoolClaimableRewards_[0];
+      ghost_rewardsClaimed[asset] += rewardPoolClaimableRewards_.amount;
+    }
 
     vm.startPrank(currentActor);
     safetyModule.claimRewards(currentReservePoolId, receiver_);
     vm.stopPrank();
-
-    ghost_rewardsClaimed[asset] += asset.balanceOf(receiver_) - initAssetBalance_;
   }
 
   function completeRedemption(address caller_, uint256 seed_)

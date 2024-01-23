@@ -206,7 +206,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
   function _previewNextRewardDrip(RewardPool storage rewardPool_) internal view returns (RewardDrip memory) {
     return RewardDrip({
       rewardAsset: rewardPool_.asset,
-      amount: _getNextDripAmount(rewardPool_.undrippedRewards, rewardPool_.dripModel, rewardPool_.lastDripTime)
+      amount: safetyModuleState == SafetyModuleState.PAUSED ? 0 :_getNextDripAmount(rewardPool_.undrippedRewards, rewardPool_.dripModel, rewardPool_.lastDripTime)
     });
   }
 
