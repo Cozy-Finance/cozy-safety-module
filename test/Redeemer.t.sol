@@ -1043,7 +1043,7 @@ contract WithdrawUnitTest is RedeemerUnitTest {
   }
 }
 
-contract RedeemedUndrippedRewards is TestBase {
+contract RedeemedUndrippedRewardsTest is TestBase {
   using SafeCastLib for uint256;
 
   IReceiptToken depositToken;
@@ -1132,6 +1132,9 @@ contract RedeemedUndrippedRewards is TestBase {
     assertEq(depositToken.balanceOf(owner_), 0, "deposit tokens balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
     _assertRewardPoolAccounting(0, 0);
+
+    (uint256 assetPoolBal_) = component.assetPools(IERC20(address(mockAsset)));
+    assertEq(assetPoolBal_, 0);
   }
 
   function test_redeemUndrippedRewards_redeemPartial() public {
@@ -1152,6 +1155,9 @@ contract RedeemedUndrippedRewards is TestBase {
     assertEq(depositToken.balanceOf(owner_), depositTokenAmount_ / 2, "deposit tokens balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
     _assertRewardPoolAccounting(0, rewardAssetAmount_ / 2);
+
+    (uint256 assetPoolBal_) = component.assetPools(IERC20(address(mockAsset)));
+    assertEq(assetPoolBal_, rewardAssetAmount_ / 2);
   }
 
   function test_redeemUndrippedRewards_withDrip() public {
@@ -1175,6 +1181,9 @@ contract RedeemedUndrippedRewards is TestBase {
     assertEq(depositToken.balanceOf(owner_), depositTokenAmount_ / 2, "deposit tokens balanceOf");
     assertEq(mockAsset.balanceOf(receiver_), resultRewardAssetAmount_, "reward assets balanceOf");
     _assertRewardPoolAccounting(0, rewardAssetAmount_ / 4);
+
+    (uint256 assetPoolBal_) = component.assetPools(IERC20(address(mockAsset)));
+    assertEq(assetPoolBal_, rewardAssetAmount_ - resultRewardAssetAmount_);
   }
 
   function test_redeemUndrippedRewards_cannotRedeemIfRoundsDownToZeroAssets() external {
@@ -1204,6 +1213,9 @@ contract RedeemedUndrippedRewards is TestBase {
     assertEq(depositToken.allowance(owner_, spender_), 1, "depositToken allowance"); // Only 1 allowance left because of
       // subtraction.
     _assertRewardPoolAccounting(0, 0);
+
+    (uint256 assetPoolBal_) = component.assetPools(IERC20(address(mockAsset)));
+    assertEq(assetPoolBal_, 0);
   }
 
   function test_redeemUndrippedRewards_cannotRedeem_ThroughAllowance_WithInsufficientAllowance() external {

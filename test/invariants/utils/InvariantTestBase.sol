@@ -54,7 +54,7 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
   }
 
   function _fuzzedSelectors() internal pure virtual returns (bytes4[] memory) {
-    bytes4[] memory selectors = new bytes4[](21);
+    bytes4[] memory selectors = new bytes4[](22);
     selectors[0] = SafetyModuleHandler.depositReserveAssets.selector;
     selectors[1] = SafetyModuleHandler.depositReserveAssetsWithExistingActor.selector;
     selectors[2] = SafetyModuleHandler.depositReserveAssetsWithoutTransfer.selector;
@@ -76,8 +76,7 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
     selectors[18] = SafetyModuleHandler.unpause.selector;
     selectors[19] = SafetyModuleHandler.trigger.selector;
     selectors[20] = SafetyModuleHandler.slash.selector;
-    // TODO: This causes tests to fail - something missing from/in redeemUndrippedRewards potentially causing issues.
-    // selectors[17] = SafetyModuleHandler.redeemUndrippedRewards.selector;
+    selectors[21] = SafetyModuleHandler.redeemUndrippedRewards.selector;
     return selectors;
   }
 
