@@ -2,12 +2,14 @@
 pragma solidity 0.8.22;
 
 import {console2} from "forge-std/console2.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Manager} from "../../../src/Manager.sol";
 import {SafetyModule} from "../../../src/SafetyModule.sol";
 import {SafetyModuleState, TriggerState} from "../../../src/lib/SafetyModuleStates.sol";
-import {ReservePool} from "../../../src/lib/structs/Pools.sol";
+import {ReservePool, RewardPool} from "../../../src/lib/structs/Pools.sol";
 import {RedemptionPreview} from "../../../src/lib/structs/Redemptions.sol";
+import {PreviewClaimableRewards, PreviewClaimableRewardsData} from "../../../src/lib/structs/Rewards.sol";
 import {Slash} from "../../../src/lib/structs/Slash.sol";
 import {Trigger} from "../../../src/lib/structs/Trigger.sol";
 import {IERC20} from "../../../src/interfaces/IERC20.sol";
@@ -76,6 +78,8 @@ contract SafetyModuleHandler is TestBase {
     ghost_actorRewardDepositCount;
 
   GhostRedemption[] public ghost_redemptions;
+
+  mapping(IERC20 asset_ => uint256 amount_) public ghost_rewardsClaimed;
 
   // -------- Structs --------
 
@@ -372,6 +376,16 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
+    {
+      uint16[] memory reservePoolIds_ = new uint16[](1);
+      reservePoolIds_[0] = currentReservePoolId;
+      PreviewClaimableRewardsData[] memory reservePoolClaimableRewards_ = safetyModule.previewClaimableRewards(reservePoolIds_, currentActor)[0].claimableRewardsData;
+      for (uint16 rewardPoolId_ = 0; rewardPoolId_ < reservePoolClaimableRewards_.length; rewardPoolId_++) {
+        PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ = reservePoolClaimableRewards_[rewardPoolId_];
+        ghost_rewardsClaimed[rewardPoolClaimableRewards_.asset] += rewardPoolClaimableRewards_.amount;
+      }
+    }
+
     stkTokenUnstakeAmount_ = bound(stkTokenUnstakeAmount_, 1, actorStkTokenBalance_);
     vm.startPrank(currentActor);
     stkToken_.approve(address(safetyModule), stkTokenUnstakeAmount_);
@@ -395,6 +409,16 @@ contract SafetyModuleHandler is TestBase {
     if (actorStkTokenBalance_ == 0) {
       invalidCalls["claimRewards"] += 1;
       return;
+    }
+
+    {
+      uint16[] memory reservePoolIds_ = new uint16[](1);
+      reservePoolIds_[0] = currentReservePoolId;
+      PreviewClaimableRewardsData[] memory reservePoolClaimableRewards_ = safetyModule.previewClaimableRewards(reservePoolIds_, currentActor)[0].claimableRewardsData;
+      for (uint16 rewardPoolId_ = 0; rewardPoolId_ < reservePoolClaimableRewards_.length; rewardPoolId_++) {
+        PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ = reservePoolClaimableRewards_[rewardPoolId_];
+        ghost_rewardsClaimed[rewardPoolClaimableRewards_.asset] += rewardPoolClaimableRewards_.amount;
+      }
     }
 
     vm.startPrank(currentActor);
