@@ -2,12 +2,11 @@
 pragma solidity 0.8.22;
 
 import {console2} from "forge-std/console2.sol";
-import {Vm} from "forge-std/Vm.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Manager} from "../../../src/Manager.sol";
 import {SafetyModule} from "../../../src/SafetyModule.sol";
 import {SafetyModuleState, TriggerState} from "../../../src/lib/SafetyModuleStates.sol";
-import {ReservePool, RewardPool} from "../../../src/lib/structs/Pools.sol";
+import {ReservePool} from "../../../src/lib/structs/Pools.sol";
 import {RedemptionPreview} from "../../../src/lib/structs/Redemptions.sol";
 import {PreviewClaimableRewards, PreviewClaimableRewardsData} from "../../../src/lib/structs/Rewards.sol";
 import {Slash} from "../../../src/lib/structs/Slash.sol";
