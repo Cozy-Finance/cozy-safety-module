@@ -17,6 +17,7 @@ import {MockDeployer} from "../../utils/MockDeployProtocol.sol";
 import {MockERC20} from "../../utils/MockERC20.sol";
 import {MockTrigger} from "../../utils/MockTrigger.sol";
 import {TestBase} from "../../utils/TestBase.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @dev Base contract for creating new SafetyModule deployment types for
 /// invariant tests. Any new SafetyModule deployments should inherit from this,
@@ -82,7 +83,7 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
 
   function _initHandler() internal {
     safetyModuleHandler =
-      new SafetyModuleHandler(manager, safetyModule, asset, numReservePools, numRewardPools, triggers, block.timestamp);
+      new SafetyModuleHandler(manager, safetyModule, numReservePools, numRewardPools, triggers, block.timestamp);
     targetSelector(FuzzSelector({addr: address(safetyModuleHandler), selectors: _fuzzedSelectors()}));
     targetContract(address(safetyModuleHandler));
   }
@@ -136,5 +137,72 @@ abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is Invar
     vm.label(address(getReservePool(safetyModule, 0).depositToken), "reservePoolADepositToken");
     vm.label(address(getReservePool(safetyModule, 0).stkToken), "reservePoolAStkToken");
     vm.label(address(getRewardPool(safetyModule, 0).depositToken), "rewardPoolADepositToken");
+  }
+}
+
+abstract contract InvariantTestWithMultipleReservePoolsAndMultipleRewardPools is InvariantBaseDeploy {
+  uint16 internal constant MAX_RESERVE_POOLS = 2;
+  uint16 internal constant MAX_REWARD_POOLS = 2;
+
+  function _initSafetyModule() internal override {
+    uint256 numReservePools_ = _randomUint256InRange(1, MAX_RESERVE_POOLS);
+    uint256 numRewardPools_ = _randomUint256InRange(1, MAX_REWARD_POOLS);
+
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numReservePools_);
+    uint256 rewardsPoolsWeightSum_ = 0;
+    for (uint256 i_; i_ < numReservePools_; i_++) {
+      uint256 rewardsPoolsWeight_ = i_ < numReservePools_ - 1
+        ? _randomUint256InRange(0, MathConstants.ZOC - rewardsPoolsWeightSum_)
+        : MathConstants.ZOC - rewardsPoolsWeightSum_;
+      rewardsPoolsWeightSum_ += rewardsPoolsWeight_;
+
+      reservePoolConfigs_[i_] = ReservePoolConfig({
+        maxSlashPercentage: _randomUint256InRange(1, MathConstants.WAD),
+        asset: IERC20(address(new MockERC20("Mock Asset", "MOCK", 6))),
+        rewardsPoolsWeight: uint16(rewardsPoolsWeight_)
+      });
+    }
+
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](numRewardPools_);
+    for (uint256 i_; i_ < numRewardPools_; i_++) {
+      rewardPoolConfigs_[i_] = RewardPoolConfig({
+        asset: IERC20(address(new MockERC20("Mock Asset", "MOCK", 6))),
+        dripModel: IDripModel(address(new DripModelExponential(DEFAULT_DRIP_RATE)))
+      });
+    }
+
+    triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
+
+    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](1);
+    triggerConfig_[0] = TriggerConfig({trigger: triggers[0], payoutHandler: _randomAddress(), exists: true});
+
+    UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
+      reservePoolConfigs: reservePoolConfigs_,
+      rewardPoolConfigs: rewardPoolConfigs_,
+      triggerConfigUpdates: triggerConfig_,
+      delaysConfig: delays
+    });
+
+    numReservePools = reservePoolConfigs_.length;
+    numRewardPools = rewardPoolConfigs_.length;
+    safetyModule = manager.createSafetyModule(owner, pauser, configs_, _randomBytes32());
+
+    for (uint256 i_; i_ < numReservePools_; i_++) {
+      vm.label(
+        address(getReservePool(safetyModule, i_).depositToken),
+        string.concat("reservePool", Strings.toString(i_), "DepositToken")
+      );
+      vm.label(
+        address(getReservePool(safetyModule, i_).stkToken),
+        string.concat("reservePool", Strings.toString(i_), "StkToken")
+      );
+    }
+
+    for (uint256 i_; i_ < numRewardPools_; i_++) {
+      vm.label(
+        address(getRewardPool(safetyModule, i_).depositToken),
+        string.concat("rewardPool", Strings.toString(i_), "DepositToken")
+      );
+    }
   }
 }

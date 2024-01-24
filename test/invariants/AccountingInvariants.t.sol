@@ -5,7 +5,11 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {ReservePool, RewardPool} from "../../src/lib/structs/Pools.sol";
 import {IERC20} from "../../src/interfaces/IERC20.sol";
-import {InvariantTestBase, InvariantTestWithSingleReservePoolAndSingleRewardPool} from "./utils/InvariantTestBase.sol";
+import {
+  InvariantTestBase,
+  InvariantTestWithSingleReservePoolAndSingleRewardPool,
+  InvariantTestWithMultipleReservePoolsAndMultipleRewardPools
+} from "./utils/InvariantTestBase.sol";
 
 abstract contract AccountingInvariants is InvariantTestBase {
   using FixedPointMathLib for uint256;
@@ -95,4 +99,9 @@ abstract contract AccountingInvariants is InvariantTestBase {
 contract AccountingInvariantsSingleReservePoolSingleRewardPool is
   AccountingInvariants,
   InvariantTestWithSingleReservePoolAndSingleRewardPool
+{}
+
+contract AccountingInvariantsMultipleReservePoolsMultipleRewardPools is
+  AccountingInvariants,
+  InvariantTestWithMultipleReservePoolsAndMultipleRewardPools
 {}
