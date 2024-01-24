@@ -323,8 +323,8 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
       RewardPool memory expectedPool3_;
       expectedPool3_.asset = concreteRewardPools_[2].asset;
       expectedPool3_.dripModel = concreteRewardPools_[2].dripModel;
-      expectedPool3_.undrippedRewards = 100; // (1 - dripRate) * originalRewardPoolAmount = (1.0 - 1.0) * 9999
-      expectedPool3_.cumulativeDrippedRewards = 9899; // dripRate * originalRewardPoolAmount = 1.0 * 9999
+      expectedPool3_.undrippedRewards = 100; // (1 - dripRate) * originalRewardPoolAmount ~= 0.01 * 9999
+      expectedPool3_.cumulativeDrippedRewards = 9899; // dripRate * originalRewardPoolAmount ~= 0.99 * 9999
       expectedPool3_.lastDripTime = uint128(block.timestamp + ONE_YEAR);
       expectedRewardPools_[2] = expectedPool3_;
     }
@@ -902,8 +902,7 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     stkToken_.transfer(receiver_, originalUserStkTokenAmount_);
     vm.stopPrank();
 
-    // Time passes, user stakes again and rewards drip the second time. Again, user owns 50% of the new total stake,
-    // 400e6.
+    // Time passes, user stakes again. Again, user owns 50% of the new total stake, 400e6.
     vm.startPrank(user_);
     component.stake(0, 200e6, user_, user_);
     vm.stopPrank();
