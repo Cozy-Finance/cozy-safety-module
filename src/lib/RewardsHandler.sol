@@ -102,8 +102,10 @@ abstract contract RewardsHandler is SafetyModuleCommon {
         // A new UserRewardsData struct is pushed to the array in the case a new reward pool was added since rewards
         // were last claimed for this user.
         uint128 oldIndexSnapshot_ = 0;
+        uint256 oldAccruedRewards_ = 0;
         if (i < claimRewardsData_.numUserRewardAssets) {
           oldIndexSnapshot_ = userRewards_[i].indexSnapshot;
+          oldAccruedRewards_ = userRewards_[i].accruedRewards;
           userRewards_[i] = newUserRewardsData_;
         } else {
           userRewards_.push(newUserRewardsData_);
@@ -114,9 +116,10 @@ abstract contract RewardsHandler is SafetyModuleCommon {
           reservePoolId_,
           rewardPool_.asset,
           receiver_,
-          _getUserAccruedRewards(
-            claimRewardsData_.userStkTokenBalance, newClaimableRewardsData_.indexSnapshot, oldIndexSnapshot_
-          )
+          oldAccruedRewards_
+            + _getUserAccruedRewards(
+              claimRewardsData_.userStkTokenBalance, newClaimableRewardsData_.indexSnapshot, oldIndexSnapshot_
+            )
         );
       }
     }
@@ -206,7 +209,9 @@ abstract contract RewardsHandler is SafetyModuleCommon {
   function _previewNextRewardDrip(RewardPool storage rewardPool_) internal view returns (RewardDrip memory) {
     return RewardDrip({
       rewardAsset: rewardPool_.asset,
-      amount: safetyModuleState == SafetyModuleState.PAUSED ? 0 :_getNextDripAmount(rewardPool_.undrippedRewards, rewardPool_.dripModel, rewardPool_.lastDripTime)
+      amount: safetyModuleState == SafetyModuleState.PAUSED
+        ? 0
+        : _getNextDripAmount(rewardPool_.undrippedRewards, rewardPool_.dripModel, rewardPool_.lastDripTime)
     });
   }
 
