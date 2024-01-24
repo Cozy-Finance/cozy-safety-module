@@ -376,13 +376,7 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
-    {
-      uint16[] memory reservePoolIds_ = new uint16[](1);
-      reservePoolIds_[0] = currentReservePoolId;
-      PreviewClaimableRewardsData[] memory reservePoolClaimableRewards_ = safetyModule.previewClaimableRewards(reservePoolIds_, currentActor)[0].claimableRewardsData;
-      PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ = reservePoolClaimableRewards_[0];
-      ghost_rewardsClaimed[asset] += rewardPoolClaimableRewards_.amount;
-    }
+    _incrementRewardsToBeClaimed(currentReservePoolId, currentActor);
 
     stkTokenUnstakeAmount_ = bound(stkTokenUnstakeAmount_, 1, actorStkTokenBalance_);
     vm.startPrank(currentActor);
@@ -409,17 +403,24 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
-    {
-      uint16[] memory reservePoolIds_ = new uint16[](1);
-      reservePoolIds_[0] = currentReservePoolId;
-      PreviewClaimableRewardsData[] memory reservePoolClaimableRewards_ = safetyModule.previewClaimableRewards(reservePoolIds_, currentActor)[0].claimableRewardsData;
-      PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ = reservePoolClaimableRewards_[0];
-      ghost_rewardsClaimed[asset] += rewardPoolClaimableRewards_.amount;
-    }
+    _incrementRewardsToBeClaimed(currentReservePoolId, currentActor);
 
     vm.startPrank(currentActor);
     safetyModule.claimRewards(currentReservePoolId, receiver_);
     vm.stopPrank();
+  }
+
+  function _incrementRewardsToBeClaimed(uint16 currentReservePool_, address currentActor_) public {
+    uint16[] memory reservePoolIds_ = new uint16[](1);
+    reservePoolIds_[0] = currentReservePool_;
+    PreviewClaimableRewards[] memory reservePoolClaimableRewards_ =
+      safetyModule.previewClaimableRewards(reservePoolIds_, currentActor_);
+
+    for (uint16 j = 0; j < numRewardPools; j++) {
+      PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ =
+        reservePoolClaimableRewards_[0].claimableRewardsData[j];
+      ghost_rewardsClaimed[rewardPoolClaimableRewards_.asset] += rewardPoolClaimableRewards_.amount;
+    }
   }
 
   function completeRedemption(address caller_, uint256 seed_)

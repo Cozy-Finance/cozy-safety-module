@@ -66,27 +66,31 @@ abstract contract AccountingInvariants is InvariantTestBase {
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
-    uint256 accountingSum;
-    ReservePool memory reservePool_ = getReservePool(safetyModule, 0);
-    RewardPool memory rewardPool_ = getRewardPool(safetyModule, 0);
+    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+      ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
+      accountingSums[reservePool_.asset] +=
+        (reservePool_.depositAmount + reservePool_.stakeAmount + reservePool_.feeAmount);
+    }
 
-    accountingSum += (reservePool_.depositAmount + reservePool_.stakeAmount + reservePool_.feeAmount);
-    accountingSum += (rewardPool_.undrippedRewards + rewardPool_.cumulativeDrippedRewards);
-    accountingSum -= safetyModuleHandler.ghost_rewardsClaimed(IERC20(address(asset)));
+    for (uint16 rewardPoolId_; rewardPoolId_ < numRewardPools; rewardPoolId_++) {
+      RewardPool memory rewardPool_ = getRewardPool(safetyModule, rewardPoolId_);
+      accountingSums[rewardPool_.asset] += (rewardPool_.undrippedRewards + rewardPool_.cumulativeDrippedRewards);
+      accountingSums[rewardPool_.asset] -= safetyModuleHandler.ghost_rewardsClaimed(IERC20(address(rewardPool_.asset)));
+    }
 
     // TODO iterate over each asset and check the invariant applies for each.
     require(
-      safetyModule.assetPools(IERC20(address(asset))).amount == accountingSum,
+      safetyModule.assetPools(IERC20(address(asset))).amount == accountingSums[asset],
       string.concat(
         "Invariant Violated: The internal asset pool amount for an asset must equal the sum of the internal pool amounts.",
         " safetyModule.assetPools(IERC20(address(asset))).amount): ",
         Strings.toString(safetyModule.assetPools(IERC20(address(asset))).amount),
         ", accountingSums[asset]: ",
-        Strings.toString(accountingSum),
-        ", asset.balanceOf(safetyModule): ",
+        Strings.toString(accountingSums[asset]),
+        ", asset.balanceOf(address(safetyModule)): ",
         Strings.toString(asset.balanceOf(address(safetyModule))),
-        ", safetyModuleHandler.ghost_rewardsClaimed(reservePool_.asset): ",
-        Strings.toString(safetyModuleHandler.ghost_rewardsClaimed(reservePool_.asset))
+        ", safetyModuleHandler.ghost_rewardsClaimed(asset): ",
+        Strings.toString(safetyModuleHandler.ghost_rewardsClaimed(asset))
       )
     );
   }
