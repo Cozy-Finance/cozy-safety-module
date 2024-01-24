@@ -14,7 +14,7 @@ abstract contract RewardsHandlerInvariants is InvariantTestBase {
   using FixedPointMathLib for uint256;
 
   function invariant_userRewardsAccountingAfterClaimRewards() public syncCurrentTimestamp(safetyModuleHandler) {
-    (address actor_, uint16 reservePoolId_) = safetyModuleHandler.claimRewards(_randomAddress(), _randomUint256());
+    address actor_ = safetyModuleHandler.claimRewards(_randomAddress(), _randomUint256());
   }
 }
 

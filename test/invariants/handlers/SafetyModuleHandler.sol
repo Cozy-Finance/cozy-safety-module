@@ -402,13 +402,13 @@ contract SafetyModuleHandler is TestBase {
     useActorWithStakes(seed_)
     countCall("claimRewards")
     advanceTime(seed_)
-    returns (address actor_, uint16 reservePoolId_)
+    returns (address actor_)
   {
     IERC20 stkToken_ = getReservePool(safetyModule, currentReservePoolId).stkToken;
     uint256 actorStkTokenBalance_ = stkToken_.balanceOf(currentActor);
     if (actorStkTokenBalance_ == 0) {
       invalidCalls["claimRewards"] += 1;
-      return (currentActor, currentReservePoolId);
+      return currentActor;
     }
 
     {
@@ -425,7 +425,7 @@ contract SafetyModuleHandler is TestBase {
     safetyModule.claimRewards(currentReservePoolId, receiver_);
     vm.stopPrank();
 
-    return (currentActor, currentReservePoolId);
+    return currentActor;
   }
 
   function completeRedemption(address caller_, uint256 seed_)

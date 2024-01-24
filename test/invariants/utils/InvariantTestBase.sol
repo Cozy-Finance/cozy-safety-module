@@ -28,8 +28,6 @@ abstract contract InvariantBaseDeploy is TestBase, MockDeployer {
   ISafetyModule public safetyModule;
   SafetyModuleHandler public safetyModuleHandler;
 
-  IERC20 public asset = IERC20(address(new MockERC20("Mock Asset", "MOCK", 6)));
-
   // Deploy with some sane params for default models.
   IDripModel public dripDecayModel = IDripModel(address(new DripModelExponential(9_116_094_774)));
 
@@ -100,10 +98,6 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
     _;
   }
 
-  function _simulateSetTransfer(uint256 amount_) internal {
-    deal(address(asset), address(safetyModuleHandler), asset.balanceOf(address(safetyModuleHandler)) + amount_, true);
-  }
-
   function invariant_callSummary() public view {
     safetyModuleHandler.callSummary();
   }
@@ -111,12 +105,14 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
 
 abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is InvariantBaseDeploy {
   function _initSafetyModule() internal override {
+    IERC20 asset_ = IERC20(address(new MockERC20("Mock Asset", "MOCK", 6)));
+
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] =
-      ReservePoolConfig({maxSlashPercentage: 0.5e18, asset: asset, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
+      ReservePoolConfig({maxSlashPercentage: 0.5e18, asset: asset_, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
 
     RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
-    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset, dripModel: dripDecayModel});
+    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: dripDecayModel});
 
     triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
 
