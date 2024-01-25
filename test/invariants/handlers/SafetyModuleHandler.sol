@@ -375,7 +375,7 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
-    _incrementRewardsToBeClaimed(currentReservePoolId, currentActor);
+    _incrementGhostRewardsToBeClaimed(currentReservePoolId, currentActor);
 
     stkTokenUnstakeAmount_ = bound(stkTokenUnstakeAmount_, 1, actorStkTokenBalance_);
     vm.startPrank(currentActor);
@@ -402,14 +402,14 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
-    _incrementRewardsToBeClaimed(currentReservePoolId, currentActor);
+    _incrementGhostRewardsToBeClaimed(currentReservePoolId, currentActor);
 
     vm.startPrank(currentActor);
     safetyModule.claimRewards(currentReservePoolId, receiver_);
     vm.stopPrank();
   }
 
-  function _incrementRewardsToBeClaimed(uint16 currentReservePool_, address currentActor_) public {
+  function _incrementGhostRewardsToBeClaimed(uint16 currentReservePool_, address currentActor_) public {
     uint16[] memory reservePoolIds_ = new uint16[](1);
     reservePoolIds_[0] = currentReservePool_;
     PreviewClaimableRewards[] memory reservePoolClaimableRewards_ =
