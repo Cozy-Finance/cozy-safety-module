@@ -474,7 +474,7 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
     __readStub__();
   }
 
-  function _applyPendingDrippedRewards(
+  function _dripAndApplyPendingDrippedRewards(
     ReservePool storage, /* reservePool_ */
     mapping(uint16 => ClaimableRewardsData) storage /* claimableRewards_ */
   ) internal view override {
