@@ -30,8 +30,6 @@ import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 import "./utils/Stub.sol";
 
-import "forge-std/console2.sol";
-
 contract RewardsHandlerUnitTest is TestBase {
   using FixedPointMathLib for uint256;
   using SafeCastLib for uint256;
