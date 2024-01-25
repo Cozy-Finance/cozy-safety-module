@@ -84,7 +84,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     for (uint16 i = 0; i < claimRewardsData_.numRewardAssets; i++) {
       // Step (1)
       RewardPool storage rewardPool_ = rewardPools[i];
-      if (safetyModuleState_ != SafetyModuleState.PAUSED) _dripRewardPool(rewardPool_);
+      _dripRewardPool(rewardPool_);
 
       {
         // Step (2)
