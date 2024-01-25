@@ -50,18 +50,22 @@ abstract contract AccountingInvariants is InvariantTestBase {
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
-    uint256 internalAssetPoolAmount_ = safetyModule.assetPools(IERC20(address(asset))).amount;
-    uint256 erc20AssetBalance_ = asset.balanceOf(address(safetyModule));
-    require(
-      internalAssetPoolAmount_ == erc20AssetBalance_,
-      string.concat(
-        "Invariant Violated: The internal asset pool amount for an asset must equal the asset's ERC20 balance of the safety module.",
-        " internalAssetPoolAmount_: ",
-        Strings.toString(internalAssetPoolAmount_),
-        ", asset.balanceOf(address(safetyModule)): ",
-        Strings.toString(erc20AssetBalance_)
-      )
-    );
+    uint256 numAssets_ = assets.length;
+    for (uint16 assetId_; assetId_ < numAssets_; assetId_++) {
+      IERC20 asset = assets[assetId_];
+      uint256 internalAssetPoolAmount_ = safetyModule.assetPools(asset).amount;
+      uint256 erc20AssetBalance_ = asset.balanceOf(address(safetyModule));
+      require(
+        internalAssetPoolAmount_ == erc20AssetBalance_,
+        string.concat(
+          "Invariant Violated: The internal asset pool amount for an asset must equal the asset's ERC20 balance of the safety module.",
+          " internalAssetPoolAmount_: ",
+          Strings.toString(internalAssetPoolAmount_),
+          ", asset.balanceOf(address(safetyModule)): ",
+          Strings.toString(erc20AssetBalance_)
+        )
+      );
+    }
   }
 
   mapping(IERC20 => uint256) internal accountingSums;
@@ -70,29 +74,36 @@ abstract contract AccountingInvariants is InvariantTestBase {
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
-    uint256 accountingSum;
-    ReservePool memory reservePool_ = getReservePool(safetyModule, 0);
-    RewardPool memory rewardPool_ = getRewardPool(safetyModule, 0);
+    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+      ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
+      accountingSums[reservePool_.asset] +=
+        (reservePool_.depositAmount + reservePool_.stakeAmount + reservePool_.feeAmount);
+    }
 
-    accountingSum += (reservePool_.depositAmount + reservePool_.stakeAmount + reservePool_.feeAmount);
-    accountingSum += (rewardPool_.undrippedRewards + rewardPool_.cumulativeDrippedRewards);
-    accountingSum -= safetyModuleHandler.ghost_rewardsClaimed(IERC20(address(asset)));
+    for (uint16 rewardPoolId_; rewardPoolId_ < numRewardPools; rewardPoolId_++) {
+      RewardPool memory rewardPool_ = getRewardPool(safetyModule, rewardPoolId_);
+      accountingSums[rewardPool_.asset] += (rewardPool_.undrippedRewards + rewardPool_.cumulativeDrippedRewards);
+      accountingSums[rewardPool_.asset] -= safetyModuleHandler.ghost_rewardsClaimed(IERC20(address(rewardPool_.asset)));
+    }
 
-    // TODO iterate over each asset and check the invariant applies for each.
-    require(
-      safetyModule.assetPools(IERC20(address(asset))).amount == accountingSum,
-      string.concat(
-        "Invariant Violated: The internal asset pool amount for an asset must equal the sum of the internal pool amounts.",
-        " safetyModule.assetPools(IERC20(address(asset))).amount): ",
-        Strings.toString(safetyModule.assetPools(IERC20(address(asset))).amount),
-        ", accountingSums[asset]: ",
-        Strings.toString(accountingSum),
-        ", asset.balanceOf(safetyModule): ",
-        Strings.toString(asset.balanceOf(address(safetyModule))),
-        ", safetyModuleHandler.ghost_rewardsClaimed(reservePool_.asset): ",
-        Strings.toString(safetyModuleHandler.ghost_rewardsClaimed(reservePool_.asset))
-      )
-    );
+    uint256 numAssets_ = assets.length;
+    for (uint16 assetId_; assetId_ < numAssets_; assetId_++) {
+      IERC20 asset = assets[assetId_];
+      require(
+        safetyModule.assetPools(asset).amount == accountingSums[asset],
+        string.concat(
+          "Invariant Violated: The internal asset pool amount for an asset must equal the sum of the internal pool amounts.",
+          " safetyModule.assetPools(IERC20(address(asset))).amount): ",
+          Strings.toString(safetyModule.assetPools(IERC20(address(asset))).amount),
+          ", accountingSums[asset]: ",
+          Strings.toString(accountingSums[asset]),
+          ", asset.balanceOf(address(safetyModule)): ",
+          Strings.toString(asset.balanceOf(address(safetyModule))),
+          ", safetyModuleHandler.ghost_rewardsClaimed(asset): ",
+          Strings.toString(safetyModuleHandler.ghost_rewardsClaimed(asset))
+        )
+      );
+    }
   }
 }
 

@@ -152,8 +152,8 @@ contract StakerUnitTest is TestBase {
     assertEq(finalAssetPool_.amount, 170e18);
     assertEq(mockAsset.balanceOf(address(component)), 170e18 + initialSafetyModuleBal);
 
-    // Because `stkToken.totalSupply() > 0`, the index snapshot and cumulative claimed rewards should not have change.
-    // Since this updates before the user stakes, the `stkToken.totalSupply() == initialStkTokenSupply_`.
+    // Because `stkToken.totalSupply() > 0`, the index snapshot and cumulative claimed rewards should change.
+    // Since this updates before the user is minted stkTokens, the `stkToken.totalSupply() == initialStkTokenSupply_`.
     assertEq(
       finalClaimableRewardsData_.indexSnapshot,
       initialIndexSnapshot_

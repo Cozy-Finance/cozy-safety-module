@@ -37,6 +37,7 @@ abstract contract InvariantBaseDeploy is TestBase, MockDeployer {
   uint256 public numReservePools;
   uint256 public numRewardPools;
   ITrigger[] public triggers;
+  IERC20[] public assets;
 
   function _initSafetyModule() internal virtual;
 }
@@ -106,6 +107,7 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
 abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is InvariantBaseDeploy {
   function _initSafetyModule() internal override {
     IERC20 asset_ = IERC20(address(new MockERC20("Mock Asset", "MOCK", 6)));
+    assets.push(asset_);
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] =
@@ -147,9 +149,8 @@ abstract contract InvariantTestWithMultipleReservePoolsAndMultipleRewardPools is
     // Create some unique assets to use for the pools. We want to make sure the invariant tests cover the case where the
     // same asset is used for multiple reserve/reward pools.
     uint256 uniqueNumAssets_ = _randomUint256InRange(1, numReservePools_ + numRewardPools_);
-    IERC20 uniqueAssets_ = new IERC20[](uniqueNumAssets_);
     for (uint256 i_; i_ < uniqueNumAssets_; i_++) {
-      uniqueAssets_[i_] = IERC20(address(new MockERC20("Mock Asset", "MOCK", 6)));
+      assets.push(IERC20(address(new MockERC20("Mock Asset", "MOCK", 6))));
     }
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numReservePools_);
@@ -162,7 +163,7 @@ abstract contract InvariantTestWithMultipleReservePoolsAndMultipleRewardPools is
 
       reservePoolConfigs_[i_] = ReservePoolConfig({
         maxSlashPercentage: _randomUint256InRange(1, MathConstants.WAD),
-        asset: uniqueAssets_[_randomUint256InRange(0, uniqueNumAssets_ - 1)],
+        asset: assets[_randomUint256InRange(0, uniqueNumAssets_ - 1)],
         rewardsPoolsWeight: uint16(rewardsPoolsWeight_)
       });
     }
@@ -170,7 +171,7 @@ abstract contract InvariantTestWithMultipleReservePoolsAndMultipleRewardPools is
     RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](numRewardPools_);
     for (uint256 i_; i_ < numRewardPools_; i_++) {
       rewardPoolConfigs_[i_] = RewardPoolConfig({
-        asset: uniqueAssets_[_randomUint256InRange(0, uniqueNumAssets_ - 1)],
+        asset: assets[_randomUint256InRange(0, uniqueNumAssets_ - 1)],
         dripModel: IDripModel(address(new DripModelExponential(DEFAULT_DRIP_RATE)))
       });
     }

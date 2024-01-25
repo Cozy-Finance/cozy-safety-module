@@ -102,8 +102,10 @@ abstract contract RewardsHandler is SafetyModuleCommon {
         // A new UserRewardsData struct is pushed to the array in the case a new reward pool was added since rewards
         // were last claimed for this user.
         uint128 oldIndexSnapshot_ = 0;
+        uint256 oldAccruedRewards_ = 0;
         if (i < claimRewardsData_.numUserRewardAssets) {
           oldIndexSnapshot_ = userRewards_[i].indexSnapshot;
+          oldAccruedRewards_ = userRewards_[i].accruedRewards;
           userRewards_[i] = newUserRewardsData_;
         } else {
           userRewards_.push(newUserRewardsData_);
@@ -114,9 +116,10 @@ abstract contract RewardsHandler is SafetyModuleCommon {
           reservePoolId_,
           rewardPool_.asset,
           receiver_,
-          _getUserAccruedRewards(
-            claimRewardsData_.userStkTokenBalance, newClaimableRewardsData_.indexSnapshot, oldIndexSnapshot_
-          )
+          oldAccruedRewards_
+            + _getUserAccruedRewards(
+              claimRewardsData_.userStkTokenBalance, newClaimableRewardsData_.indexSnapshot, oldIndexSnapshot_
+            )
         );
       }
     }
@@ -272,7 +275,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     return totalBaseAmount_.mulWadDown(dripFactor_);
   }
 
-  function _applyPendingDrippedRewards(
+  function _dripAndApplyPendingDrippedRewards(
     ReservePool storage reservePool_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal override {
@@ -282,6 +285,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
 
     for (uint16 i = 0; i < numRewardAssets_; i++) {
       RewardPool storage rewardPool_ = rewardPools[i];
+      _dripRewardPool(rewardPool_);
       ClaimableRewardsData storage claimableRewardsData_ = claimableRewards_[i];
 
       claimableRewards_[i] = _previewNextClaimableRewardsData(

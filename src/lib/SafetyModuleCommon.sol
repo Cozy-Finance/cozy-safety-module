@@ -66,7 +66,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
 
   function _dripRewardPool(RewardPool storage rewardPool_) internal virtual;
 
-  function _applyPendingDrippedRewards(
+  function _dripAndApplyPendingDrippedRewards(
     ReservePool storage reservePool_,
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_
   ) internal virtual;

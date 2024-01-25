@@ -2,12 +2,11 @@
 pragma solidity 0.8.22;
 
 import {console2} from "forge-std/console2.sol";
-import {Vm} from "forge-std/Vm.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Manager} from "../../../src/Manager.sol";
 import {SafetyModule} from "../../../src/SafetyModule.sol";
 import {SafetyModuleState, TriggerState} from "../../../src/lib/SafetyModuleStates.sol";
-import {ReservePool, RewardPool} from "../../../src/lib/structs/Pools.sol";
+import {ReservePool} from "../../../src/lib/structs/Pools.sol";
 import {RedemptionPreview} from "../../../src/lib/structs/Redemptions.sol";
 import {PreviewClaimableRewards, PreviewClaimableRewardsData} from "../../../src/lib/structs/Rewards.sol";
 import {Slash} from "../../../src/lib/structs/Slash.sol";
@@ -372,18 +371,7 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
-    {
-      uint16[] memory reservePoolIds_ = new uint16[](1);
-      reservePoolIds_[0] = currentReservePoolId;
-      PreviewClaimableRewardsData[] memory reservePoolClaimableRewards_ =
-        safetyModule.previewClaimableRewards(reservePoolIds_, currentActor)[0].claimableRewardsData;
-
-      uint256 reservePoolClaimableRewardsLength_ = reservePoolClaimableRewards_.length;
-      for (uint256 i = 0; i < reservePoolClaimableRewardsLength_; i++) {
-        PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ = reservePoolClaimableRewards_[i];
-        ghost_rewardsClaimed[rewardPoolClaimableRewards_.asset] += rewardPoolClaimableRewards_.amount;
-      }
-    }
+    _incrementGhostRewardsToBeClaimed(currentReservePoolId, currentActor);
 
     stkTokenUnstakeAmount_ = bound(stkTokenUnstakeAmount_, 1, actorStkTokenBalance_);
     vm.startPrank(currentActor);
@@ -411,21 +399,26 @@ contract SafetyModuleHandler is TestBase {
       return currentActor;
     }
 
-    {
-      IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
-      uint16[] memory reservePoolIds_ = new uint16[](1);
-      reservePoolIds_[0] = currentReservePoolId;
-      PreviewClaimableRewardsData[] memory reservePoolClaimableRewards_ =
-        safetyModule.previewClaimableRewards(reservePoolIds_, currentActor)[0].claimableRewardsData;
-      PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ = reservePoolClaimableRewards_[0];
-      ghost_rewardsClaimed[asset_] += rewardPoolClaimableRewards_.amount;
-    }
+    _incrementGhostRewardsToBeClaimed(currentReservePoolId, currentActor);
 
     vm.startPrank(currentActor);
     safetyModule.claimRewards(currentReservePoolId, receiver_);
     vm.stopPrank();
 
     return currentActor;
+  }
+
+  function _incrementGhostRewardsToBeClaimed(uint16 currentReservePool_, address currentActor_) public {
+    uint16[] memory reservePoolIds_ = new uint16[](1);
+    reservePoolIds_[0] = currentReservePool_;
+    PreviewClaimableRewards[] memory reservePoolClaimableRewards_ =
+      safetyModule.previewClaimableRewards(reservePoolIds_, currentActor_);
+
+    for (uint16 j = 0; j < numRewardPools; j++) {
+      PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ =
+        reservePoolClaimableRewards_[0].claimableRewardsData[j];
+      ghost_rewardsClaimed[rewardPoolClaimableRewards_.asset] += rewardPoolClaimableRewards_.amount;
+    }
   }
 
   function completeRedemption(address caller_, uint256 seed_)
