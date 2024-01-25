@@ -144,6 +144,14 @@ abstract contract InvariantTestWithMultipleReservePoolsAndMultipleRewardPools is
     uint256 numReservePools_ = _randomUint256InRange(1, MAX_RESERVE_POOLS);
     uint256 numRewardPools_ = _randomUint256InRange(1, MAX_REWARD_POOLS);
 
+    // Create some unique assets to use for the pools. We want to make sure the invariant tests cover the case where the
+    // same asset is used for multiple reserve/reward pools.
+    uint256 uniqueNumAssets_ = _randomUint256InRange(1, numReservePools_ + numRewardPools_);
+    IERC20 uniqueAssets_ = new IERC20[](uniqueNumAssets_);
+    for (uint256 i_; i_ < uniqueNumAssets_; i_++) {
+      uniqueAssets_[i_] = IERC20(address(new MockERC20("Mock Asset", "MOCK", 6)));
+    }
+
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numReservePools_);
     uint256 rewardsPoolsWeightSum_ = 0;
     for (uint256 i_; i_ < numReservePools_; i_++) {
@@ -154,7 +162,7 @@ abstract contract InvariantTestWithMultipleReservePoolsAndMultipleRewardPools is
 
       reservePoolConfigs_[i_] = ReservePoolConfig({
         maxSlashPercentage: _randomUint256InRange(1, MathConstants.WAD),
-        asset: IERC20(address(new MockERC20("Mock Asset", "MOCK", 6))),
+        asset: uniqueAssets_[_randomUint256InRange(0, uniqueNumAssets_ - 1)],
         rewardsPoolsWeight: uint16(rewardsPoolsWeight_)
       });
     }
@@ -162,7 +170,7 @@ abstract contract InvariantTestWithMultipleReservePoolsAndMultipleRewardPools is
     RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](numRewardPools_);
     for (uint256 i_; i_ < numRewardPools_; i_++) {
       rewardPoolConfigs_[i_] = RewardPoolConfig({
-        asset: IERC20(address(new MockERC20("Mock Asset", "MOCK", 6))),
+        asset: uniqueAssets_[_randomUint256InRange(0, uniqueNumAssets_ - 1)],
         dripModel: IDripModel(address(new DripModelExponential(DEFAULT_DRIP_RATE)))
       });
     }
