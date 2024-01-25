@@ -85,7 +85,7 @@ abstract contract Staker is SafetyModuleCommon {
 
     // Update user rewards before minting any new stkTokens.
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_ = claimableRewards[reservePoolId_];
-    dripRewards();
+    _applyPendingDrippedRewards(reservePool_, claimableRewards_);
     _updateUserRewards(stkToken_.balanceOf(receiver_), claimableRewards_, userRewards[reservePoolId_][receiver_]);
 
     stkToken_.mint(receiver_, stkTokenAmount_);
