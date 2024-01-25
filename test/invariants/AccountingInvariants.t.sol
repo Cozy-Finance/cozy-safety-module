@@ -46,6 +46,7 @@ abstract contract AccountingInvariants is InvariantTestBase {
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
+    // TODO: iterate over each asset and check the invariant applies for each.
     uint256 internalAssetPoolAmount_ = safetyModule.assetPools(IERC20(address(asset))).amount;
     uint256 erc20AssetBalance_ = asset.balanceOf(address(safetyModule));
     require(
@@ -93,6 +94,44 @@ abstract contract AccountingInvariants is InvariantTestBase {
         Strings.toString(safetyModuleHandler.ghost_rewardsClaimed(asset))
       )
     );
+  }
+
+  function invariant_pendingUnstakesAmountLteTotalStakeAmount() public syncCurrentTimestamp(safetyModuleHandler) {
+    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+      ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
+
+      require(
+        reservePool_.pendingUnstakesAmount <= reservePool_.stakeAmount,
+        string.concat(
+          "Invariant Violated: A reserve pool's pending unstakes amount must be less than or equal to its total stake amount.",
+          " reservePoolId_: ",
+          Strings.toString(reservePoolId_),
+          ", reservePool_.pendingUnstakesAmount: ",
+          Strings.toString(reservePool_.pendingUnstakesAmount),
+          ", reservePool_.stakeAmount: ",
+          Strings.toString(reservePool_.stakeAmount)
+        )
+      );
+    }
+  }
+
+  function invariant_pendingWithdrawalsAmountLteTotalDepositAmount() public syncCurrentTimestamp(safetyModuleHandler) {
+    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+      ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
+
+      require(
+        reservePool_.pendingWithdrawalsAmount <= reservePool_.depositAmount,
+        string.concat(
+          "Invariant Violated: A reserve pool's pending withdrawals amount must be less than or equal to its total deposit amount.",
+          " reservePoolId_: ",
+          Strings.toString(reservePoolId_),
+          ", reservePool_.pendingWithdrawalsAmount: ",
+          Strings.toString(reservePool_.pendingWithdrawalsAmount),
+          ", reservePool_.depositAmount: ",
+          Strings.toString(reservePool_.depositAmount)
+        )
+      );
+    }
   }
 }
 
