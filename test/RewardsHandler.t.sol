@@ -148,8 +148,6 @@ contract RewardsHandlerUnitTest is TestBase {
   }
 
   function _setUpConcrete() internal {
-    // skip(10);
-
     // Set-up two reserve pools.
     IReceiptToken stkToken1_ =
       IReceiptToken(address(new MockStkToken("Mock Cozy  stkToken", "cozyStk", 6, ISafetyModule(address(component)))));
