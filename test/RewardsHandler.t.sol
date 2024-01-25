@@ -924,7 +924,7 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
     assertApproxEqAbs(rewardPools_[0].asset.balanceOf(user_), 37, 1); // 100_000 * 0.01 * 0.1 * (0.5 * 0.75)
     assertApproxEqAbs(rewardPools_[1].asset.balanceOf(user_), 9_375_000, 1); // 1_000_000_000 * 0.25 * 0.1 *
       // (0.5 * 0.75)
-    assertApproxEqAbs(rewardPools_[2].asset.balanceOf(user_), 370, 1); // 9_999 * 1.0 * 0.1 * (0.5 * 0.75)
+    assertApproxEqAbs(rewardPools_[2].asset.balanceOf(user_), 370, 1); // 9_999 * 0.99 * 0.1 * (0.5 * 0.75)
 
     // Check user rewards data.
     UserRewardsData[] memory userRewardsData_ = component.getUserRewards(0, user_);
@@ -1006,7 +1006,7 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
     assertApproxEqAbs(rewardPools_[0].asset.balanceOf(user_), 50, 1); // 100_000 * 0.01 * 0.1 * 0.5
     assertApproxEqAbs(rewardPools_[1].asset.balanceOf(user_), 12_500_000, 1); // 1_000_000_000 * 0.25 * 0.1 *
       // 0.5
-    assertApproxEqAbs(rewardPools_[2].asset.balanceOf(user_), 494, 1); // 9_999 * 1.0 * 0.1 * 0.5
+    assertApproxEqAbs(rewardPools_[2].asset.balanceOf(user_), 494, 1); // 9_999 * 0.99 * 0.1 * 0.5
 
     // Receiver should receive no rewards.
     assertEq(rewardPools_[0].asset.balanceOf(receiver_), 0);
@@ -1060,12 +1060,12 @@ contract RewardsHandlerDripAndResetCumulativeValuesUnitTest is RewardsHandlerUni
       // WAD
     assertEq(claimableRewards_[0][1], _expectedClaimableRewardsData(250_000_000)); // [(1_000_000_000 * 0.25 *
       // 0.1) / 0.1e18] * WAD
-    assertEq(claimableRewards_[0][2], _expectedClaimableRewardsData(9890)); // [(9890 * 1 * 0.1) / 0.1e18] * WAD
+    assertEq(claimableRewards_[0][2], _expectedClaimableRewardsData(9890)); // [(9999 * 0.99 * 0.1) / 0.1e18] * WAD
     assertEq(claimableRewards_[1][0], _expectedClaimableRewardsData(90e18)); // [(100_000 * 0.01 * 0.9) / 10] *
       // WAD
     assertEq(claimableRewards_[1][1], _expectedClaimableRewardsData(2.25e25)); // [(1_000_000_000 * 0.25 *
       // 0.9) / 10] * WAD
-    assertEq(claimableRewards_[1][2], _expectedClaimableRewardsData(8.909e20)); // [(9999 * 1 * 0.9) / 10] * WAD
+    assertEq(claimableRewards_[1][2], _expectedClaimableRewardsData(8.909e20)); // [(9999 * 0.99 * 0.9) / 10] * WAD
 
     // Cumulative claimed rewards here should match the sum of the cumulative claimed rewards.
     RewardPool[] memory rewardPools_ = component.getRewardPools();
