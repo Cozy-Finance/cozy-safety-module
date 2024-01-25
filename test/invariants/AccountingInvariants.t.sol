@@ -10,7 +10,9 @@ import {InvariantTestBase, InvariantTestWithSingleReservePoolAndSingleRewardPool
 abstract contract AccountingInvariants is InvariantTestBase {
   using FixedPointMathLib for uint256;
 
-  function invariant_reserveDepositAmountGtePendingRedemptionAmounts() public syncCurrentTimestamp(safetyModuleHandler) {
+  mapping(IERC20 => uint256) internal testAccountingSums;
+
+  function invariant_reserveAssetAmountsGtePendingRedemptionAmounts() public syncCurrentTimestamp(safetyModuleHandler) {
     for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
 
@@ -61,77 +63,38 @@ abstract contract AccountingInvariants is InvariantTestBase {
     );
   }
 
-  mapping(IERC20 => uint256) internal accountingSums;
-
   function invariant_internalAssetPoolAmountEqualsSumOfInternalAmounts()
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
     for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
-      accountingSums[reservePool_.asset] +=
+      testAccountingSums[reservePool_.asset] +=
         (reservePool_.depositAmount + reservePool_.stakeAmount + reservePool_.feeAmount);
     }
 
     for (uint16 rewardPoolId_; rewardPoolId_ < numRewardPools; rewardPoolId_++) {
       RewardPool memory rewardPool_ = getRewardPool(safetyModule, rewardPoolId_);
-      accountingSums[rewardPool_.asset] += (rewardPool_.undrippedRewards + rewardPool_.cumulativeDrippedRewards);
-      accountingSums[rewardPool_.asset] -= safetyModuleHandler.ghost_rewardsClaimed(IERC20(address(rewardPool_.asset)));
+      testAccountingSums[rewardPool_.asset] += (rewardPool_.undrippedRewards + rewardPool_.cumulativeDrippedRewards);
+      testAccountingSums[rewardPool_.asset] -=
+        safetyModuleHandler.ghost_rewardsClaimed(IERC20(address(rewardPool_.asset)));
     }
 
     // TODO iterate over each asset and check the invariant applies for each.
     require(
-      safetyModule.assetPools(IERC20(address(asset))).amount == accountingSums[asset],
+      safetyModule.assetPools(IERC20(address(asset))).amount == testAccountingSums[asset],
       string.concat(
         "Invariant Violated: The internal asset pool amount for an asset must equal the sum of the internal pool amounts.",
         " safetyModule.assetPools(IERC20(address(asset))).amount): ",
         Strings.toString(safetyModule.assetPools(IERC20(address(asset))).amount),
         ", accountingSums[asset]: ",
-        Strings.toString(accountingSums[asset]),
+        Strings.toString(testAccountingSums[asset]),
         ", asset.balanceOf(address(safetyModule)): ",
         Strings.toString(asset.balanceOf(address(safetyModule))),
         ", safetyModuleHandler.ghost_rewardsClaimed(asset): ",
         Strings.toString(safetyModuleHandler.ghost_rewardsClaimed(asset))
       )
     );
-  }
-
-  function invariant_pendingUnstakesAmountLteTotalStakeAmount() public syncCurrentTimestamp(safetyModuleHandler) {
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
-      ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
-
-      require(
-        reservePool_.pendingUnstakesAmount <= reservePool_.stakeAmount,
-        string.concat(
-          "Invariant Violated: A reserve pool's pending unstakes amount must be less than or equal to its total stake amount.",
-          " reservePoolId_: ",
-          Strings.toString(reservePoolId_),
-          ", reservePool_.pendingUnstakesAmount: ",
-          Strings.toString(reservePool_.pendingUnstakesAmount),
-          ", reservePool_.stakeAmount: ",
-          Strings.toString(reservePool_.stakeAmount)
-        )
-      );
-    }
-  }
-
-  function invariant_pendingWithdrawalsAmountLteTotalDepositAmount() public syncCurrentTimestamp(safetyModuleHandler) {
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
-      ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
-
-      require(
-        reservePool_.pendingWithdrawalsAmount <= reservePool_.depositAmount,
-        string.concat(
-          "Invariant Violated: A reserve pool's pending withdrawals amount must be less than or equal to its total deposit amount.",
-          " reservePoolId_: ",
-          Strings.toString(reservePoolId_),
-          ", reservePool_.pendingWithdrawalsAmount: ",
-          Strings.toString(reservePool_.pendingWithdrawalsAmount),
-          ", reservePool_.depositAmount: ",
-          Strings.toString(reservePool_.depositAmount)
-        )
-      );
-    }
   }
 }
 
