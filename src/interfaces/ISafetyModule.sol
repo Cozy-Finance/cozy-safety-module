@@ -2,8 +2,10 @@
 pragma solidity ^0.8.0;
 
 import {IERC20} from "./IERC20.sol";
+import {AssetPool} from "../lib/structs/Pools.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
 import {RedemptionPreview} from "../lib/structs/Redemptions.sol";
+import {ClaimableRewardsData, PreviewClaimableRewards} from "../lib/structs/Rewards.sol";
 import {Slash} from "../lib/structs/Slash.sol";
 import {Trigger} from "../lib/structs/Trigger.sol";
 import {SafetyModuleState} from "../lib/SafetyModuleStates.sol";
@@ -17,6 +19,13 @@ import {RewardPoolConfig, ReservePoolConfig} from "../lib/structs/Configs.sol";
 interface ISafetyModule {
   /// @notice Replaces the constructor for minimal proxies.
   function initialize(address owner_, address pauser_, UpdateConfigsCalldataParams calldata configs_) external;
+
+  function assetPools(IERC20 asset_) external view returns (AssetPool memory assetPool_);
+
+  function claimableRewards(uint16 reservePoolId_, uint16 rewardPoolId_)
+    external
+    view
+    returns (ClaimableRewardsData memory claimableRewardsData_);
 
   function claimRewards(uint16 reservePoolId_, address receiver_) external;
 
@@ -123,6 +132,11 @@ interface ISafetyModule {
 
   /// @notice Address of the SafetyModule pauser.
   function pauser() external view returns (address);
+
+  function previewClaimableRewards(uint16[] calldata reservePoolIds_, address owner_)
+    external
+    view
+    returns (PreviewClaimableRewards[] memory previewClaimableRewards_);
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their queued redemption (i.e. view the
   /// number of reserve assets received) at the current block, given current on-chain conditions.
