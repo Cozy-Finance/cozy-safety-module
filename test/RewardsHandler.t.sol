@@ -208,6 +208,7 @@ contract RewardsHandlerUnitTest is TestBase {
       testPool1_.asset = IERC20(address(asset1_));
       testPool1_.dripModel = dripModel1_;
       testPool1_.undrippedRewards = 100_000;
+      testPool1_.lastDripTime = uint128(block.timestamp);
       component.mockAddRewardPool(testPool1_);
       component.mockAddAssetPool(IERC20(address(asset1_)), AssetPool({amount: testPool1_.undrippedRewards}));
       asset1_.mint(address(component), testPool1_.undrippedRewards);
@@ -220,6 +221,7 @@ contract RewardsHandlerUnitTest is TestBase {
       testPool2_.asset = IERC20(address(asset2_));
       testPool2_.dripModel = dripModel2_;
       testPool2_.undrippedRewards = 1_000_000_000;
+      testPool2_.lastDripTime = uint128(block.timestamp);
       component.mockAddRewardPool(testPool2_);
       component.mockAddAssetPool(IERC20(address(asset2_)), AssetPool({amount: testPool2_.undrippedRewards}));
       asset2_.mint(address(component), testPool2_.undrippedRewards);
@@ -232,6 +234,7 @@ contract RewardsHandlerUnitTest is TestBase {
       testPool3_.asset = IERC20(address(asset3_));
       testPool3_.dripModel = dripModel3_;
       testPool3_.undrippedRewards = 9999;
+      testPool3_.lastDripTime = uint128(block.timestamp);
       component.mockAddRewardPool(testPool3_);
       component.mockAddAssetPool(IERC20(address(asset3_)), AssetPool({amount: testPool3_.undrippedRewards}));
       asset3_.mint(address(component), testPool3_.undrippedRewards);
@@ -314,9 +317,9 @@ contract RewardsHandlerDripUnitTest is RewardsHandlerUnitTest {
       RewardPool memory expectedPool2_;
       expectedPool2_.asset = concreteRewardPools_[1].asset;
       expectedPool2_.dripModel = concreteRewardPools_[1].dripModel;
-      expectedPool2_.undrippedRewards = 749_999_924; // (1 - dripRate) * originalRewardPoolAmount = (1.0 - 0.25) *
+      expectedPool2_.undrippedRewards = 750_000_000; // (1 - dripRate) * originalRewardPoolAmount = (1.0 - 0.25) *
         // 1_000_000_000
-      expectedPool2_.cumulativeDrippedRewards = 250_000_076; // dripRate * originalRewardPoolAmount = 0.25 *
+      expectedPool2_.cumulativeDrippedRewards = 250_000_000; // dripRate * originalRewardPoolAmount = 0.25 *
         // 1_000_000_000
       expectedPool2_.lastDripTime = uint128(block.timestamp + ONE_YEAR);
       expectedRewardPools_[1] = expectedPool2_;
@@ -399,8 +402,6 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     ReservePool[] memory reservePools_ = component.getReservePools();
     MockERC20 reserveAsset1_ = MockERC20(address(reservePools_[0].asset));
     MockERC20 reserveAsset2_ = MockERC20(address(reservePools_[1].asset));
-    IERC20 stkToken1_ = reservePools_[0].stkToken;
-    IERC20 stkToken2_ = reservePools_[1].stkToken;
     RewardPool[] memory rewardPools_ = component.getRewardPools();
 
     // Set-up two stakers with reserve assets.
@@ -425,15 +426,9 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     vm.prank(user1);
     component.stake(0, 100e6, user1, user1);
 
-    console2.log("component.getClaimableRewards()[1][1]", component.getClaimableRewards()[1][1].indexSnapshot);
-
-    console2.log("===========before stake in reserve pool 1===========");
-
     // User 2 stakes 800e6 in pool2, increasing stkTokenSupply to 50. User 2 owns 80% of total stake, 1000e6.
     vm.prank(user2);
     component.stake(1, 800e6, user2, user2);
-
-    console2.log("component.getClaimableRewards()[1][1]", component.getClaimableRewards()[1][1].indexSnapshot);
 
     skip(ONE_YEAR);
 
@@ -442,7 +437,7 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
       _expectEmit();
       emit ClaimedRewards(0, rewardPools_[0].asset, 50, user1, receiver_);
       _expectEmit();
-      emit ClaimedRewards(0, rewardPools_[1].asset, 12500000, user1, receiver_);
+      emit ClaimedRewards(0, rewardPools_[1].asset, 12_500_000, user1, receiver_);
       _expectEmit();
       emit ClaimedRewards(0, rewardPools_[2].asset, 494, user1, receiver_);
 
@@ -451,22 +446,15 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
       component.claimRewards(0, receiver_);
       vm.stopPrank();
 
-      console2.log("stkToken1_.totalSupply()", stkToken1_.totalSupply());
-      console2.log("stkToken2_.totalSupply()", stkToken2_.totalSupply());
-      console2.log("stkToken1_.balanceOf(user1)", stkToken1_.balanceOf(user1));
-      console2.log("stkToken2_.balanceOf(user1)", stkToken2_.balanceOf(user1));
-      console2.log("stkToken1_.balanceOf(user2)", stkToken1_.balanceOf(user2));
-      console2.log("stkToken2_.balanceOf(user2)", stkToken2_.balanceOf(user2));
-
-      // Check rewards balances.
+      // Check cumulative dripped rewards.
       assertEq(component.getRewardPools()[0].cumulativeDrippedRewards, 1000);
-      assertEq(component.getRewardPools()[1].cumulativeDrippedRewards, 250000007);
+      assertEq(component.getRewardPools()[1].cumulativeDrippedRewards, 250_000_000);
       assertEq(component.getRewardPools()[2].cumulativeDrippedRewards, 9899);
 
       // Reward amounts received by `receiver_` are calculated as: rewardPool.cumulativeDrippedRewards *
       // rewardsPoolWeight * (userStkTokenBalance / totalStkTokenSupply), rounded down.
       assertApproxEqAbs(rewardPools_[0].asset.balanceOf(receiver_), 50, 1); // 1000 * 0.1 * 0.5
-      assertApproxEqAbs(rewardPools_[1].asset.balanceOf(receiver_), 12500000, 1); // 250_000_007 * 0.1 * 0.5
+      assertApproxEqAbs(rewardPools_[1].asset.balanceOf(receiver_), 12_500_000, 1); // 250_000_000 * 0.1 * 0.5
       assertApproxEqAbs(rewardPools_[2].asset.balanceOf(receiver_), 494, 1); // 9899 * 0.1 * 0.5
 
       // Since user claimed rewards, accrued rewards should be 0 and index snapshot should be updated.
@@ -482,21 +470,21 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
 
       // Reward pools should be updated as: rewardPool.undrippedRewards - rewardPool.cumulativeDrippedRewards.
       RewardPool[] memory rewardPoolsUpdated_ = component.getRewardPools();
-      assertEq(rewardPoolsUpdated_[0].undrippedRewards, 99000); // 100_000 - 1000
-      assertEq(rewardPoolsUpdated_[1].undrippedRewards, 749999993); // 1_000_000_000 - 250_000_007
+      assertEq(rewardPoolsUpdated_[0].undrippedRewards, 99_000); // 100_000 - 1000
+      assertEq(rewardPoolsUpdated_[1].undrippedRewards, 750_000_000); // 1_000_000_000 - 250_000_000
       assertEq(rewardPoolsUpdated_[2].undrippedRewards, 100); // 9999 - 9899
 
       // Claimable reward indices should be updated as: oldIndex + [(drippedRewards * rewardsPoolWeight) /
       // stkTokenSupply] * WAD.
       ClaimableRewardsData[][] memory claimableRewards_ = component.getClaimableRewards();
       assertEq(claimableRewards_[0][0].indexSnapshot, 500); // ~= 0 + [(1000 * 0.1) / 0.2e18] * WAD
-      assertEq(claimableRewards_[0][1].indexSnapshot, 125000000); // ~= 0 + [(250000007 * 0.1) / 0.2e18] * WAD
+      assertEq(claimableRewards_[0][1].indexSnapshot, 125_000_000); // ~= 0 + [(250000007 * 0.1) / 0.2e18] * WAD
       assertEq(claimableRewards_[0][2].indexSnapshot, 4945); // ~= 0 + [(9899 * 0.1) / 0.2e18] * WAD
 
       // Claimable reward indices for reserve pool 1 are not updated since someone has staked for the first time,
-      // but there have been no claims or additional stakes on it.
+      // but there have been no claims or additional stakes on it yet.
       assertEq(claimableRewards_[1][0].indexSnapshot, 0);
-      assertEq(claimableRewards_[1][1].indexSnapshot, 0.8e18);
+      assertEq(claimableRewards_[1][1].indexSnapshot, 0);
       assertEq(claimableRewards_[1][2].indexSnapshot, 0);
     }
 
@@ -506,75 +494,90 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     component.stake(0, 200e6, user2, user2); // Owns 50% of total stake, 400e6
 
     {
-      // address receiver_ = _randomAddress();
-      // vm.startPrank(user1);
-      // component.claimRewards(0, receiver_);
-      // vm.stopPrank();
+      address receiver_ = _randomAddress();
+      vm.startPrank(user1);
+      component.claimRewards(0, receiver_);
+      vm.stopPrank();
 
-      // // Reward amounts received by `receiver_` are calculated as: (change in rewardPool.cumulativeDrippedRewards) *
-      // // rewardsPoolWeight * (userStkTokenBalance / totalStkTokenSupply), rounded down.
-      // assertApproxEqAbs(rewardPools_[0].asset.balanceOf(receiver_), 12, 1); // 496 * 0.1 * 0.25
-      // assertApproxEqAbs(rewardPools_[1].asset.balanceOf(receiver_), 2_512_023, 1); // 100_480_937 * 0.25 * 0.1
-      // assertApproxEqAbs(rewardPools_[2].asset.balanceOf(receiver_), 2, 1); // 100 * 0.1 * 0.25
+      // Check cumulative dripped rewards.
+      assertEq(component.getRewardPools()[0].cumulativeDrippedRewards, 1990);
+      assertEq(component.getRewardPools()[1].cumulativeDrippedRewards, 437_500_000);
+      assertEq(component.getRewardPools()[2].cumulativeDrippedRewards, 9998);
+
+      // Reward amounts received by `receiver_` are calculated as: (change in rewardPool.cumulativeDrippedRewards) *
+      // rewardsPoolWeight * (userStkTokenBalance / totalStkTokenSupply), rounded down.
+      // Time skipped one year before the new stake from user 2, so for the entirety of the skip user1 still owned
+      // 50% of the totalStkTokenSupply.
+      assertApproxEqAbs(rewardPools_[0].asset.balanceOf(receiver_), 49, 1); // 990 * 0.1 * 0.5
+      assertApproxEqAbs(rewardPools_[1].asset.balanceOf(receiver_), 9_375_000, 1); // 187_500_000 * 0.1 * 0.5
+      assertApproxEqAbs(rewardPools_[2].asset.balanceOf(receiver_), 4, 1); // 99 * 0.1 * 0.5
     }
 
+    skip(ONE_YEAR);
+
     {
-      // address receiver1_ = _randomAddress();
-      // _expectEmit();
-      // emit ClaimedRewards(0, rewardPools_[0].asset, 25, user2, receiver1_);
-      // _expectEmit();
-      // emit ClaimedRewards(0, rewardPools_[1].asset, 5_024_047, user2, receiver1_);
-      // _expectEmit();
-      // emit ClaimedRewards(0, rewardPools_[2].asset, 4, user2, receiver1_);
+      address receiver1_ = _randomAddress();
+      _expectEmit();
+      emit ClaimedRewards(0, rewardPools_[0].asset, 49, user2, receiver1_);
+      _expectEmit();
+      emit ClaimedRewards(0, rewardPools_[1].asset, 7_031_250, user2, receiver1_);
+      // Event is not emitted from rewardPool 2 because no rewards are transfered.
 
-      // vm.startPrank(user2);
-      // component.claimRewards(0, receiver1_);
-      // vm.stopPrank();
+      vm.startPrank(user2);
+      component.claimRewards(0, receiver1_);
+      vm.stopPrank();
 
-      // address receiver2_ = _randomAddress();
-      // _expectEmit();
-      // emit ClaimedRewards(1, rewardPools_[0].asset, 1076, user2, receiver2_);
-      // _expectEmit();
-      // emit ClaimedRewards(1, rewardPools_[1].asset, 252_346_328, user2, receiver2_);
-      // _expectEmit();
-      // emit ClaimedRewards(1, rewardPools_[2].asset, 7192, user2, receiver2_);
+      address receiver2_ = _randomAddress();
+      _expectEmit();
+      emit ClaimedRewards(1, rewardPools_[0].asset, 2138, user2, receiver2_);
+      _expectEmit();
+      emit ClaimedRewards(1, rewardPools_[1].asset, 416_250_000, user2, receiver2_);
+      _expectEmit();
+      emit ClaimedRewards(1, rewardPools_[2].asset, 7198, user2, receiver2_);
 
-      // vm.startPrank(user2);
-      // component.claimRewards(1, receiver2_);
-      // vm.stopPrank();
+      vm.startPrank(user2);
+      component.claimRewards(1, receiver2_);
+      vm.stopPrank();
 
-      // // TODO: Explain why these values make sense.
-      // assertApproxEqAbs(rewardPools_[0].asset.balanceOf(receiver1_), 25, 1);
-      // assertApproxEqAbs(rewardPools_[1].asset.balanceOf(receiver1_), 5_024_047, 1);
-      // assertApproxEqAbs(rewardPools_[2].asset.balanceOf(receiver1_), 4, 1);
+      // Check cumulative dripped rewards.
+      assertEq(component.getRewardPools()[0].cumulativeDrippedRewards, 2970);
+      assertEq(component.getRewardPools()[1].cumulativeDrippedRewards, 578_125_000);
+      assertEq(component.getRewardPools()[2].cumulativeDrippedRewards, 9998);
 
-      // // Reward amounts received by `receiver_` are calculated as: rewardPool.cumulativeDrippedRewards *
-      // // rewardsPoolWeight * (userStkTokenBalance / totalStkTokenSupply) rounded down, since no one else
-      // // is a staker in pool 1.
-      // assertApproxEqAbs(rewardPools_[0].asset.balanceOf(receiver2_), 1076, 1); // 1495 * 0.9 * 0.8
-      // assertApproxEqAbs(rewardPools_[1].asset.balanceOf(receiver2_), 252_346_328, 1); // 350481012 * 0.9 * 0.8
-      // assertApproxEqAbs(rewardPools_[2].asset.balanceOf(receiver2_), 7192, 1); // 9989 * 0.9 * 0.8
+      // Reward amounts received by `receiver1_` are calculated as: change in rewardPool.cumulativeDrippedRewards *
+      // rewardsPoolWeight * (userStkTokenBalance / totalStkTokenSupply) rounded down.
+      assertApproxEqAbs(rewardPools_[0].asset.balanceOf(receiver1_), 49, 1); // 980 * 0.1 * 0.5
+      assertApproxEqAbs(rewardPools_[1].asset.balanceOf(receiver1_), 7_031_250, 1); // 140625000 * 0.1 * 0.5
+      assertApproxEqAbs(rewardPools_[2].asset.balanceOf(receiver1_), 0, 1); // 0 * 0.1 * 0.5
 
-      // // Since user claimed full rewards, user's accrued rewards should be 0 and index snapshot should be updated.
-      // UserRewardsData[] memory user2RewardsData1_ = component.getUserRewards(0, user2);
-      // UserRewardsData[] memory expectedUser2RewardsData1_ = new UserRewardsData[](3);
-      // expectedUser2RewardsData1_[0] =
-      //   UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(0, 0).indexSnapshot});
-      // expectedUser2RewardsData1_[1] =
-      //   UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(0, 1).indexSnapshot});
-      // expectedUser2RewardsData1_[2] =
-      //   UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(0, 2).indexSnapshot});
-      // assertEq(user2RewardsData1_, expectedUser2RewardsData1_);
+      // Reward amounts received by `receiver2_` are calculated as: rewardPool.cumulativeDrippedRewards *
+      // rewardsPoolWeight * (userStkTokenBalance / totalStkTokenSupply) rounded down. They do not use the change
+      // in cumulativeDrippedRewards since this is the first time user2 is claiming from pool 1, and their
+      // stake was before all the time skips.
+      assertApproxEqAbs(rewardPools_[0].asset.balanceOf(receiver2_), 2138, 1); // 2970 * 0.9 * 0.8
+      assertApproxEqAbs(rewardPools_[1].asset.balanceOf(receiver2_), 416_250_000, 1); // 578125000 * 0.9 * 0.8
+      assertApproxEqAbs(rewardPools_[2].asset.balanceOf(receiver2_), 7198, 1); // 9998 * 0.9 * 0.8
 
-      // UserRewardsData[] memory user2RewardsData2_ = component.getUserRewards(1, user2);
-      // UserRewardsData[] memory expectedUser2RewardsData2_ = new UserRewardsData[](3);
-      // expectedUser2RewardsData2_[0] =
-      //   UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(1, 0).indexSnapshot});
-      // expectedUser2RewardsData2_[1] =
-      //   UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(1, 1).indexSnapshot});
-      // expectedUser2RewardsData2_[2] =
-      //   UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(1, 2).indexSnapshot});
-      // assertEq(user2RewardsData2_, expectedUser2RewardsData2_);
+      // Since user claimed full rewards, user's accrued rewards should be 0 and index snapshot should be updated.
+      UserRewardsData[] memory user2RewardsData1_ = component.getUserRewards(0, user2);
+      UserRewardsData[] memory expectedUser2RewardsData1_ = new UserRewardsData[](3);
+      expectedUser2RewardsData1_[0] =
+        UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(0, 0).indexSnapshot});
+      expectedUser2RewardsData1_[1] =
+        UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(0, 1).indexSnapshot});
+      expectedUser2RewardsData1_[2] =
+        UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(0, 2).indexSnapshot});
+      assertEq(user2RewardsData1_, expectedUser2RewardsData1_);
+
+      UserRewardsData[] memory user2RewardsData2_ = component.getUserRewards(1, user2);
+      UserRewardsData[] memory expectedUser2RewardsData2_ = new UserRewardsData[](3);
+      expectedUser2RewardsData2_[0] =
+        UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(1, 0).indexSnapshot});
+      expectedUser2RewardsData2_[1] =
+        UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(1, 1).indexSnapshot});
+      expectedUser2RewardsData2_[2] =
+        UserRewardsData({accruedRewards: 0, indexSnapshot: component.getClaimableRewardsData(1, 2).indexSnapshot});
+      assertEq(user2RewardsData2_, expectedUser2RewardsData2_);
     }
   }
 
@@ -887,7 +890,8 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
       {
         RewardPool memory testPool3_;
         MockERC20 asset3_ = new MockERC20("Mock Cozy Reward Token", "rewardToken1", 18);
-        IDripModel dripModel3_ = IDripModel(address(new DripModelExponential(145_929_026_605))); // 100% annual drip rate
+        IDripModel dripModel3_ = IDripModel(address(new DripModelExponential(145_929_026_605))); // 100% annual drip
+          // rate
 
         testPool3_.asset = IERC20(address(asset3_));
         testPool3_.dripModel = dripModel3_;
@@ -925,7 +929,7 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
 
     skip(ONE_YEAR);
 
-    assertEq(component.getRewardPools()[0].cumulativeDrippedRewards, 1000);
+    assertEq(component.getRewardPools()[0].cumulativeDrippedRewards, 0);
 
     // Both users claim rewards.
     vm.prank(user_);
@@ -936,16 +940,16 @@ contract RewardsHandlerClaimUnitTest is RewardsHandlerUnitTest {
     // Check rewards balances.
     RewardPool[] memory rewardPools_ = component.getRewardPools();
     assertEq(rewardPools_[0].cumulativeDrippedRewards, 1000);
-    assertEq(rewardPools_[1].cumulativeDrippedRewards, 250000007);
+    assertEq(rewardPools_[1].cumulativeDrippedRewards, 250_000_007);
     assertEq(rewardPools_[2].cumulativeDrippedRewards, 9899);
 
     // Rewards received are equal to the amount dripped from each reward pool * rewardsPoolWeight * (userStkTokenBalance
     // / totalStkTokenSupply).
     assertApproxEqAbs(rewardPools_[0].asset.balanceOf(user_), 50, 1); // ~= 1000 * 0.1 * 0.5
-    assertApproxEqAbs(rewardPools_[1].asset.balanceOf(user_), 12500000, 1); // ~= 250000007 * 0.1 * 0.5
+    assertApproxEqAbs(rewardPools_[1].asset.balanceOf(user_), 12_500_000, 1); // ~= 250000007 * 0.1 * 0.5
     assertApproxEqAbs(rewardPools_[2].asset.balanceOf(user_), 494, 1); // ~= 9899 * 0.1 * 0.5
     assertApproxEqAbs(rewardPools_[0].asset.balanceOf(receiver_), 25, 1); // ~= 1000 * 0.1 * 0.25
-    assertApproxEqAbs(rewardPools_[1].asset.balanceOf(receiver_), 6249999, 1); // ~= 250000007 * 0.1 * 0.25
+    assertApproxEqAbs(rewardPools_[1].asset.balanceOf(receiver_), 6_249_999, 1); // ~= 250000007 * 0.1 * 0.25
     assertApproxEqAbs(rewardPools_[2].asset.balanceOf(receiver_), 247, 1); // ~= 9899 * 0.1 * 0.25
   }
 }
@@ -1008,7 +1012,7 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
     // Reward amounts received by `user_` are calculated as: rewardPool.amount * dripRate *
     // rewardsPoolWeight * (userStkTokenBalance / totalStkTokenSupply).
     assertApproxEqAbs(rewardPools_[0].asset.balanceOf(user_), 37, 1); // 100_000 * 0.01 * 0.1 * (0.5 * 0.75)
-    assertApproxEqAbs(rewardPools_[1].asset.balanceOf(user_), 9_375_002, 1); // 1_000_000_000 * 0.25 * 0.1 *
+    assertApproxEqAbs(rewardPools_[1].asset.balanceOf(user_), 9_375_000, 1); // 1_000_000_000 * 0.25 * 0.1 *
       // (0.5 * 0.75)
     assertApproxEqAbs(rewardPools_[2].asset.balanceOf(user_), 370, 1); // 9_999 * 1.0 * 0.1 * (0.5 * 0.75)
 
@@ -1090,7 +1094,7 @@ contract RewardsHandlerStkTokenTransferUnitTest is RewardsHandlerUnitTest {
     // rewardsPoolWeight * (userStkTokenBalance / totalStkTokenSupply).
     RewardPool[] memory rewardPools_ = component.getRewardPools();
     assertApproxEqAbs(rewardPools_[0].asset.balanceOf(user_), 50, 1); // 100_000 * 0.01 * 0.1 * 0.5
-    assertApproxEqAbs(rewardPools_[1].asset.balanceOf(user_), 12_500_003, 1); // 1_000_000_000 * 0.25 * 0.1 *
+    assertApproxEqAbs(rewardPools_[1].asset.balanceOf(user_), 12_500_000, 1); // 1_000_000_000 * 0.25 * 0.1 *
       // 0.5
     assertApproxEqAbs(rewardPools_[2].asset.balanceOf(user_), 494, 1); // 9_999 * 1.0 * 0.1 * 0.5
 
@@ -1144,12 +1148,12 @@ contract RewardsHandlerDripAndResetCumulativeValuesUnitTest is RewardsHandlerUni
     // Cumulative claimed rewards should be the drippedRewards. Cumulative claimed rewards should be reset to 0.
     assertEq(claimableRewards_[0][0], _expectedClaimableRewardsData(1000)); // [(100_000 * 0.01 * 0.1) / 0.1e18] *
       // WAD
-    assertEq(claimableRewards_[0][1], _expectedClaimableRewardsData(250_000_070)); // [(1_000_000_000 * 0.25 *
+    assertEq(claimableRewards_[0][1], _expectedClaimableRewardsData(250_000_000)); // [(1_000_000_000 * 0.25 *
       // 0.1) / 0.1e18] * WAD
     assertEq(claimableRewards_[0][2], _expectedClaimableRewardsData(9890)); // [(9890 * 1 * 0.1) / 0.1e18] * WAD
     assertEq(claimableRewards_[1][0], _expectedClaimableRewardsData(90e18)); // [(100_000 * 0.01 * 0.9) / 10] *
       // WAD
-    assertEq(claimableRewards_[1][1], _expectedClaimableRewardsData(2.25000068e25)); // [(1_000_000_000 * 0.25 *
+    assertEq(claimableRewards_[1][1], _expectedClaimableRewardsData(2.25e25)); // [(1_000_000_000 * 0.25 *
       // 0.9) / 10] * WAD
     assertEq(claimableRewards_[1][2], _expectedClaimableRewardsData(8.909e20)); // [(9999 * 1 * 0.9) / 10] * WAD
 

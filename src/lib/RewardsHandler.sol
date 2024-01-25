@@ -21,8 +21,6 @@ import {RewardPool, IdLookup} from "./structs/Pools.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
 
-import "forge-std/console2.sol";
-
 abstract contract RewardsHandler is SafetyModuleCommon {
   using FixedPointMathLib for uint256;
   using SafeERC20 for IERC20;
@@ -194,10 +192,6 @@ abstract contract RewardsHandler is SafetyModuleCommon {
         - claimableRewardsData_.cumulativeClaimedRewards;
       nextClaimableRewardsData_.cumulativeClaimedRewards += unclaimedDrippedRewards_;
       // Round down, in favor of leaving assets in the claimable reward pool.
-      console2.log("cumulativeDrippedRewards_", cumulativeDrippedRewards_);
-      console2.log("unclaimedDrippedRewards_",unclaimedDrippedRewards_);
-      console2.log("totalStkTokenSupply_",totalStkTokenSupply_);
-      console2.log("unclaimedDrippedRewards_.divWadDown(totalStkTokenSupply_).safeCastTo128();", unclaimedDrippedRewards_.divWadDown(totalStkTokenSupply_).safeCastTo128());
       nextClaimableRewardsData_.indexSnapshot +=
         unclaimedDrippedRewards_.divWadDown(totalStkTokenSupply_).safeCastTo128();
     }

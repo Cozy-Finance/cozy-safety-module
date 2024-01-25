@@ -152,11 +152,14 @@ contract StakerUnitTest is TestBase {
     assertEq(finalAssetPool_.amount, 170e18);
     assertEq(mockAsset.balanceOf(address(component)), 170e18 + initialSafetyModuleBal);
 
-    // Because `stkToken.totalSupply() > 0`, the index snapshot should not have changed.
-    // The cumulative claimed rewards should have increased by the amount of rewards that would have been dripped.
-    // Since this updates before the user stakes, the `stkToken.totalSupply() == initialStkTokenSupply_`.
-    assertEq(finalClaimableRewardsData_.indexSnapshot, initialIndexSnapshot_);
-    assertEq(finalClaimableRewardsData_.cumulativeClaimedRewards, cumulativeDrippedRewards_ - 200e18);
+    // Because `stkToken.totalSupply() > 0`, the index snapshot and cumulative claimed rewards should change.
+    // Since this updates before the user is minted stkTokens, the `stkToken.totalSupply() == initialStkTokenSupply_`.
+    assertEq(
+      finalClaimableRewardsData_.indexSnapshot,
+      initialIndexSnapshot_
+        + uint256(cumulativeDrippedRewards_ - cumulativeClaimedRewards_).divWadDown(initialStkTokenSupply_)
+    );
+    assertEq(finalClaimableRewardsData_.cumulativeClaimedRewards, cumulativeDrippedRewards_);
 
     assertEq(mockAsset.balanceOf(staker_), 0);
     assertEq(mockStkToken.balanceOf(receiver_), expectedStkTokenAmount_);
