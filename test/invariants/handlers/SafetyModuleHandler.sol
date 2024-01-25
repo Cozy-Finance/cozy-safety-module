@@ -30,8 +30,6 @@ contract SafetyModuleHandler is TestBase {
   Manager public manager;
   ISafetyModule public safetyModule;
 
-  IERC20 public asset;
-
   uint256 numReservePools;
   uint256 numRewardPools;
 
@@ -113,7 +111,6 @@ contract SafetyModuleHandler is TestBase {
   constructor(
     Manager manager_,
     ISafetyModule safetyModule_,
-    IERC20 asset_,
     uint256 numReservePools_,
     uint256 numRewardPools_,
     ITrigger[] memory triggers_,
@@ -123,7 +120,6 @@ contract SafetyModuleHandler is TestBase {
     manager = manager_;
     numReservePools = numReservePools_;
     numRewardPools = numRewardPools_;
-    asset = asset_;
     pauser = safetyModule_.pauser();
     owner = safetyModule_.owner();
     currentTimestamp = currentTimestamp_;
@@ -394,12 +390,13 @@ contract SafetyModuleHandler is TestBase {
     useActorWithStakes(seed_)
     countCall("claimRewards")
     advanceTime(seed_)
+    returns (address actor_)
   {
     IERC20 stkToken_ = getReservePool(safetyModule, currentReservePoolId).stkToken;
     uint256 actorStkTokenBalance_ = stkToken_.balanceOf(currentActor);
     if (actorStkTokenBalance_ == 0) {
       invalidCalls["claimRewards"] += 1;
-      return;
+      return currentActor;
     }
 
     _incrementGhostRewardsToBeClaimed(currentReservePoolId, currentActor);
@@ -407,6 +404,8 @@ contract SafetyModuleHandler is TestBase {
     vm.startPrank(currentActor);
     safetyModule.claimRewards(currentReservePoolId, receiver_);
     vm.stopPrank();
+
+    return currentActor;
   }
 
   function _incrementGhostRewardsToBeClaimed(uint16 currentReservePool_, address currentActor_) public {
@@ -605,10 +604,11 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
     assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
-    deal(address(asset), currentActor, asset.balanceOf(currentActor) + assetAmount_, true);
+    IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
+    deal(address(asset_), currentActor, asset_.balanceOf(currentActor) + assetAmount_, true);
 
     vm.startPrank(currentActor);
-    asset.approve(address(safetyModule), assetAmount_);
+    asset_.approve(address(safetyModule), assetAmount_);
     uint256 shares_ = safetyModule.depositReserveAssets(currentReservePoolId, assetAmount_, currentActor, currentActor);
     vm.stopPrank();
 
@@ -626,7 +626,8 @@ contract SafetyModuleHandler is TestBase {
     }
 
     assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
-    _simulateTransferToSafetyModule(assetAmount_);
+    IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
+    _simulateTransferToSafetyModule(asset_, assetAmount_);
 
     vm.startPrank(currentActor);
     uint256 shares_ = safetyModule.depositReserveAssetsWithoutTransfer(currentReservePoolId, assetAmount_, currentActor);
@@ -646,10 +647,11 @@ contract SafetyModuleHandler is TestBase {
     }
 
     assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
-    deal(address(asset), currentActor, asset.balanceOf(currentActor) + assetAmount_, true);
+    IERC20 asset_ = getRewardPool(safetyModule, currentRewardPoolId).asset;
+    deal(address(asset_), currentActor, asset_.balanceOf(currentActor) + assetAmount_, true);
 
     vm.startPrank(currentActor);
-    asset.approve(address(safetyModule), assetAmount_);
+    asset_.approve(address(safetyModule), assetAmount_);
     uint256 shares_ = safetyModule.depositRewardAssets(currentRewardPoolId, assetAmount_, currentActor, currentActor);
     vm.stopPrank();
 
@@ -666,7 +668,8 @@ contract SafetyModuleHandler is TestBase {
     }
 
     assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
-    _simulateTransferToSafetyModule(assetAmount_);
+    IERC20 asset_ = getRewardPool(safetyModule, currentRewardPoolId).asset;
+    _simulateTransferToSafetyModule(asset_, assetAmount_);
 
     vm.startPrank(currentActor);
     uint256 shares_ = safetyModule.depositRewardAssetsWithoutTransfer(currentRewardPoolId, assetAmount_, currentActor);
@@ -685,10 +688,11 @@ contract SafetyModuleHandler is TestBase {
     }
 
     assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
-    deal(address(asset), currentActor, asset.balanceOf(currentActor) + assetAmount_, true);
+    IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
+    deal(address(asset_), currentActor, asset_.balanceOf(currentActor) + assetAmount_, true);
 
     vm.startPrank(currentActor);
-    asset.approve(address(safetyModule), assetAmount_);
+    asset_.approve(address(safetyModule), assetAmount_);
     uint256 shares_ = safetyModule.stake(currentReservePoolId, assetAmount_, currentActor, currentActor);
     vm.stopPrank();
 
@@ -706,7 +710,8 @@ contract SafetyModuleHandler is TestBase {
     }
 
     assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
-    _simulateTransferToSafetyModule(assetAmount_);
+    IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
+    _simulateTransferToSafetyModule(asset_, assetAmount_);
 
     vm.startPrank(currentActor);
     uint256 shares_ = safetyModule.stakeWithoutTransfer(currentReservePoolId, assetAmount_, currentActor);
@@ -719,9 +724,9 @@ contract SafetyModuleHandler is TestBase {
     ghost_actorStakeCount[currentActor][currentReservePoolId] += 1;
   }
 
-  function _simulateTransferToSafetyModule(uint256 assets_) internal {
+  function _simulateTransferToSafetyModule(IERC20 asset_, uint256 assets_) internal {
     // Simulate transfer of assets to the safety module.
-    deal(address(asset), address(safetyModule), asset.balanceOf(address(safetyModule)) + assets_, true);
+    deal(address(asset_), address(safetyModule), asset_.balanceOf(address(safetyModule)) + assets_, true);
   }
 
   function _createValidRandomAddress(address addr_) internal view returns (address) {

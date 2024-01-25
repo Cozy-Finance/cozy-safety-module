@@ -4,7 +4,11 @@ pragma solidity 0.8.22;
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
-import {InvariantTestBase, InvariantTestWithSingleReservePoolAndSingleRewardPool} from "./utils/InvariantTestBase.sol";
+import {
+  InvariantTestBase,
+  InvariantTestWithSingleReservePoolAndSingleRewardPool,
+  InvariantTestWithMultipleReservePoolsAndMultipleRewardPools
+} from "./utils/InvariantTestBase.sol";
 
 abstract contract DepositInvariants is InvariantTestBase {
   using FixedPointMathLib for uint256;
@@ -63,4 +67,9 @@ abstract contract DepositInvariants is InvariantTestBase {
 contract DepositsInvariantsSingleReservePoolSingleRewardPool is
   DepositInvariants,
   InvariantTestWithSingleReservePoolAndSingleRewardPool
+{}
+
+contract DepositsInvariantsMultipleReservePoolsMultipleRewardPools is
+  DepositInvariants,
+  InvariantTestWithMultipleReservePoolsAndMultipleRewardPools
 {}

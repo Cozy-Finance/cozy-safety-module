@@ -61,8 +61,6 @@ abstract contract RewardsHandler is SafetyModuleCommon {
   }
 
   function claimRewards(uint16 reservePoolId_, address receiver_) public override {
-    SafetyModuleState safetyModuleState_ = safetyModuleState;
-
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     IReceiptToken stkToken_ = reservePool_.stkToken;
     mapping(uint16 => ClaimableRewardsData) storage claimableRewards_ = claimableRewards[reservePoolId_];
@@ -84,7 +82,7 @@ abstract contract RewardsHandler is SafetyModuleCommon {
     for (uint16 i = 0; i < claimRewardsData_.numRewardAssets; i++) {
       // Step (1)
       RewardPool storage rewardPool_ = rewardPools[i];
-      if (safetyModuleState_ != SafetyModuleState.PAUSED) _dripRewardPool(rewardPool_);
+      _dripRewardPool(rewardPool_);
 
       {
         // Step (2)
