@@ -69,6 +69,7 @@ abstract contract AccountingInvariants is InvariantTestBase {
   }
 
   mapping(IERC20 => uint256) internal accountingSums;
+  mapping(IERC20 => bool) internal ghostRewardsClaimedIncluded;
 
   function invariant_internalAssetPoolAmountEqualsSumOfInternalAmounts()
     public
@@ -83,7 +84,11 @@ abstract contract AccountingInvariants is InvariantTestBase {
     for (uint16 rewardPoolId_; rewardPoolId_ < numRewardPools; rewardPoolId_++) {
       RewardPool memory rewardPool_ = getRewardPool(safetyModule, rewardPoolId_);
       accountingSums[rewardPool_.asset] += (rewardPool_.undrippedRewards + rewardPool_.cumulativeDrippedRewards);
-      accountingSums[rewardPool_.asset] -= safetyModuleHandler.ghost_rewardsClaimed(IERC20(address(rewardPool_.asset)));
+      if (!ghostRewardsClaimedIncluded[rewardPool_.asset]) {
+        accountingSums[rewardPool_.asset] -=
+          safetyModuleHandler.ghost_rewardsClaimed(IERC20(address(rewardPool_.asset)));
+        ghostRewardsClaimedIncluded[rewardPool_.asset] = true;
+      }
     }
 
     uint256 numAssets_ = assets.length;
