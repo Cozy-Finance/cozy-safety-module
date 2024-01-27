@@ -460,6 +460,11 @@ contract SafetyModuleHandler is TestBase {
     vm.stopPrank();
   }
 
+  function claimFees(address owner_, uint256 seed_) public virtual countCall("claimFees") advanceTime(seed_) {
+    vm.prank(address(manager));
+    safetyModule.claimFees(owner_);
+  }
+
   function pause(uint256 seed_) public virtual countCall("pause") advanceTime(seed_) {
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       invalidCalls["pause"] += 1;
@@ -573,6 +578,7 @@ contract SafetyModuleHandler is TestBase {
     console2.log("completeRedemption", calls["completeRedemption"]);
     console2.log("dripFees", calls["dripFees"]);
     console2.log("dripFeesFromReservePool", calls["dripFeesFromReservePool"]);
+    console2.log("claimFees", calls["claimFees"]);
     console2.log("pause", calls["pause"]);
     console2.log("unpause", calls["unpause"]);
     console2.log("trigger", calls["trigger"]);
