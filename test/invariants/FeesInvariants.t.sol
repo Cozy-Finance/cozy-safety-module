@@ -65,12 +65,15 @@ abstract contract FeesInvariants is InvariantTestBase {
       beforeReservePools_[reservePoolId_] = beforeReservePool_;
     }
 
-    // Save the `owner_`'s balances before claiming fees.
     address owner_ = _randomAddress();
+    // Save the `owner_`'s balances and asset pool amounts before claiming fees.
     uint256 numAssets_ = assets.length;
     uint256[] memory beforeOwnerBalances_ = new uint256[](numAssets_);
+    uint256[] memory beforeAssetPoolAmounts_ = new uint256[](numAssets_);
     for (uint16 assetId_; assetId_ < numAssets_; assetId_++) {
-      beforeOwnerBalances_[assetId_] = assets[assetId_].balanceOf(owner_);
+      IERC20 asset_ = assets[assetId_];
+      beforeOwnerBalances_[assetId_] = asset_.balanceOf(owner_);
+      beforeAssetPoolAmounts_[assetId_] = safetyModule.assetPools(asset_).amount;
     }
 
     safetyModuleHandler.claimFees(owner_, _randomUint256());
@@ -142,10 +145,25 @@ abstract contract FeesInvariants is InvariantTestBase {
           "Invariant Violated: An owner's asset balance must increase by the summed fee amount claimed when fees are claimed.",
           " assetId_: ",
           Strings.toString(assetId_),
-          ", assets[assetId_].balanceOf(owner_): ",
+          ", asset_.balanceOf(owner_): ",
           Strings.toString(asset_.balanceOf(owner_)),
           ", beforeOwnerBalances_[assetId_]: ",
           Strings.toString(beforeOwnerBalances_[assetId_]),
+          ", feesClaimedSums[asset_]: ",
+          Strings.toString(feesClaimedSums[asset_])
+        )
+      );
+
+      require(
+        safetyModule.assetPools(asset_).amount == beforeAssetPoolAmounts_[assetId_] - feesClaimedSums[asset_],
+        string.concat(
+          "Invariant Violated: An asset pool's amount must decrease by the summed fee amount claimed when fees are claimed.",
+          " assetId_: ",
+          Strings.toString(assetId_),
+          ", safetyModule.assetPools(asset_).amount: ",
+          Strings.toString(safetyModule.assetPools(asset_).amount),
+          ", beforeAssetPoolAmounts_[assetId_]: ",
+          Strings.toString(beforeAssetPoolAmounts_[assetId_]),
           ", feesClaimedSums[asset_]: ",
           Strings.toString(feesClaimedSums[asset_])
         )
