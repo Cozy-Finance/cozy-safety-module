@@ -132,15 +132,15 @@ abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is Invar
     numRewardPools = rewardPoolConfigs_.length;
     safetyModule = manager.createSafetyModule(owner, pauser, configs_, _randomBytes32());
 
-    vm.label(address(getReservePool(safetyModule, 0).depositToken), "reservePoolADepositToken");
-    vm.label(address(getReservePool(safetyModule, 0).stkToken), "reservePoolAStkToken");
-    vm.label(address(getRewardPool(safetyModule, 0).depositToken), "rewardPoolADepositToken");
+    vm.label(address(getReservePool(safetyModule, 0).depositToken), "reservePool0DepositToken");
+    vm.label(address(getReservePool(safetyModule, 0).stkToken), "reservePool0StkToken");
+    vm.label(address(getRewardPool(safetyModule, 0).depositToken), "rewardPool0DepositToken");
   }
 }
 
 abstract contract InvariantTestWithMultipleReservePoolsAndMultipleRewardPools is InvariantBaseDeploy {
-  uint16 internal constant MAX_RESERVE_POOLS = 2;
-  uint16 internal constant MAX_REWARD_POOLS = 2;
+  uint16 internal constant MAX_RESERVE_POOLS = 10;
+  uint16 internal constant MAX_REWARD_POOLS = 10;
 
   function _initSafetyModule() internal override {
     uint256 numReservePools_ = _randomUint256InRange(1, MAX_RESERVE_POOLS);
