@@ -5,12 +5,11 @@ import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {SafetyModuleFactory} from "../src/SafetyModuleFactory.sol";
-import {StkToken} from "../src/StkToken.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
-import {ReservePoolConfig, RewardPoolConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
+import {ReservePoolConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
-import {ReservePool, RewardPool} from "../src/lib/structs/Pools.sol";
+import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
@@ -28,7 +27,7 @@ contract SafetyModuleFactoryTest is TestBase {
   SafetyModuleFactory safetyModuleFactory;
 
   ReceiptToken depositTokenLogic;
-  StkToken stkTokenLogic;
+  ReceiptToken stkTokenLogic;
   IReceiptTokenFactory receiptTokenFactory;
 
   IManager mockManager = IManager(_randomAddress());
@@ -38,7 +37,7 @@ contract SafetyModuleFactoryTest is TestBase {
 
   function setUp() public {
     depositTokenLogic = new ReceiptToken();
-    stkTokenLogic = new StkToken();
+    stkTokenLogic = new ReceiptToken();
 
     depositTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
     stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
@@ -52,9 +51,8 @@ contract SafetyModuleFactoryTest is TestBase {
       address(0),
       UpdateConfigsCalldataParams({
         reservePoolConfigs: new ReservePoolConfig[](0),
-        rewardPoolConfigs: new RewardPoolConfig[](0),
         triggerConfigUpdates: new TriggerConfig[](0),
-        delaysConfig: Delays({configUpdateDelay: 0, configUpdateGracePeriod: 0, unstakeDelay: 0, withdrawDelay: 0})
+        delaysConfig: Delays({configUpdateDelay: 0, configUpdateGracePeriod: 0, withdrawDelay: 0})
       })
     );
 
@@ -83,14 +81,10 @@ contract SafetyModuleFactoryTest is TestBase {
     IERC20 asset_ = IERC20(address(new MockERC20("Mock Asset", "cozyMock", 6)));
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] =
-      ReservePoolConfig({maxSlashPercentage: 0, asset: asset_, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
-
-    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
-    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(_randomAddress()))});
+    reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0, asset: asset_});
 
     Delays memory delaysConfig_ =
-      Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
+      Delays({withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
 
     TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](1);
     triggerConfig_[0] = TriggerConfig({
@@ -101,7 +95,6 @@ contract SafetyModuleFactoryTest is TestBase {
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
-      rewardPoolConfigs: rewardPoolConfigs_,
       triggerConfigUpdates: triggerConfig_,
       delaysConfig: delaysConfig_
     });
@@ -123,11 +116,6 @@ contract SafetyModuleFactoryTest is TestBase {
     // Loosely validate config applied.
     ReservePool memory reservePool_ = getReservePool(safetyModule_, 0);
     assertEq(address(reservePool_.asset), address(asset_));
-    assertEq(reservePool_.rewardsPoolsWeight, uint16(MathConstants.ZOC));
-
-    RewardPool memory rewardPool_ = getRewardPool(safetyModule_, 0);
-    assertEq(address(rewardPool_.asset), address(asset_));
-    assertEq(address(rewardPool_.dripModel), address(rewardPoolConfigs_[0].dripModel));
   }
 
   function test_revertDeploySafetyModuleNotManager() public {
@@ -138,14 +126,10 @@ contract SafetyModuleFactoryTest is TestBase {
     IERC20 asset_ = IERC20(address(new MockERC20("Mock Asset", "cozyMock", 6)));
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] =
-      ReservePoolConfig({maxSlashPercentage: 0, asset: asset_, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
-
-    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
-    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(_randomAddress()))});
+    reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0, asset: asset_});
 
     Delays memory delaysConfig_ =
-      Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
+      Delays({withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
 
     TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](1);
     triggerConfig_[0] = TriggerConfig({
@@ -156,7 +140,6 @@ contract SafetyModuleFactoryTest is TestBase {
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
-      rewardPoolConfigs: rewardPoolConfigs_,
       triggerConfigUpdates: triggerConfig_,
       delaysConfig: delaysConfig_
     });

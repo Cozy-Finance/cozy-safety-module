@@ -6,12 +6,11 @@ import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
-import {StkToken} from "../src/StkToken.sol";
 import {TestBase} from "./utils/TestBase.sol";
 
 contract ReceiptTokenFactoryTest is TestBase {
   ReceiptToken depositTokenLogic;
-  StkToken stkTokenLogic;
+  ReceiptToken stkTokenLogic;
   ReceiptTokenFactory receiptTokenFactory;
 
   ISafetyModule mockSafetyModule = ISafetyModule(_randomAddress());
@@ -27,7 +26,7 @@ contract ReceiptTokenFactoryTest is TestBase {
 
   function setUp() public {
     depositTokenLogic = new ReceiptToken();
-    stkTokenLogic = new StkToken();
+    stkTokenLogic = new ReceiptToken();
 
     depositTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
     stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);

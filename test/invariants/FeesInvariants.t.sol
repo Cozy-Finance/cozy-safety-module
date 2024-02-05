@@ -8,8 +8,8 @@ import {ReservePool} from "../../src/lib/structs/Pools.sol";
 import {IERC20} from "../../src/interfaces/IERC20.sol";
 import {
   InvariantTestBase,
-  InvariantTestWithSingleReservePoolAndSingleRewardPool,
-  InvariantTestWithMultipleReservePoolsAndMultipleRewardPools
+  InvariantTestWithSingleReservePool,
+  InvariantTestWithMultipleReservePools
 } from "./utils/InvariantTestBase.sol";
 
 abstract contract FeesInvariants is InvariantTestBase {
@@ -82,9 +82,8 @@ abstract contract FeesInvariants is InvariantTestBase {
       ReservePool memory afterReservePool_ = getReservePool(safetyModule, reservePoolId_);
       ReservePool memory beforeReservePool_ = beforeReservePools_[reservePoolId_];
       // The claimed fees include the old dripped fees and newly dripped fees.
-      feesClaimedSums[afterReservePool_.asset] += beforeReservePool_.feeAmount
-        + (beforeReservePool_.stakeAmount - afterReservePool_.stakeAmount)
-        + (beforeReservePool_.depositAmount - afterReservePool_.depositAmount);
+      feesClaimedSums[afterReservePool_.asset] +=
+        beforeReservePool_.feeAmount + (beforeReservePool_.depositAmount - afterReservePool_.depositAmount);
 
       require(
         afterReservePool_.feeAmount == 0,
@@ -94,19 +93,6 @@ abstract contract FeesInvariants is InvariantTestBase {
           Strings.toString(reservePoolId_),
           ", afterReservePool_.feeAmount: ",
           Strings.toString(afterReservePool_.feeAmount)
-        )
-      );
-
-      require(
-        afterReservePool_.stakeAmount <= beforeReservePool_.stakeAmount,
-        string.concat(
-          "Invariant Violated: A reserve pool's stake amount must decrease when fees are claimed.",
-          " reservePoolId_: ",
-          Strings.toString(reservePoolId_),
-          ", afterReservePool_.stakeAmount: ",
-          Strings.toString(afterReservePool_.stakeAmount),
-          ", beforeReservePool_.stakeAmount: ",
-          Strings.toString(beforeReservePool_.stakeAmount)
         )
       );
 
@@ -190,19 +176,6 @@ abstract contract FeesInvariants is InvariantTestBase {
     );
 
     require(
-      afterReservePool_.stakeAmount <= beforeReservePool_.stakeAmount,
-      string.concat(
-        "Invariant Violated: A reserve pool's stake amount must decrease when fees are dripped.",
-        " reservePoolId_: ",
-        Strings.toString(reservePoolId_),
-        ", afterReservePool_.stakeAmount: ",
-        Strings.toString(afterReservePool_.stakeAmount),
-        ", beforeReservePool_.stakeAmount: ",
-        Strings.toString(beforeReservePool_.stakeAmount)
-      )
-    );
-
-    require(
       afterReservePool_.depositAmount <= beforeReservePool_.depositAmount,
       string.concat(
         "Invariant Violated: A reserve pool's deposit amount must decrease when fees are dripped.",
@@ -216,18 +189,17 @@ abstract contract FeesInvariants is InvariantTestBase {
     );
 
     uint256 feeDelta_ = afterReservePool_.feeAmount - beforeReservePool_.feeAmount;
-    uint256 stakePlusDepositDelta_ = (beforeReservePool_.stakeAmount - afterReservePool_.stakeAmount)
-      + (beforeReservePool_.depositAmount - afterReservePool_.depositAmount);
+    uint256 depositDelta_ = beforeReservePool_.depositAmount - afterReservePool_.depositAmount;
     require(
-      feeDelta_ == stakePlusDepositDelta_,
+      feeDelta_ == depositDelta_,
       string.concat(
-        "Invariant Violated: A reserve pool's change in fee amount must equal the sum of the changes in stake and deposit amount when fees are dripped.",
+        "Invariant Violated: A reserve pool's change in fee amount must equal the change in deposit amount when fees are dripped.",
         " reservePoolId_: ",
         Strings.toString(reservePoolId_),
         ", feeDelta_: ",
         Strings.toString(feeDelta_),
-        ", stakePlusDepositDelta_: ",
-        Strings.toString(stakePlusDepositDelta_)
+        ", depositDelta_: ",
+        Strings.toString(depositDelta_)
       )
     );
 
@@ -264,19 +236,6 @@ abstract contract FeesInvariants is InvariantTestBase {
     );
 
     require(
-      afterReservePool_.stakeAmount == beforeReservePool_.stakeAmount,
-      string.concat(
-        "Invariant Violated: A reserve pool's stake amount must not change when fees are dripped for another pool.",
-        " reservePoolId_: ",
-        Strings.toString(reservePoolId_),
-        ", afterReservePool_.stakeAmount: ",
-        Strings.toString(afterReservePool_.stakeAmount),
-        ", beforeReservePool_.stakeAmount: ",
-        Strings.toString(beforeReservePool_.stakeAmount)
-      )
-    );
-
-    require(
       afterReservePool_.depositAmount == beforeReservePool_.depositAmount,
       string.concat(
         "Invariant Violated: A reserve pool's deposit amount must not change when fees are dripped for another pool.",
@@ -304,12 +263,6 @@ abstract contract FeesInvariants is InvariantTestBase {
   }
 }
 
-contract FeesInvariantsSingleReservePoolSingleRewardPool is
-  FeesInvariants,
-  InvariantTestWithSingleReservePoolAndSingleRewardPool
-{}
+contract FeesInvariantsSingleReservePool is FeesInvariants, InvariantTestWithSingleReservePool {}
 
-contract FeesInvariantsMultipleReservePoolsMultipleRewardPools is
-  FeesInvariants,
-  InvariantTestWithMultipleReservePoolsAndMultipleRewardPools
-{}
+contract FeesInvariantsMultipleReservePools is FeesInvariants, InvariantTestWithMultipleReservePools {}

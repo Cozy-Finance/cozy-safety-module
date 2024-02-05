@@ -10,8 +10,7 @@ import {IStateChangerErrors} from "../src/interfaces/IStateChangerErrors.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {StateChanger} from "../src/lib/StateChanger.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
-import {UserRewardsData, ClaimableRewardsData} from "../src/lib/structs/Rewards.sol";
-import {ReservePool, RewardPool} from "../src/lib/structs/Pools.sol";
+import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
@@ -19,7 +18,6 @@ import {TestBase} from "./utils/TestBase.sol";
 import "./utils/Stub.sol";
 
 interface StateChangerTestMockEvents {
-  event DripRewardsCalled();
   event DripFeesCalled();
 }
 
@@ -70,8 +68,6 @@ contract StateChangerPauseTest is StateChangerUnitTest {
   function _testPauseSuccess(ComponentParams memory testParams_, TestCaller testCaller_) internal {
     (TestableStateChanger component_, address caller_) = _initializeComponentAndCaller(testParams_, testCaller_);
 
-    _expectEmit();
-    emit DripRewardsCalled();
     _expectEmit();
     emit DripFeesCalled();
     _expectEmit();
@@ -151,8 +147,6 @@ contract StateChangerUnpauseTest is StateChangerUnitTest {
   ) internal {
     (TestableStateChanger component_, address caller_) = _initializeComponentAndCaller(testParams_, testCaller_);
 
-    _expectEmit();
-    emit DripRewardsCalled();
     _expectEmit();
     emit DripFeesCalled();
     _expectEmit();
@@ -274,8 +268,6 @@ contract StateChangerTriggerTest is StateChangerUnitTest {
     uint256 currNumPendingSlashes_ = component.numPendingSlashes();
     uint256 payoutHandlerCurrNumPendingSlashes_ = component.payoutHandlerNumPendingSlashes(mockPayoutHandler);
 
-    _expectEmit();
-    emit DripRewardsCalled();
     _expectEmit();
     emit DripFeesCalled();
     _expectEmit();
@@ -410,17 +402,9 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
   }
 
   // -------- Overridden abstract function placeholders --------
-  // Mock drip of rewards based on mocked next amount.
-  function dripRewards() public override {
-    emit DripRewardsCalled();
-  }
 
   function dripFees() public override {
     emit DripFeesCalled();
-  }
-
-  function claimRewards(uint16, /* reservePoolId_ */ address /* receiver_ */ ) public view override {
-    __readStub__();
   }
 
   function _getNextDripAmount(uint256, /* totalBaseAmount_ */ IDripModel, /* dripModel_ */ uint256 /* lastDripTime_ */ )
@@ -441,15 +425,6 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     __readStub__();
   }
 
-  function _updateUnstakesAfterTrigger(
-    uint16, /* reservePoolId_ */
-    ReservePool storage, /* reservePool_ */
-    uint256, /* oldStakeAmount_ */
-    uint256 /* slashAmount_ */
-  ) internal view override returns (uint256) {
-    __readStub__();
-  }
-
   function _updateWithdrawalsAfterTrigger(
     uint16, /* reservePoolId_ */
     ReservePool storage, /* reservePool_ */
@@ -467,33 +442,11 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     __readStub__();
   }
 
-  function _updateUserRewards(
-    uint256, /*userStkTokenBalance_*/
-    mapping(uint16 => ClaimableRewardsData) storage, /*claimableRewards*/
-    UserRewardsData[] storage /*userRewards_*/
-  ) internal override {
-    __readStub__();
-  }
-
-  function _dripRewardPool(RewardPool storage /*rewardPool_*/ ) internal override {
-    __readStub__();
-  }
-
-  function _dripAndApplyPendingDrippedRewards(
-    ReservePool storage, /*reservePool_*/
-    mapping(uint16 => ClaimableRewardsData) storage /*claimableRewards_*/
-  ) internal override {
-    __readStub__();
-  }
-
-  function _dripFeesFromReservePool(ReservePool storage, /*reservePool_*/ IDripModel /*dripModel_*/ ) internal override {
-    __readStub__();
-  }
-
-  function _dripAndResetCumulativeRewardsValues(
-    ReservePool[] storage, /*reservePools_*/
-    RewardPool[] storage /*rewardPools_*/
-  ) internal override {
+  function _dripFeesFromReservePool(ReservePool storage, /*reservePool_*/ IDripModel /*dripModel_*/ )
+    internal
+    view
+    override
+  {
     __readStub__();
   }
 }

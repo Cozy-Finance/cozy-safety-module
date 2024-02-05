@@ -44,36 +44,19 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
       Slash memory slash_ = slashes_[i];
       ReservePool storage reservePool_ = reservePools[slash_.reservePoolId];
       IERC20 reserveAsset_ = reservePool_.asset;
-      uint256 slashAmountRemaining_ = slash_.amount;
 
-      // 1. Slash deposited assets
-      uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
-      reservePool_.pendingWithdrawalsAmount = _updateWithdrawalsAfterTrigger(
-        slash_.reservePoolId, reservePool_, reservePoolDepositAmount_, slashAmountRemaining_
-      );
-      if (reservePoolDepositAmount_ <= slashAmountRemaining_) {
-        slashAmountRemaining_ -= reservePoolDepositAmount_;
-        reservePool_.depositAmount = 0;
-        assetPools[reserveAsset_].amount -= reservePoolDepositAmount_;
-      } else {
-        reservePool_.depositAmount -= slashAmountRemaining_;
-        assetPools[reserveAsset_].amount -= slashAmountRemaining_;
-        slashAmountRemaining_ = 0;
-      }
-
-      // 2. Slash staked assets
-      if (slashAmountRemaining_ > 0) {
-        uint256 reservePoolStakeAmount_ = reservePool_.stakeAmount;
-        uint256 slashPercentage_ = _computeSlashPercentage(slashAmountRemaining_, reservePoolStakeAmount_);
+      // Slash reserve pool assets
+      if (slash_.amount > 0) {
+        uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
+        uint256 slashPercentage_ = _computeSlashPercentage(slash_.amount, reservePoolDepositAmount_);
         if (slashPercentage_ > reservePool_.maxSlashPercentage) {
           revert ExceedsMaxSlashPercentage(slash_.reservePoolId, slashPercentage_);
         }
 
-        reservePool_.pendingUnstakesAmount = _updateUnstakesAfterTrigger(
-          slash_.reservePoolId, reservePool_, reservePoolStakeAmount_, slashAmountRemaining_
-        );
-        reservePool_.stakeAmount -= slashAmountRemaining_;
-        assetPools[reserveAsset_].amount -= slashAmountRemaining_;
+        reservePool_.pendingWithdrawalsAmount =
+          _updateWithdrawalsAfterTrigger(slash_.reservePoolId, reservePool_, reservePoolDepositAmount_, slash_.amount);
+        reservePool_.depositAmount -= slash_.amount;
+        assetPools[reserveAsset_].amount -= slash_.amount;
       }
 
       // Transfer the slashed assets to the receiver.
@@ -87,7 +70,7 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
     pure
     returns (uint256)
   {
-    // Round up, in favor of stakers and depositors.
+    // Round up, in favor of depositors.
     return slashAmount_.divWadUp(totalReservePoolAmount_);
   }
 

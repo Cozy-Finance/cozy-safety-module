@@ -7,6 +7,5 @@
   "chainlinkTriggerFactory": "0x0000000000000000000000000000000000000000",
   "ownableTriggerFactory": "0x0000000000000000000000000000000000000000",
   "umaTriggerFactory": "0x0000000000000000000000000000000000000000",
-  "allowedReservePools": 30,
-  "allowedRewardPools": 20
+  "allowedReservePools": 30
 }

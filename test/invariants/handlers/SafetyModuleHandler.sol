@@ -8,7 +8,6 @@ import {SafetyModule} from "../../../src/SafetyModule.sol";
 import {SafetyModuleState, TriggerState} from "../../../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../../../src/lib/structs/Pools.sol";
 import {RedemptionPreview} from "../../../src/lib/structs/Redemptions.sol";
-import {PreviewClaimableRewards, PreviewClaimableRewardsData} from "../../../src/lib/structs/Rewards.sol";
 import {Slash} from "../../../src/lib/structs/Slash.sol";
 import {Trigger} from "../../../src/lib/structs/Trigger.sol";
 import {IERC20} from "../../../src/interfaces/IERC20.sol";
@@ -31,7 +30,6 @@ contract SafetyModuleHandler is TestBase {
   ISafetyModule public safetyModule;
 
   uint256 numReservePools;
-  uint256 numRewardPools;
 
   ITrigger[] public triggers;
   ITrigger[] public triggeredTriggers; // Triggers that have triggered the safety module.
@@ -45,13 +43,7 @@ contract SafetyModuleHandler is TestBase {
 
   AddressSet internal actorsWithReserveDeposits;
 
-  AddressSet internal actorsWithRewardDeposits;
-
-  AddressSet internal actorsWithStakes;
-
   uint16 public currentReservePoolId;
-
-  uint16 public currentRewardPoolId;
 
   address public currentPayoutHandler;
 
@@ -66,37 +58,19 @@ contract SafetyModuleHandler is TestBase {
   // -------- Ghost Variables --------
 
   mapping(uint16 reservePoolId_ => GhostReservePool reservePool_) public ghost_reservePoolCumulative;
-  mapping(uint16 rewardPoolId_ => GhostRewardPool) public ghost_rewardPoolCumulative;
 
-  mapping(address actor_ => mapping(uint16 reservePoolId_ => uint256 actorStakeCount_)) public ghost_actorStakeCount;
   mapping(address actor_ => mapping(uint16 reservePoolId_ => uint256 actorReserveDepositCount_)) public
     ghost_actorReserveDepositCount;
-  mapping(address actor_ => mapping(uint16 rewardPoolId_ => uint256 actorRewardDepositCount_)) public
-    ghost_actorRewardDepositCount;
 
   GhostRedemption[] public ghost_redemptions;
-
-  mapping(IERC20 asset_ => uint256 amount_) public ghost_rewardsClaimed;
 
   // -------- Structs --------
 
   struct GhostReservePool {
-    uint256 totalAssetAmount;
     uint256 depositAssetAmount;
     uint256 depositSharesAmount;
-    uint256 stakeAssetAmount;
-    uint256 stakeSharesAmount;
     uint256 depositRedeemAssetAmount;
     uint256 depositRedeemSharesAmount;
-    uint256 unstakeAssetAmount;
-    uint256 unstakeSharesAmount;
-  }
-
-  struct GhostRewardPool {
-    uint256 totalAssetAmount;
-    uint256 depositSharesAmount;
-    uint256 redeemSharesAmount;
-    uint256 redeemAssetAmount;
   }
 
   struct GhostRedemption {
@@ -112,14 +86,12 @@ contract SafetyModuleHandler is TestBase {
     Manager manager_,
     ISafetyModule safetyModule_,
     uint256 numReservePools_,
-    uint256 numRewardPools_,
     ITrigger[] memory triggers_,
     uint256 currentTimestamp_
   ) {
     safetyModule = safetyModule_;
     manager = manager_;
     numReservePools = numReservePools_;
-    numRewardPools = numRewardPools_;
     pauser = safetyModule_.pauser();
     owner = safetyModule_.owner();
     currentTimestamp = currentTimestamp_;
@@ -190,122 +162,6 @@ contract SafetyModuleHandler is TestBase {
     return currentActor;
   }
 
-  function depositRewardAssets(uint256 assetAmount_, uint256 seed_)
-    public
-    virtual
-    createActor
-    createActorWithRewardDeposits
-    useValidRewardPoolId(seed_)
-    countCall("depositRewardAssets")
-    advanceTime(seed_)
-    returns (address actor_)
-  {
-    _depositRewardAssets(assetAmount_, "depositRewardAssets");
-
-    return currentActor;
-  }
-
-  function depositRewardAssetsWithExistingActor(uint256 assetAmount_, uint256 seed_)
-    public
-    virtual
-    useActor(seed_)
-    useValidRewardPoolId(seed_)
-    countCall("depositRewardAssetsWithExistingActor")
-    advanceTime(seed_)
-    returns (address actor_)
-  {
-    _depositRewardAssets(assetAmount_, "depositRewardAssetsWithExistingActor");
-
-    return currentActor;
-  }
-
-  function depositRewardAssetsWithoutTransfer(uint256 assetAmount_, uint256 seed_)
-    public
-    virtual
-    createActor
-    createActorWithRewardDeposits
-    useValidRewardPoolId(seed_)
-    countCall("depositRewardAssetsWithoutTransfer")
-    advanceTime(seed_)
-    returns (address actor_)
-  {
-    _depositRewardAssetsWithoutTransfer(assetAmount_, "depositRewardAssetsWithoutTransfer");
-
-    return currentActor;
-  }
-
-  function depositRewardAssetsWithoutTransferWithExistingActor(uint256 assetAmount_, uint256 seed_)
-    public
-    virtual
-    useActor(seed_)
-    useValidRewardPoolId(seed_)
-    countCall("depositRewardAssetsWithoutTransferWithExistingActor")
-    advanceTime(seed_)
-    returns (address actor_)
-  {
-    _depositRewardAssetsWithoutTransfer(assetAmount_, "depositRewardAssetsWithoutTransferWithExistingActor");
-
-    return currentActor;
-  }
-
-  function stake(uint256 assetAmount_, uint256 seed_)
-    public
-    virtual
-    createActor
-    createActorWithStakes
-    useValidReservePoolId(seed_)
-    countCall("stake")
-    advanceTime(seed_)
-    returns (address actor_)
-  {
-    _stake(assetAmount_, "stake");
-
-    return currentActor;
-  }
-
-  function stakeWithExistingActor(uint256 assetAmount_, uint256 seed_)
-    public
-    virtual
-    useActor(seed_)
-    useValidReservePoolId(seed_)
-    countCall("stakeWithExistingActor")
-    advanceTime(seed_)
-    returns (address actor_)
-  {
-    _stake(assetAmount_, "stakeWithExistingActor");
-
-    return currentActor;
-  }
-
-  function stakeWithoutTransfer(uint256 assetAmount_, uint256 seed_)
-    public
-    virtual
-    createActor
-    createActorWithStakes
-    useValidReservePoolId(seed_)
-    countCall("stakeWithoutTransfer")
-    advanceTime(seed_)
-    returns (address actor_)
-  {
-    _stakeWithoutTransfer(assetAmount_, "stakeWithoutTransfer");
-
-    return currentActor;
-  }
-
-  function stakeWithoutTransferWithExistingActor(uint256 assetAmount_, uint256 seed_)
-    public
-    virtual
-    useActor(seed_)
-    useValidReservePoolId(seed_)
-    countCall("stakeWithoutTransferWithExistingActor")
-    advanceTime(seed_)
-    returns (address actor_)
-  {
-    _stakeWithoutTransfer(assetAmount_, "stakeWithoutTransferWithExistingActor");
-
-    return currentActor;
-  }
-
   function redeem(uint256 depositTokenRedeemAmount_, address receiver_, uint256 seed_)
     public
     virtual
@@ -330,95 +186,6 @@ contract SafetyModuleHandler is TestBase {
     ghost_reservePoolCumulative[currentReservePoolId].depositRedeemAssetAmount += assetAmount_;
     ghost_reservePoolCumulative[currentReservePoolId].depositRedeemSharesAmount += depositTokenRedeemAmount_;
     ghost_redemptions.push(GhostRedemption(redemptionId_, assetAmount_, depositTokenRedeemAmount_, false));
-  }
-
-  function redeemUndrippedRewards(uint256 depositTokenRedeemAmount_, address receiver_, uint256 seed_)
-    public
-    virtual
-    useActorWithRewardDeposits(seed_)
-    countCall("redeemUndrippedRewards")
-    advanceTime(seed_)
-  {
-    IERC20 depositToken_ = getRewardPool(safetyModule, currentRewardPoolId).depositToken;
-    uint256 actorDepositTokenBalance_ = depositToken_.balanceOf(currentActor);
-    if (actorDepositTokenBalance_ == 0 || safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) {
-      invalidCalls["redeemUndrippedRewards"] += 1;
-      return;
-    }
-
-    depositTokenRedeemAmount_ = bound(depositTokenRedeemAmount_, 1, actorDepositTokenBalance_);
-    vm.startPrank(currentActor);
-    depositToken_.approve(address(safetyModule), depositTokenRedeemAmount_);
-    uint256 assetAmount_ =
-      safetyModule.redeemUndrippedRewards(currentRewardPoolId, depositTokenRedeemAmount_, receiver_, currentActor);
-    vm.stopPrank();
-
-    ghost_rewardPoolCumulative[currentRewardPoolId].redeemAssetAmount += assetAmount_;
-    ghost_rewardPoolCumulative[currentRewardPoolId].redeemSharesAmount += depositTokenRedeemAmount_;
-  }
-
-  function unstake(uint256 stkTokenUnstakeAmount_, address receiver_, uint256 seed_)
-    public
-    virtual
-    useActorWithStakes(seed_)
-    countCall("unstake")
-    advanceTime(seed_)
-  {
-    IERC20 stkToken_ = getReservePool(safetyModule, currentReservePoolId).stkToken;
-    uint256 actorStkTokenBalance_ = stkToken_.balanceOf(currentActor);
-    if (actorStkTokenBalance_ == 0 || safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) {
-      invalidCalls["unstake"] += 1;
-      return;
-    }
-
-    _incrementGhostRewardsToBeClaimed(currentReservePoolId, currentActor);
-
-    stkTokenUnstakeAmount_ = bound(stkTokenUnstakeAmount_, 1, actorStkTokenBalance_);
-    vm.startPrank(currentActor);
-    stkToken_.approve(address(safetyModule), stkTokenUnstakeAmount_);
-    (uint64 redemptionId_, uint256 assetAmount_) =
-      safetyModule.unstake(currentReservePoolId, stkTokenUnstakeAmount_, receiver_, currentActor);
-    vm.stopPrank();
-
-    ghost_reservePoolCumulative[currentReservePoolId].unstakeAssetAmount += assetAmount_;
-    ghost_reservePoolCumulative[currentReservePoolId].unstakeSharesAmount += stkTokenUnstakeAmount_;
-    ghost_redemptions.push(GhostRedemption(redemptionId_, assetAmount_, stkTokenUnstakeAmount_, false));
-  }
-
-  function claimRewards(address receiver_, uint256 seed_)
-    public
-    useActorWithStakes(seed_)
-    countCall("claimRewards")
-    advanceTime(seed_)
-    returns (address actor_)
-  {
-    IERC20 stkToken_ = getReservePool(safetyModule, currentReservePoolId).stkToken;
-    uint256 actorStkTokenBalance_ = stkToken_.balanceOf(currentActor);
-    if (actorStkTokenBalance_ == 0) {
-      invalidCalls["claimRewards"] += 1;
-      return currentActor;
-    }
-
-    _incrementGhostRewardsToBeClaimed(currentReservePoolId, currentActor);
-
-    vm.startPrank(currentActor);
-    safetyModule.claimRewards(currentReservePoolId, receiver_);
-    vm.stopPrank();
-
-    return currentActor;
-  }
-
-  function _incrementGhostRewardsToBeClaimed(uint16 currentReservePool_, address currentActor_) public {
-    uint16[] memory reservePoolIds_ = new uint16[](1);
-    reservePoolIds_[0] = currentReservePool_;
-    PreviewClaimableRewards[] memory reservePoolClaimableRewards_ =
-      safetyModule.previewClaimableRewards(reservePoolIds_, currentActor_);
-
-    for (uint16 j = 0; j < numRewardPools; j++) {
-      PreviewClaimableRewardsData memory rewardPoolClaimableRewards_ =
-        reservePoolClaimableRewards_[0].claimableRewardsData[j];
-      ghost_rewardsClaimed[rewardPoolClaimableRewards_.asset] += rewardPoolClaimableRewards_.amount;
-    }
   }
 
   function completeRedemption(address caller_, uint256 seed_)
@@ -500,13 +267,7 @@ contract SafetyModuleHandler is TestBase {
     }
   }
 
-  function slash(uint256 seedA_, uint256 seedB_)
-    public
-    virtual
-    useValidPayoutHandler(seedA_)
-    countCall("slash")
-    advanceTime(seedA_)
-  {
+  function slash(uint256 seed_) public virtual useValidPayoutHandler(seed_) countCall("slash") advanceTime(seed_) {
     if (safetyModule.numPendingSlashes() == 0 || safetyModule.safetyModuleState() != SafetyModuleState.TRIGGERED) {
       invalidCalls["slash"] += 1;
       return;
@@ -516,12 +277,11 @@ contract SafetyModuleHandler is TestBase {
     for (uint16 i = 0; i < numReservePools; i++) {
       ReservePool memory reservePool_ = getReservePool(safetyModule, uint16(i));
 
-      uint256 depositAmountToSlash_ = reservePool_.depositAmount > 0 ? bound(seedA_, 0, reservePool_.depositAmount) : 0;
-      uint256 stakeAmountToSlash_ = reservePool_.stakeAmount > 0
-        ? bound(seedB_, 0, reservePool_.stakeAmount.mulWadUp(reservePool_.maxSlashPercentage))
+      uint256 depositAmountToSlash_ = reservePool_.depositAmount > 0
+        ? bound(seed_, 0, reservePool_.depositAmount.mulWadUp(reservePool_.maxSlashPercentage))
         : 0;
 
-      slashes_[i] = Slash({reservePoolId: uint16(i), amount: depositAmountToSlash_ + stakeAmountToSlash_});
+      slashes_[i] = Slash({reservePoolId: uint16(i), amount: depositAmountToSlash_});
     }
 
     vm.prank(currentPayoutHandler);
@@ -560,21 +320,7 @@ contract SafetyModuleHandler is TestBase {
       "depositReserveAssetsWithoutTransferWithExistingActor",
       calls["depositReserveAssetsWithoutTransferWithExistingActor"]
     );
-    console2.log("depositRewardAssets", calls["depositRewardAssets"]);
-    console2.log("depositRewardAssetsWithExistingActor", calls["depositRewardAssetsWithExistingActor"]);
-    console2.log("depositRewardAssetsWithoutTransfer", calls["depositRewardAssetsWithoutTransfer"]);
-    console2.log(
-      "depositRewardAssetsWithoutTransferWithExistingActor",
-      calls["depositRewardAssetsWithoutTransferWithExistingActor"]
-    );
-    console2.log("stake", calls["stake"]);
-    console2.log("stakeWithExistingActor", calls["stakeWithExistingActor"]);
-    console2.log("stakeWithoutTransfer", calls["stakeWithoutTransfer"]);
-    console2.log("stakeWithoutTransferWithExistingActor", calls["stakeWithoutTransferWithExistingActor"]);
     console2.log("redeem", calls["redeem"]);
-    console2.log("redeemUndrippedRewards", calls["redeemUndrippedRewards"]);
-    console2.log("unstake", calls["unstake"]);
-    console2.log("claimRewards", calls["claimRewards"]);
     console2.log("completeRedemption", calls["completeRedemption"]);
     console2.log("dripFees", calls["dripFees"]);
     console2.log("dripFeesFromReservePool", calls["dripFeesFromReservePool"]);
@@ -593,21 +339,7 @@ contract SafetyModuleHandler is TestBase {
       "depositReserveAssetsWithoutTransferWithExistingActor",
       invalidCalls["depositReserveAssetsWithoutTransferWithExistingActor"]
     );
-    console2.log("depositRewardAssets", invalidCalls["depositRewardAssets"]);
-    console2.log("depositRewardAssetsWithExistingActor", invalidCalls["depositRewardAssetsWithExistingActor"]);
-    console2.log("depositRewardAssetsWithoutTransfer", invalidCalls["depositRewardAssetsWithoutTransfer"]);
-    console2.log(
-      "depositRewardAssetsWithoutTransferWithExistingActor",
-      invalidCalls["depositRewardAssetsWithoutTransferWithExistingActor"]
-    );
-    console2.log("stake", invalidCalls["stake"]);
-    console2.log("stakeWithExistingActor", invalidCalls["stakeWithExistingActor"]);
-    console2.log("stakeWithoutTransfer", invalidCalls["stakeWithoutTransfer"]);
-    console2.log("stakeWithoutTransferWithExistingActor", invalidCalls["stakeWithoutTransferWithExistingActor"]);
     console2.log("redeem", invalidCalls["redeem"]);
-    console2.log("redeemUndrippedRewards", invalidCalls["redeemUndrippedRewards"]);
-    console2.log("unstake", invalidCalls["unstake"]);
-    console2.log("claimRewards", invalidCalls["claimRewards"]);
     console2.log("completeRedemption", invalidCalls["completeRedemption"]);
     console2.log("dripFees", invalidCalls["dripFees"]);
     console2.log("pause", invalidCalls["pause"]);
@@ -631,7 +363,6 @@ contract SafetyModuleHandler is TestBase {
     vm.stopPrank();
 
     ghost_reservePoolCumulative[currentReservePoolId].depositAssetAmount += assetAmount_;
-    ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
     ghost_reservePoolCumulative[currentReservePoolId].depositSharesAmount += shares_;
 
     ghost_actorReserveDepositCount[currentActor][currentReservePoolId] += 1;
@@ -652,94 +383,9 @@ contract SafetyModuleHandler is TestBase {
     vm.stopPrank();
 
     ghost_reservePoolCumulative[currentReservePoolId].depositAssetAmount += assetAmount_;
-    ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
     ghost_reservePoolCumulative[currentReservePoolId].depositSharesAmount += shares_;
 
     ghost_actorReserveDepositCount[currentActor][currentReservePoolId] += 1;
-  }
-
-  function _depositRewardAssets(uint256 assetAmount_, string memory callName_) internal {
-    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
-      invalidCalls[callName_] += 1;
-      return;
-    }
-
-    assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
-    IERC20 asset_ = getRewardPool(safetyModule, currentRewardPoolId).asset;
-    deal(address(asset_), currentActor, asset_.balanceOf(currentActor) + assetAmount_, true);
-
-    vm.startPrank(currentActor);
-    asset_.approve(address(safetyModule), assetAmount_);
-    uint256 shares_ = safetyModule.depositRewardAssets(currentRewardPoolId, assetAmount_, currentActor, currentActor);
-    vm.stopPrank();
-
-    ghost_rewardPoolCumulative[currentRewardPoolId].totalAssetAmount += assetAmount_;
-    ghost_rewardPoolCumulative[currentRewardPoolId].depositSharesAmount += shares_;
-
-    ghost_actorRewardDepositCount[currentActor][currentRewardPoolId] += 1;
-  }
-
-  function _depositRewardAssetsWithoutTransfer(uint256 assetAmount_, string memory callName_) internal {
-    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
-      invalidCalls[callName_] += 1;
-      return;
-    }
-
-    assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
-    IERC20 asset_ = getRewardPool(safetyModule, currentRewardPoolId).asset;
-    _simulateTransferToSafetyModule(asset_, assetAmount_);
-
-    vm.startPrank(currentActor);
-    uint256 shares_ = safetyModule.depositRewardAssetsWithoutTransfer(currentRewardPoolId, assetAmount_, currentActor);
-    vm.stopPrank();
-
-    ghost_rewardPoolCumulative[currentRewardPoolId].totalAssetAmount += assetAmount_;
-    ghost_rewardPoolCumulative[currentRewardPoolId].depositSharesAmount += shares_;
-
-    ghost_actorRewardDepositCount[currentActor][currentRewardPoolId] += 1;
-  }
-
-  function _stake(uint256 assetAmount_, string memory callName_) internal {
-    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
-      invalidCalls[callName_] += 1;
-      return;
-    }
-
-    assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
-    IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
-    deal(address(asset_), currentActor, asset_.balanceOf(currentActor) + assetAmount_, true);
-
-    vm.startPrank(currentActor);
-    asset_.approve(address(safetyModule), assetAmount_);
-    uint256 shares_ = safetyModule.stake(currentReservePoolId, assetAmount_, currentActor, currentActor);
-    vm.stopPrank();
-
-    ghost_reservePoolCumulative[currentReservePoolId].stakeAssetAmount += assetAmount_;
-    ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
-    ghost_reservePoolCumulative[currentReservePoolId].stakeSharesAmount += shares_;
-
-    ghost_actorStakeCount[currentActor][currentReservePoolId] += 1;
-  }
-
-  function _stakeWithoutTransfer(uint256 assetAmount_, string memory callName_) internal {
-    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
-      invalidCalls[callName_] += 1;
-      return;
-    }
-
-    assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
-    IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
-    _simulateTransferToSafetyModule(asset_, assetAmount_);
-
-    vm.startPrank(currentActor);
-    uint256 shares_ = safetyModule.stakeWithoutTransfer(currentReservePoolId, assetAmount_, currentActor);
-    vm.stopPrank();
-
-    ghost_reservePoolCumulative[currentReservePoolId].stakeAssetAmount += assetAmount_;
-    ghost_reservePoolCumulative[currentReservePoolId].totalAssetAmount += assetAmount_;
-    ghost_reservePoolCumulative[currentReservePoolId].stakeSharesAmount += shares_;
-
-    ghost_actorStakeCount[currentActor][currentReservePoolId] += 1;
   }
 
   function _simulateTransferToSafetyModule(IERC20 asset_, uint256 assets_) internal {
@@ -750,14 +396,8 @@ contract SafetyModuleHandler is TestBase {
   function _createValidRandomAddress(address addr_) internal view returns (address) {
     if (addr_ == address(safetyModule)) return _randomAddress();
     for (uint256 i = 0; i < numReservePools; i++) {
-      for (uint256 j = 0; j < numRewardPools; j++) {
-        if (addr_ == address(getReservePool(ISafetyModule(address(safetyModule)), i).depositToken)) {
-          return _randomAddress();
-        }
-        if (addr_ == address(getReservePool(ISafetyModule(address(safetyModule)), i).stkToken)) return _randomAddress();
-        if (addr_ == address(getRewardPool(ISafetyModule(address(safetyModule)), j).depositToken)) {
-          return _randomAddress();
-        }
+      if (addr_ == address(getReservePool(ISafetyModule(address(safetyModule)), i).depositToken)) {
+        return _randomAddress();
       }
     }
     return addr_;
@@ -802,16 +442,6 @@ contract SafetyModuleHandler is TestBase {
     _;
   }
 
-  modifier createActorWithRewardDeposits() {
-    actorsWithRewardDeposits.add(currentActor);
-    _;
-  }
-
-  modifier createActorWithStakes() {
-    actorsWithStakes.add(currentActor);
-    _;
-  }
-
   modifier countCall(string memory key_) {
     totalCalls++;
     calls[key_]++;
@@ -820,11 +450,6 @@ contract SafetyModuleHandler is TestBase {
 
   modifier useValidReservePoolId(uint256 seed_) {
     currentReservePoolId = uint16(bound(seed_, 0, numReservePools - 1));
-    _;
-  }
-
-  modifier useValidRewardPoolId(uint256 seed_) {
-    currentRewardPoolId = uint16(bound(seed_, 0, numRewardPools - 1));
     _;
   }
 
@@ -873,40 +498,6 @@ contract SafetyModuleHandler is TestBase {
     // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
     for (uint16 i = initIndex_; indicesVisited_ < numReservePools; i = uint16((i + 1) % numReservePools)) {
       if (ghost_actorReserveDepositCount[currentActor][i] > 0) {
-        currentReservePoolId = i;
-        break;
-      }
-      indicesVisited_++;
-    }
-    _;
-  }
-
-  modifier useActorWithRewardDeposits(uint256 seed_) {
-    currentActor = actorsWithRewardDeposits.rand(seed_);
-
-    uint16 initIndex_ = uint16(bound(seed_, 0, numRewardPools));
-    uint16 indicesVisited_ = 0;
-
-    // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
-    for (uint16 i = initIndex_; indicesVisited_ < numRewardPools; i = uint16((i + 1) % numRewardPools)) {
-      if (ghost_actorRewardDepositCount[currentActor][i] > 0) {
-        currentRewardPoolId = i;
-        break;
-      }
-      indicesVisited_++;
-    }
-    _;
-  }
-
-  modifier useActorWithStakes(uint256 seed_) {
-    currentActor = actorsWithStakes.rand(seed_);
-
-    uint16 initIndex_ = uint16(bound(seed_, 0, numReservePools));
-    uint16 indicesVisited_ = 0;
-
-    // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
-    for (uint16 i = initIndex_; indicesVisited_ < numReservePools; i = uint16((i + 1) % numReservePools)) {
-      if (ghost_actorStakeCount[currentActor][i] > 0) {
         currentReservePoolId = i;
         break;
       }

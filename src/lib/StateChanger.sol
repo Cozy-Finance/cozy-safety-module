@@ -20,8 +20,7 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
       )
     ) revert InvalidStateTransition();
 
-    // Drip rewards and fees before pausing.
-    dripRewards();
+    // Drip fees before pausing.
     dripFees();
     safetyModuleState = SafetyModuleState.PAUSED;
     emit SafetyModuleStateUpdated(SafetyModuleState.PAUSED);
@@ -40,8 +39,7 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
     ) revert InvalidStateTransition();
 
     safetyModuleState = newState_;
-    // Drip rewards and fees after unpausing.
-    dripRewards();
+    // Drip fees after unpausing.
     dripFees();
     emit SafetyModuleStateUpdated(newState_);
   }
@@ -54,8 +52,7 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
       revert InvalidTrigger();
     }
 
-    // Drip rewards and fees before triggering the safety module.
-    dripRewards();
+    // Drip fees before triggering the safety module.
     dripFees();
 
     // Each trigger has an assigned payout handler that is authorized to slash assets once when the trigger is

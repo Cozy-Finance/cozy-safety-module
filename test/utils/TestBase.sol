@@ -6,7 +6,7 @@ import {IDripModel} from "../../src/interfaces/IDripModel.sol";
 import {IReceiptToken} from "../../src/interfaces/IReceiptToken.sol";
 import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
 import {Delays} from "../../src/lib/structs/Delays.sol";
-import {RewardPool, ReservePool} from "../../src/lib/structs/Pools.sol";
+import {ReservePool} from "../../src/lib/structs/Pools.sol";
 import {Test} from "forge-std/Test.sol";
 import {TestAssertions} from "./TestAssertions.sol";
 
@@ -89,12 +89,10 @@ contract TestBase is Test, TestAssertions {
   }
 
   function getDelays(ISafetyModule safetyModule_) internal view returns (Delays memory) {
-    (uint64 configUpdateDelay, uint64 configUpdateGracePeriod, uint64 unstakeDelay, uint64 withdrawDelay) =
-      safetyModule_.delays();
+    (uint64 configUpdateDelay, uint64 configUpdateGracePeriod, uint64 withdrawDelay) = safetyModule_.delays();
     return Delays({
       configUpdateDelay: configUpdateDelay,
       configUpdateGracePeriod: configUpdateGracePeriod,
-      unstakeDelay: unstakeDelay,
       withdrawDelay: withdrawDelay
     });
   }
@@ -104,73 +102,16 @@ contract TestBase is Test, TestAssertions {
     view
     returns (ReservePool memory)
   {
-    (
-      uint256 stakeAmount,
-      uint256 depositAmount,
-      uint256 pendingUnstakesAmount,
-      uint256 pendingWithdrawalsAmount,
-      uint256 feeAmount,
-      uint256 maxSlashPercentage,
-      IERC20 asset,
-      IReceiptToken stkToken,
-      IReceiptToken depositToken,
-      uint16 rewardsPoolsWeight,
-      uint128 lastFeesDripTime
-    ) = safetyModule_.reservePools(reservePoolId_);
-    return ReservePool({
-      stakeAmount: stakeAmount,
-      depositAmount: depositAmount,
-      pendingUnstakesAmount: pendingUnstakesAmount,
-      pendingWithdrawalsAmount: pendingWithdrawalsAmount,
-      feeAmount: feeAmount,
-      maxSlashPercentage: maxSlashPercentage,
-      asset: asset,
-      stkToken: stkToken,
-      depositToken: depositToken,
-      rewardsPoolsWeight: rewardsPoolsWeight,
-      lastFeesDripTime: lastFeesDripTime
-    });
-  }
-
-  function getRewardPool(ISafetyModule safetyModule_, uint256 rewardPoolid_) internal view returns (RewardPool memory) {
-    (
-      uint256 undrippedRewards,
-      uint256 cumulativeDrippedRewards,
-      uint128 lastDripTime,
-      IERC20 asset,
-      IDripModel dripModel,
-      IReceiptToken depositToken
-    ) = safetyModule_.rewardPools(rewardPoolid_);
-    return RewardPool({
-      undrippedRewards: undrippedRewards,
-      asset: asset,
-      dripModel: dripModel,
-      depositToken: depositToken,
-      cumulativeDrippedRewards: cumulativeDrippedRewards,
-      lastDripTime: lastDripTime
-    });
+    return safetyModule_.reservePools(reservePoolId_);
   }
 
   function copyReservePool(ReservePool memory original_) internal pure returns (ReservePool memory copied_) {
     copied_.asset = original_.asset;
-    copied_.stkToken = original_.stkToken;
     copied_.depositToken = original_.depositToken;
-    copied_.stakeAmount = original_.stakeAmount;
     copied_.depositAmount = original_.depositAmount;
-    copied_.rewardsPoolsWeight = original_.rewardsPoolsWeight;
-    copied_.pendingUnstakesAmount = original_.pendingUnstakesAmount;
     copied_.pendingWithdrawalsAmount = original_.pendingWithdrawalsAmount;
     copied_.feeAmount = original_.feeAmount;
     copied_.maxSlashPercentage = original_.maxSlashPercentage;
     copied_.lastFeesDripTime = original_.lastFeesDripTime;
-  }
-
-  function copyRewardPool(RewardPool memory original_) internal pure returns (RewardPool memory copied_) {
-    copied_.asset = original_.asset;
-    copied_.undrippedRewards = original_.undrippedRewards;
-    copied_.cumulativeDrippedRewards = original_.cumulativeDrippedRewards;
-    copied_.dripModel = original_.dripModel;
-    copied_.depositToken = original_.depositToken;
-    copied_.lastDripTime = original_.lastDripTime;
   }
 }

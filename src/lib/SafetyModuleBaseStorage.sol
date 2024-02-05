@@ -6,27 +6,14 @@ import {IManager} from "../interfaces/IManager.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
-import {ReservePool, AssetPool, IdLookup, RewardPool} from "./structs/Pools.sol";
+import {ReservePool, AssetPool, IdLookup} from "./structs/Pools.sol";
 import {Trigger} from "./structs/Trigger.sol";
-import {UserRewardsData, ClaimableRewardsData} from "./structs/Rewards.sol";
 import {Delays} from "./structs/Delays.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 abstract contract SafetyModuleBaseStorage {
   /// @dev Reserve pool index in this array is its ID
   ReservePool[] public reservePools;
-
-  /// @dev Reward pool index in this array is its ID
-  RewardPool[] public rewardPools;
-
-  /// @notice Maps a reserve pool id to an reward pool id to claimable reward index
-  mapping(uint16 => mapping(uint16 => ClaimableRewardsData)) public claimableRewards;
-
-  /// @notice Maps a reserve pool id to a user address to a user reward pool accounting struct.
-  mapping(uint16 => mapping(address => UserRewardsData[])) public userRewards;
-
-  /// @dev Used when claiming rewards
-  mapping(IReceiptToken stkToken_ => IdLookup reservePoolId_) public stkTokenToReservePoolIds;
 
   /// @dev Used for doing aggregate accounting of reserve assets.
   mapping(IERC20 reserveAsset_ => AssetPool assetPool_) public assetPools;

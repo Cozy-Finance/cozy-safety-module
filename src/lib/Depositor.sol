@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import {IDepositorErrors} from "../interfaces/IDepositorErrors.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
-import {ReservePool, AssetPool, RewardPool} from "./structs/Pools.sol";
+import {ReservePool, AssetPool} from "./structs/Pools.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
@@ -55,36 +55,6 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
       _executeReserveDeposit(underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
 
-  function depositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_, address from_)
-    external
-    returns (uint256 depositTokenAmount_)
-  {
-    RewardPool storage rewardsPool_ = rewardPools[rewardPoolId_];
-
-    IERC20 underlyingToken_ = rewardsPool_.asset;
-    AssetPool storage assetPool_ = assetPools[underlyingToken_];
-
-    // Pull in deposited assets. After the transfer we ensure we no longer need any assets. This check is
-    // required to support fee on transfer tokens, for example if USDT enables a fee.
-    // Also, we need to transfer before minting or ERC777s could reenter.
-    underlyingToken_.safeTransferFrom(from_, address(this), rewardAssetAmount_);
-
-    depositTokenAmount_ =
-      _executeRewardDeposit(underlyingToken_, rewardAssetAmount_, receiver_, assetPool_, rewardsPool_);
-  }
-
-  function depositRewardAssetsWithoutTransfer(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_)
-    external
-    returns (uint256 depositTokenAmount_)
-  {
-    RewardPool storage rewardsPool_ = rewardPools[rewardPoolId_];
-    IERC20 underlyingToken_ = rewardsPool_.asset;
-    AssetPool storage assetPool_ = assetPools[underlyingToken_];
-
-    depositTokenAmount_ =
-      _executeRewardDeposit(underlyingToken_, rewardAssetAmount_, receiver_, assetPool_, rewardsPool_);
-  }
-
   function _executeReserveDeposit(
     IERC20 underlyingToken_,
     uint256 reserveAssetAmount_,
@@ -110,31 +80,6 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
 
     depositToken_.mint(receiver_, depositTokenAmount_);
     emit Deposited(msg.sender, receiver_, depositToken_, reserveAssetAmount_, depositTokenAmount_);
-  }
-
-  function _executeRewardDeposit(
-    IERC20 token_,
-    uint256 rewardAssetAmount_,
-    address receiver_,
-    AssetPool storage assetPool_,
-    RewardPool storage rewardPool_
-  ) internal returns (uint256 depositTokenAmount_) {
-    _assertValidDepositState();
-    _assertValidDepositBalance(token_, assetPool_.amount, rewardAssetAmount_);
-
-    IReceiptToken depositToken_ = rewardPool_.depositToken;
-
-    depositTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
-      rewardAssetAmount_, depositToken_.totalSupply(), rewardPool_.undrippedRewards
-    );
-    if (depositTokenAmount_ == 0) revert RoundsToZero();
-
-    // Increment reward pool accounting only after calculating `depositTokenAmount_` to mint.
-    rewardPool_.undrippedRewards += rewardAssetAmount_;
-    assetPool_.amount += rewardAssetAmount_;
-
-    depositToken_.mint(receiver_, depositTokenAmount_);
-    emit Deposited(msg.sender, receiver_, depositToken_, rewardAssetAmount_, depositTokenAmount_);
   }
 
   function _assertValidDepositBalance(IERC20 token_, uint256 assetPoolBalance_, uint256 depositAmount_)

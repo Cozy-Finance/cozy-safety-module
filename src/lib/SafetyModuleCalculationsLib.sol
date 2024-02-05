@@ -37,8 +37,8 @@ library SafetyModuleCalculationsLib {
   }
 
   /// @notice The pool amount for the purposes of performing conversions. We set a floor once
-  /// deposit/stkTokens have been initialized to avoid divide-by-zero errors that would occur when the supply
-  /// of deposit/stkTokens > 0, but the `poolAmount` = 0.
+  /// deposit have been initialized to avoid divide-by-zero errors that would occur when the supply
+  /// of deposit > 0, but the `poolAmount` = 0.
   function _poolAmountWithFloor(uint256 poolAmount_) private pure returns (uint256) {
     return poolAmount_ > POOL_AMOUNT_FLOOR ? poolAmount_ : POOL_AMOUNT_FLOOR;
   }

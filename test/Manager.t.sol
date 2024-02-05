@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {UpdateConfigsCalldataParams, ReservePoolConfig, RewardPoolConfig} from "../src/lib/structs/Configs.sol";
+import {UpdateConfigsCalldataParams, ReservePoolConfig} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
 import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
@@ -25,22 +25,17 @@ abstract contract ManagerTestSetup is TestBase {
     IERC20 asset_ = IERC20(address(new MockERC20("MockAsset", "MOCK", 18)));
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0, asset: asset_, rewardsPoolsWeight: 1e4});
-
-    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
-    rewardPoolConfigs_[0] =
-      RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(new MockDripModel(_randomUint256())))});
+    reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0, asset: asset_});
 
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
     triggerConfigUpdates_[0] =
       TriggerConfig({trigger: new MockTrigger(TriggerState.ACTIVE), exists: true, payoutHandler: address(0xFEEB)});
 
     Delays memory delaysConfig_ =
-      Delays({unstakeDelay: 1 days, withdrawDelay: 1 days, configUpdateDelay: 10 days, configUpdateGracePeriod: 1 days});
+      Delays({withdrawDelay: 1 days, configUpdateDelay: 10 days, configUpdateGracePeriod: 1 days});
 
     updateConfigsCalldataParams_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
-      rewardPoolConfigs: rewardPoolConfigs_,
       triggerConfigUpdates: triggerConfigUpdates_,
       delaysConfig: delaysConfig_
     });
@@ -62,7 +57,6 @@ contract ManagerTestSetupWithSafetyModules is MockDeployProtocol, ManagerTestSet
     asset = IERC20(address(mockAsset));
     UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
     updateConfigsCalldataParams_.reservePoolConfigs[0].asset = asset;
-    updateConfigsCalldataParams_.rewardPoolConfigs[0].asset = asset;
     safetyModuleA =
       manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
     safetyModuleB =
@@ -97,7 +91,7 @@ contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
   function test_createSafetyModule_revertInvalidDelays() public {
     UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
     updateConfigsCalldataParams_.delaysConfig =
-      Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 1 days, configUpdateGracePeriod: 1 days});
+      Delays({withdrawDelay: 2 days, configUpdateDelay: 1 days, configUpdateGracePeriod: 1 days});
 
     vm.expectRevert(Manager.InvalidConfiguration.selector);
     manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
@@ -110,40 +104,9 @@ contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
     for (uint256 i = 0; i < ALLOWED_RESERVE_POOLS + 1; i++) {
       reservePoolConfigs_[i] = ReservePoolConfig({
         maxSlashPercentage: MathConstants.WAD,
-        asset: IERC20(address(new MockERC20("MockAsset", "MOCK", 18))),
-        rewardsPoolsWeight: i == 0 ? uint16(MathConstants.ZOC) : 0
+        asset: IERC20(address(new MockERC20("MockAsset", "MOCK", 18)))
       });
     }
-    updateConfigsCalldataParams_.reservePoolConfigs = reservePoolConfigs_;
-
-    vm.expectRevert(Manager.InvalidConfiguration.selector);
-    manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
-  }
-
-  function test_createSafetyModule_revertTooManyRewardPools() public {
-    UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
-
-    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](ALLOWED_REWARD_POOLS + 1);
-    for (uint256 i = 0; i < ALLOWED_REWARD_POOLS + 1; i++) {
-      rewardPoolConfigs_[i] = RewardPoolConfig({
-        asset: IERC20(address(new MockERC20("MockAsset", "MOCK", 18))),
-        dripModel: IDripModel(_randomAddress())
-      });
-    }
-    updateConfigsCalldataParams_.rewardPoolConfigs = rewardPoolConfigs_;
-
-    vm.expectRevert(Manager.InvalidConfiguration.selector);
-    manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
-  }
-
-  function test_createSafetyModule_revertInvalidWeightSum() public {
-    UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
-    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] = ReservePoolConfig({
-      maxSlashPercentage: updateConfigsCalldataParams_.reservePoolConfigs[0].maxSlashPercentage,
-      asset: updateConfigsCalldataParams_.reservePoolConfigs[0].asset,
-      rewardsPoolsWeight: 1e4 - 1
-    });
     updateConfigsCalldataParams_.reservePoolConfigs = reservePoolConfigs_;
 
     vm.expectRevert(Manager.InvalidConfiguration.selector);
@@ -153,11 +116,8 @@ contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
   function test_createSafetyModule_revertInvalidMaxSlashPercentage() public {
     UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] = ReservePoolConfig({
-      maxSlashPercentage: 1e18 + 1,
-      asset: updateConfigsCalldataParams_.reservePoolConfigs[0].asset,
-      rewardsPoolsWeight: updateConfigsCalldataParams_.reservePoolConfigs[0].rewardsPoolsWeight
-    });
+    reservePoolConfigs_[0] =
+      ReservePoolConfig({maxSlashPercentage: 1e18 + 1, asset: updateConfigsCalldataParams_.reservePoolConfigs[0].asset});
     updateConfigsCalldataParams_.reservePoolConfigs = reservePoolConfigs_;
 
     vm.expectRevert(Manager.InvalidConfiguration.selector);
@@ -181,10 +141,6 @@ contract ManagerTestDeploy is MockDeployProtocol {
 
   function test_allowedReservePools() public {
     assertEq(manager.allowedReservePools(), ALLOWED_RESERVE_POOLS);
-  }
-
-  function test_allowedRewardPools() public {
-    assertEq(manager.allowedRewardPools(), ALLOWED_REWARD_POOLS);
   }
 }
 

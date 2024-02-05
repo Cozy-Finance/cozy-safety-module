@@ -6,8 +6,8 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
 import {
   InvariantTestBase,
-  InvariantTestWithSingleReservePoolAndSingleRewardPool,
-  InvariantTestWithMultipleReservePoolsAndMultipleRewardPools
+  InvariantTestWithSingleReservePool,
+  InvariantTestWithMultipleReservePools
 } from "./utils/InvariantTestBase.sol";
 
 abstract contract DepositInvariants is InvariantTestBase {
@@ -64,12 +64,6 @@ abstract contract DepositInvariants is InvariantTestBase {
   }
 }
 
-contract DepositsInvariantsSingleReservePoolSingleRewardPool is
-  DepositInvariants,
-  InvariantTestWithSingleReservePoolAndSingleRewardPool
-{}
+contract DepositsInvariantsSingleReservePool is DepositInvariants, InvariantTestWithSingleReservePool {}
 
-contract DepositsInvariantsMultipleReservePoolsMultipleRewardPools is
-  DepositInvariants,
-  InvariantTestWithMultipleReservePoolsAndMultipleRewardPools
-{}
+contract DepositsInvariantsMultipleReservePools is DepositInvariants, InvariantTestWithMultipleReservePools {}
