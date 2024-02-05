@@ -2,10 +2,10 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
 import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {SafetyModuleState, TriggerState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
-import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
-import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IConfiguratorErrors} from "../interfaces/IConfiguratorErrors.sol";
 import {IConfiguratorEvents} from "../interfaces/IConfiguratorEvents.sol";

@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
 import {SafetyModuleState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
 import {AssetPool} from "../lib/structs/Pools.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
@@ -11,8 +13,6 @@ import {Slash} from "../lib/structs/Slash.sol";
 import {Trigger} from "../lib/structs/Trigger.sol";
 import {IDripModel} from "./IDripModel.sol";
 import {IManager} from "./IManager.sol";
-import {IReceiptToken} from "./IReceiptToken.sol";
-import {IReceiptTokenFactory} from "./IReceiptTokenFactory.sol";
 import {ITrigger} from "./ITrigger.sol";
 
 interface ISafetyModule {

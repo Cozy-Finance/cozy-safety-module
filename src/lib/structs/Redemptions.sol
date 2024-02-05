@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-import {IReceiptToken} from "../../interfaces/IReceiptToken.sol";
+import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
 
 struct Redemption {
   uint16 reservePoolId; // ID of the reserve pool.

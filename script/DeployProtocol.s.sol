@@ -2,13 +2,15 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
+import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
+import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
 import {console2} from "forge-std/console2.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {ScriptUtils} from "./utils/ScriptUtils.sol";
 import {CozyRouter} from "../src/CozyRouter.sol";
 import {Manager} from "../src/Manager.sol";
-import {ReceiptToken} from "../src/ReceiptToken.sol";
-import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {SafetyModuleFactory} from "../src/SafetyModuleFactory.sol";
 import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
@@ -17,8 +19,6 @@ import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFacto
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";
-import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
-import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "../src/interfaces/ISafetyModuleFactory.sol";
 import {IStETH} from "../src/interfaces/IStETH.sol";
@@ -195,7 +195,7 @@ contract DeployProtocol is ScriptUtils {
     );
 
     vm.broadcast();
-    depositTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    depositTokenLogic.initialize(address(0), "", "", 0);
 
     // TODO: Deploy StkToken logic and initialize
     // -------- Deploy: StkToken Logic --------

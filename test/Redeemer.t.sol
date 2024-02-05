@@ -2,13 +2,15 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
 import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {SafeCastLib} from "cozy-safety-module-shared/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
+import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
+import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
-import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
-import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IRedemptionErrors} from "../src/interfaces/IRedemptionErrors.sol";
@@ -16,8 +18,6 @@ import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {CozyMath} from "../src/lib/CozyMath.sol";
 import {Redeemer} from "../src/lib/Redeemer.sol";
 import {RedemptionLib} from "../src/lib/RedemptionLib.sol";
-import {ReceiptToken} from "../src/ReceiptToken.sol";
-import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {RedemptionPreview} from "../src/lib/structs/Redemptions.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
@@ -152,7 +152,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
     component.mockSetWithdrawDelay(WITHDRAW_DELAY);
 
     ReceiptToken receiptTokenLogic_ = new ReceiptToken();
-    receiptTokenLogic_.initialize(ISafetyModule(address(0)), "", "", 0);
+    receiptTokenLogic_.initialize(address(0), "", "", 0);
     ReceiptTokenFactory receiptTokenFactory =
       new ReceiptTokenFactory(IReceiptToken(address(receiptTokenLogic_)), IReceiptToken(address(receiptTokenLogic_)));
 
