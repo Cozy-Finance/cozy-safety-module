@@ -10,7 +10,7 @@ import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 import {AssetPool, ReservePool} from "./structs/Pools.sol";
 import {MathConstants} from "./MathConstants.sol";
-import {PendingRedemptionAccISFs, Redemption, RedemptionPreview} from "./structs/Redemptions.sol";
+import {Redemption, RedemptionPreview} from "./structs/Redemptions.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {CozyMath} from "./CozyMath.sol";
 import {RedemptionLib} from "./RedemptionLib.sol";

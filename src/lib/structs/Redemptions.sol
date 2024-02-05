@@ -24,7 +24,3 @@ struct RedemptionPreview {
   address owner; // Owner of the deposit receipt tokens.
   address receiver; // Receiver of the assets.
 }
-
-struct PendingRedemptionAccISFs {
-  uint256[] withdrawals;
-}
