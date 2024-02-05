@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {IERC20} from "../src/interfaces/IERC20.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
+import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
+import {SafetyModuleState, TriggerState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IConfiguratorErrors} from "../src/interfaces/IConfiguratorErrors.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
@@ -11,11 +14,8 @@ import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
-import {Ownable} from "../src/lib/Ownable.sol";
 import {ConfiguratorLib} from "../src/lib/ConfiguratorLib.sol";
 import {Configurator} from "../src/lib/Configurator.sol";
-import {MathConstants} from "../src/lib/MathConstants.sol";
-import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModuleBaseStorage} from "../src/lib/SafetyModuleBaseStorage.sol";

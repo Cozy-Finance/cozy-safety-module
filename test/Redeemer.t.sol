@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
+import {SafeCastLib} from "cozy-safety-module-shared/lib/SafeCastLib.sol";
+import {SafetyModuleState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
@@ -11,15 +14,12 @@ import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IRedemptionErrors} from "../src/interfaces/IRedemptionErrors.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {CozyMath} from "../src/lib/CozyMath.sol";
-import {MathConstants} from "../src/lib/MathConstants.sol";
 import {Redeemer} from "../src/lib/Redeemer.sol";
 import {RedemptionLib} from "../src/lib/RedemptionLib.sol";
 import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
-import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {RedemptionPreview} from "../src/lib/structs/Redemptions.sol";
-import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";

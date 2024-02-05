@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {Clones} from "openzeppelin-contracts/contracts/proxy/Clones.sol";
 import {ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
 import {UpdateConfigsCalldataParams} from "./lib/structs/Configs.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";

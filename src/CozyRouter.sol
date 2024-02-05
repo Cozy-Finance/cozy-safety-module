@@ -2,13 +2,13 @@
 pragma solidity ^0.8.22;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {SafeERC20} from "cozy-safety-module-shared/lib/SafeERC20.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {CozyMath} from "./lib/CozyMath.sol";
-import {SafeERC20} from "./lib/SafeERC20.sol";
 import {UpdateConfigsCalldataParams} from "./lib/structs/Configs.sol";
 import {TriggerMetadata} from "./lib/structs/Trigger.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
 import {IChainlinkTriggerFactory} from "src/interfaces/IChainlinkTriggerFactory.sol";
 import {IConnector} from "./interfaces/IConnector.sol";
 import {IManager} from "./interfaces/IManager.sol";

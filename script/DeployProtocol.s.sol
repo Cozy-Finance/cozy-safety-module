@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {console2} from "forge-std/console2.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {ScriptUtils} from "./utils/ScriptUtils.sol";
@@ -13,7 +14,6 @@ import {SafetyModuleFactory} from "../src/SafetyModuleFactory.sol";
 import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
-import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";

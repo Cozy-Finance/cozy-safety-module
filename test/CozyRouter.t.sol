@@ -2,6 +2,10 @@
 pragma solidity 0.8.22;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
+import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
+import {TriggerState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
 import {ChainlinkTriggerFactory} from "cozy-safety-module-triggers/src/ChainlinkTriggerFactory.sol";
 import {OwnableTriggerFactory} from "cozy-safety-module-triggers/src/OwnableTriggerFactory.sol";
 import {OptimisticOracleV2Interface} from "cozy-safety-module-triggers/src/interfaces/OptimisticOracleV2Interface.sol";
@@ -9,15 +13,11 @@ import {UMATriggerFactory} from "cozy-safety-module-triggers/src/UMATriggerFacto
 import {MockChainlinkOracle} from "cozy-safety-module-triggers/test/utils/MockChainlinkOracle.sol";
 import {CozyRouter} from "../src/CozyRouter.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
-import {MathConstants} from "../src/lib/MathConstants.sol";
-import {Ownable} from "../src/lib/Ownable.sol";
-import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {TriggerMetadata} from "../src/lib/structs/Trigger.sol";
 import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
-import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";

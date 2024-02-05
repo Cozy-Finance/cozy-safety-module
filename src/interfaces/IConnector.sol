@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import {IERC20} from "./IERC20.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 
 interface IConnector {
   /// @notice Calculates the minimum amount of base assets needed to get back at least `assets_` amount of the wrapped

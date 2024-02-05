@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
+import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
+import {SafeERC20} from "cozy-safety-module-shared/lib/SafeERC20.sol";
+import {SafetyModuleState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
 import {ReservePool, AssetPool} from "./structs/Pools.sol";
-import {Ownable} from "./Ownable.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
-import {SafeERC20} from "./SafeERC20.sol";
-import {SafetyModuleState} from "./SafetyModuleStates.sol";
-import {MathConstants} from "./MathConstants.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ISafetyModule} from "../interfaces/ISafetyModule.sol";

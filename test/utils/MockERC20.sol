@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import "../../src/lib/ERC20.sol";
+import "cozy-safety-module-shared/lib/ERC20.sol";
 
 /// @author Solmate
 /// https://github.com/transmissions11/solmate/blob/d155ee8d58f96426f57c015b34dee8a410c1eacc/src/test/utils/mocks/MockERC20.sol

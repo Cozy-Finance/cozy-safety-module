@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {IERC20} from "../interfaces/IERC20.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
+import {SafetyModuleState, TriggerState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "../interfaces/IReceiptTokenFactory.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
@@ -13,8 +15,6 @@ import {ReservePool, IdLookup} from "./structs/Pools.sol";
 import {Delays} from "./structs/Delays.sol";
 import {ConfigUpdateMetadata, ReservePoolConfig, UpdateConfigsCalldataParams} from "./structs/Configs.sol";
 import {TriggerConfig, Trigger} from "./structs/Trigger.sol";
-import {SafetyModuleState, TriggerState} from "./SafetyModuleStates.sol";
-import {MathConstants} from "./MathConstants.sol";
 
 library ConfiguratorLib {
   /// @notice Signal an update to the safety module configs. Existing queued updates are overwritten.

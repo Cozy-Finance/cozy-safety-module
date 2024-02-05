@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {IERC20} from "../src/interfaces/IERC20.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {SafetyModuleState, TriggerState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
@@ -9,7 +10,6 @@ import {IStateChangerEvents} from "../src/interfaces/IStateChangerEvents.sol";
 import {IStateChangerErrors} from "../src/interfaces/IStateChangerErrors.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {StateChanger} from "../src/lib/StateChanger.sol";
-import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
 import {MockManager} from "./utils/MockManager.sol";

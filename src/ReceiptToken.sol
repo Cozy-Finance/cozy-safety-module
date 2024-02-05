@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {ERC20} from "cozy-safety-module-shared/lib/ERC20.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
-import {ERC20} from "./lib/ERC20.sol";
 
 contract ReceiptToken is ERC20 {
   /// @notice Address of this token's safety module.
