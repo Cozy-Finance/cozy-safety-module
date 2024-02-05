@@ -6,7 +6,7 @@ import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 import {ReservePool} from "./structs/Pools.sol";
 
 abstract contract SafetyModuleInspector is SafetyModuleCommon {
-  function convertToReserveDepositReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
+  function convertToReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
     external
     view
     returns (uint256 depositReceiptTokenAmount_)
@@ -19,10 +19,11 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
     );
   }
 
-  function convertReserveDepositReceiptTokenToReserveAssetAmount(
-    uint256 reservePoolId_,
-    uint256 depositReceiptTokenAmount_
-  ) external view returns (uint256 reserveAssetAmount_) {
+  function convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
+    external
+    view
+    returns (uint256 reserveAssetAmount_)
+  {
     ReservePool memory reservePool_ = reservePools[reservePoolId_];
     reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
       depositReceiptTokenAmount_,

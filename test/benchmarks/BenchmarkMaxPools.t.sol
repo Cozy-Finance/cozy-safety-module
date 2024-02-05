@@ -95,8 +95,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
   {
     _depositReserveAssets(reservePoolId_, reserveAssetAmount_, receiver_);
 
-    depositReceiptTokenAmount_ =
-      safetyModule.convertToReserveDepositReceiptTokenAmount(reservePoolId_, reserveAssetAmount_);
+    depositReceiptTokenAmount_ = safetyModule.convertToReceiptTokenAmount(reservePoolId_, reserveAssetAmount_);
     vm.startPrank(receiver_);
     getReservePool(ISafetyModule(address(safetyModule)), reservePoolId_).depositReceiptToken.approve(
       address(safetyModule), depositReceiptTokenAmount_

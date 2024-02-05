@@ -23,15 +23,15 @@ interface ISafetyModule {
 
   function completeRedemption(uint64 redemptionId_) external returns (uint256 assetAmount_);
 
-  function convertToReserveDepositReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
+  function convertToReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
     external
     view
     returns (uint256 depositReceiptTokenAmount_);
 
-  function convertReserveDepositReceiptTokenToReserveAssetAmount(
-    uint256 reservePoolId_,
-    uint256 depositReceiptTokenAmount_
-  ) external view returns (uint256 reserveAssetAmount_);
+  function convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
+    external
+    view
+    returns (uint256 reserveAssetAmount_);
 
   /// @notice Address of the Cozy protocol manager.
   function cozyManager() external view returns (IManager);

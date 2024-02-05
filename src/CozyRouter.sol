@@ -404,8 +404,7 @@ contract CozyRouter {
     uint256 maxReceiptTokensBurned_
   ) external payable returns (uint64 redemptionId_, uint256 depositReceiptTokenAmount_) {
     _assertAddressNotZero(receiver_);
-    depositReceiptTokenAmount_ =
-      safetyModule_.convertToReserveDepositReceiptTokenAmount(reservePoolId_, reserveAssetAmount_);
+    depositReceiptTokenAmount_ = safetyModule_.convertToReceiptTokenAmount(reservePoolId_, reserveAssetAmount_);
     if (depositReceiptTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
     // Caller must first approve the CozyRouter to spend the deposit tokens.
     (redemptionId_,) = safetyModule_.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, msg.sender);
