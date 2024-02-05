@@ -65,8 +65,9 @@ abstract contract FeesHandler is SafetyModuleCommon {
     uint256 dripFactor_ = dripModel_.dripFactor(reservePool_.lastFeesDripTime);
     if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
 
-    uint256 drippedFromDepositAmount_ =
-      _computeNextDripAmount(reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount, dripFactor_);
+    uint256 drippedFromDepositAmount_ = _getNextDripAmount(
+      reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount, dripModel_, reservePool_.lastFeesDripTime
+    );
 
     if (drippedFromDepositAmount_ > 0) {
       reservePool_.feeAmount += drippedFromDepositAmount_;
@@ -74,15 +75,6 @@ abstract contract FeesHandler is SafetyModuleCommon {
     }
 
     reservePool_.lastFeesDripTime = uint128(block.timestamp);
-  }
-
-  function _computeNextDripAmount(uint256 totalBaseAmount_, uint256 dripFactor_)
-    internal
-    pure
-    override
-    returns (uint256)
-  {
-    return totalBaseAmount_.mulWadDown(dripFactor_);
   }
 
   function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_)
@@ -94,6 +86,6 @@ abstract contract FeesHandler is SafetyModuleCommon {
     uint256 dripFactor_ = dripModel_.dripFactor(lastDripTime_);
     if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
 
-    return _computeNextDripAmount(totalBaseAmount_, dripFactor_);
+    return totalBaseAmount_.mulWadDown(dripFactor_);
   }
 }

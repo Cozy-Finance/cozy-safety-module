@@ -26,13 +26,6 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     virtual
     returns (uint256);
 
-  // @dev Compute the next amount of fees to be dripped given a base amount and a drip factor.
-  function _computeNextDripAmount(uint256 totalBaseAmount_, uint256 dripFactor_)
-    internal
-    view
-    virtual
-    returns (uint256);
-
   /// @dev Prepares pending withdrawals to have their exchange rates adjusted after a trigger. Defined in `Redeemer`.
   function _updateWithdrawalsAfterTrigger(
     uint16 reservePoolId_,

@@ -1028,15 +1028,6 @@ contract TestableRedeemer is Redeemer {
     return block.timestamp == lastDripTime_ ? 0 : mockNextDepositDripAmount;
   }
 
-  function _computeNextDripAmount(uint256, /* totalBaseAmount_ */ uint256 /* dripFactor_ */ )
-    internal
-    view
-    override
-    returns (uint256)
-  {
-    __readStub__();
-  }
-
   function _assertValidDepositBalance(
     IERC20, /* token_ */
     uint256, /* tokenPoolBalance_ */

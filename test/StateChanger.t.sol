@@ -416,15 +416,6 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     __readStub__();
   }
 
-  function _computeNextDripAmount(uint256, /* totalBaseAmount_ */ uint256 /* dripFactor_ */ )
-    internal
-    view
-    override
-    returns (uint256)
-  {
-    __readStub__();
-  }
-
   function _updateWithdrawalsAfterTrigger(
     uint16, /* reservePoolId_ */
     ReservePool storage, /* reservePool_ */
