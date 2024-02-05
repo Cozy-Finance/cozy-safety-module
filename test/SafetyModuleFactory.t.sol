@@ -76,7 +76,7 @@ contract SafetyModuleFactoryTest is TestBase {
     new SafetyModuleFactory(IManager(address(0)), ISafetyModule(address(0)));
   }
 
-  function test_deploySafetyModule1() public {
+  function test_deploySafetyModule() public {
     address owner_ = _randomAddress();
     address pauser_ = _randomAddress();
     IERC20 asset_ = IERC20(address(new MockERC20("Mock Asset", "cozyMock", 6)));
@@ -117,6 +117,10 @@ contract SafetyModuleFactoryTest is TestBase {
     // Loosely validate config applied.
     ReservePool memory reservePool_ = getReservePool(safetyModule_, 0);
     assertEq(address(reservePool_.asset), address(asset_));
+
+    // Cannot call initialize again on the safety module.
+    vm.expectRevert(SafetyModule.Initialized.selector);
+    safetyModule_.initialize(owner_, pauser_, configs_);
   }
 
   function test_revertDeploySafetyModuleNotManager() public {

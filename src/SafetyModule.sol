@@ -24,6 +24,11 @@ contract SafetyModule is
   FeesHandler,
   StateChanger
 {
+  bool public initialized;
+
+  /// @dev Thrown if the contract is already initialized.
+  error Initialized();
+
   constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(manager_));
     _assertAddressNotZero(address(receiptTokenFactory_));
@@ -32,10 +37,13 @@ contract SafetyModule is
   }
 
   function initialize(address owner_, address pauser_, UpdateConfigsCalldataParams calldata configs_) external {
+    if (initialized) revert Initialized();
+
     // Safety Modules are minimal proxies, so the owner and pauser is set to address(0) in the constructor for the logic
     // contract. When the set is initialized for the minimal proxy, we update the owner and pauser.
     __initGovernable(owner_, pauser_);
 
     ConfiguratorLib.applyConfigUpdates(reservePools, triggerData, delays, receiptTokenFactory, configs_);
+    initialized = true;
   }
 }
