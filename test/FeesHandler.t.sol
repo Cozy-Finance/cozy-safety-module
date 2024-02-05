@@ -9,14 +9,12 @@ import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
-import {RewardsHandler} from "../src/lib/RewardsHandler.sol";
 import {FeesHandler} from "../src/lib/FeesHandler.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {Ownable} from "../src/lib/Ownable.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
-import {UserRewardsData} from "../src/lib/structs/Rewards.sol";
 import {IdLookup} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
@@ -46,29 +44,22 @@ contract FeesHandlerUnitTest is TestBase {
     for (uint16 i = 0; i < numReservePools_; i++) {
       MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
 
-      uint256 stakeAmount_ = _randomUint256() % 500_000_000;
       uint256 depositAmount_ = _randomUint256() % 500_000_000;
-      uint256 pendingUnstakesAmount_ = _randomUint256() % 500_000_000;
       uint256 pendingWithdrawalsAmount_ = _randomUint256() % 500_000_000;
-      pendingUnstakesAmount_ = bound(pendingUnstakesAmount_, 0, stakeAmount_);
       pendingWithdrawalsAmount_ = bound(pendingWithdrawalsAmount_, 0, depositAmount_);
 
       ReservePool memory reservePool_ = ReservePool({
         asset: IERC20(address(mockAsset_)),
-        stkToken: IReceiptToken(address(0)),
-        depositToken: IReceiptToken(address(0)),
-        stakeAmount: stakeAmount_,
+        depositReceiptToken: IReceiptToken(address(0)),
         depositAmount: depositAmount_,
-        pendingUnstakesAmount: pendingUnstakesAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: 0,
-        rewardsPoolsWeight: (MathConstants.ZOC / numReservePools_).safeCastTo16(),
         maxSlashPercentage: MathConstants.WAD,
         lastFeesDripTime: uint128(block.timestamp)
       });
       component.mockAddReservePool(reservePool_);
-      component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: stakeAmount_ + depositAmount_}));
-      mockAsset_.mint(address(component), stakeAmount_ + depositAmount_);
+      component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: depositAmount_}));
+      mockAsset_.mint(address(component), depositAmount_);
     }
   }
 
@@ -83,37 +74,29 @@ contract FeesHandlerUnitTest is TestBase {
     MockERC20 mockAsset1_ = new MockERC20("Mock Asset", "MOCK", 6);
     ReservePool memory reservePool1_ = ReservePool({
       asset: IERC20(address(mockAsset1_)),
-      stkToken: IReceiptToken(address(0)),
-      depositToken: IReceiptToken(address(0)),
-      stakeAmount: 100e6,
+      depositReceiptToken: IReceiptToken(address(0)),
       depositAmount: 50e6,
-      pendingUnstakesAmount: 100e6,
       pendingWithdrawalsAmount: 25e6,
       feeAmount: 0,
-      rewardsPoolsWeight: 0.1e4, // 10% weight,
       maxSlashPercentage: MathConstants.WAD,
       lastFeesDripTime: 0
     });
     component.mockAddReservePool(reservePool1_);
-    component.mockAddAssetPool(IERC20(address(mockAsset1_)), AssetPool({amount: 150e6}));
-    mockAsset1_.mint(address(component), 150e6);
+    component.mockAddAssetPool(IERC20(address(mockAsset1_)), AssetPool({amount: 50e6}));
+    mockAsset1_.mint(address(component), 50e6);
 
     MockERC20 mockAsset2_ = new MockERC20("Mock Asset", "MOCK", 6);
     ReservePool memory reservePool2_ = ReservePool({
       asset: IERC20(address(mockAsset2_)),
-      stkToken: IReceiptToken(address(0)),
-      depositToken: IReceiptToken(address(0)),
-      stakeAmount: 200e6,
+      depositReceiptToken: IReceiptToken(address(0)),
       depositAmount: 20e6,
-      pendingUnstakesAmount: 10e6,
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
-      rewardsPoolsWeight: 0.9e4, // 90% weight,
       maxSlashPercentage: MathConstants.WAD,
       lastFeesDripTime: 0
     });
     component.mockAddReservePool(reservePool2_);
-    component.mockAddAssetPool(IERC20(address(mockAsset2_)), AssetPool({amount: 220e6}));
+    component.mockAddAssetPool(IERC20(address(mockAsset2_)), AssetPool({amount: 20e6}));
     mockAsset2_.mint(address(component), 220e6);
   }
 
@@ -164,32 +147,21 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     {
       ReservePool memory expectedPool1_;
       expectedPool1_.asset = concreteReservePools_[0].asset;
-      expectedPool1_.stkToken = concreteReservePools_[0].stkToken;
-      expectedPool1_.depositToken = concreteReservePools_[0].depositToken;
-      // drippedFromStakeAmount = (stakeAmount - pendingUnstakesAmount) * dripRate = 0e6 * 0.05 = 0e6
+      expectedPool1_.depositReceiptToken = concreteReservePools_[0].depositReceiptToken;
       // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 25e6 * 0.05 = 1.25e6
-      expectedPool1_.stakeAmount = 100e6; // stakeAmount = originalStakeAmount - drippedFromStakeAmount
       expectedPool1_.depositAmount = 48.75e6; // depositAmount = originalDepositAmount - drippedFromDepositAmount
-      expectedPool1_.feeAmount = 1.25e6; // drippedFromStakeAmount + drippedFromDepositAmount
-      expectedPool1_.pendingUnstakesAmount = concreteReservePools_[0].pendingUnstakesAmount;
+      expectedPool1_.feeAmount = 1.25e6; // drippedFromDepositAmount
       expectedPool1_.pendingWithdrawalsAmount = concreteReservePools_[0].pendingWithdrawalsAmount;
-      expectedPool1_.rewardsPoolsWeight = concreteReservePools_[0].rewardsPoolsWeight;
       expectedPool1_.maxSlashPercentage = concreteReservePools_[0].maxSlashPercentage;
       expectedReservePools_[0] = expectedPool1_;
     }
     {
       ReservePool memory expectedPool2_;
       expectedPool2_.asset = concreteReservePools_[1].asset;
-      expectedPool2_.stkToken = concreteReservePools_[1].stkToken;
-      expectedPool2_.depositToken = concreteReservePools_[1].depositToken;
-      // drippedFromStakeAmount = (stakeAmount - pendingUnstakesAmount) * dripRate = 190e6 * 0.05 = 9.5e6
-      // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 20e6 * 0.05 = 1e6
-      expectedPool2_.stakeAmount = 190.5e6; // stakeAmount = originalStakeAmount - drippedFromStakeAmount
+      expectedPool2_.depositReceiptToken = concreteReservePools_[1].depositReceiptToken;
       expectedPool2_.depositAmount = 19e6; // depositAmount = originalDepositAmount - drippedFromDepositAmount
-      expectedPool2_.feeAmount = 10.5e6; // drippedFromStakeAmount + drippedFromDepositAmount
-      expectedPool2_.pendingUnstakesAmount = concreteReservePools_[1].pendingUnstakesAmount;
+      expectedPool2_.feeAmount = 1e6; // drippedFromDepositAmount
       expectedPool2_.pendingWithdrawalsAmount = concreteReservePools_[1].pendingWithdrawalsAmount;
-      expectedPool2_.rewardsPoolsWeight = concreteReservePools_[1].rewardsPoolsWeight;
       expectedPool2_.maxSlashPercentage = concreteReservePools_[1].maxSlashPercentage;
       expectedReservePools_[1] = expectedPool2_;
     }
@@ -207,16 +179,11 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     {
       ReservePool memory expectedPool2_;
       expectedPool2_.asset = concreteReservePools_[1].asset;
-      expectedPool2_.stkToken = concreteReservePools_[1].stkToken;
-      expectedPool2_.depositToken = concreteReservePools_[1].depositToken;
-      // drippedFromStakeAmount = (stakeAmount - pendingUnstakesAmount) * dripRate = 190e6 * 0.05 = 9.5e6
+      expectedPool2_.depositReceiptToken = concreteReservePools_[1].depositReceiptToken;
       // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 20e6 * 0.05 = 1e6
-      expectedPool2_.stakeAmount = 190.5e6; // stakeAmount = originalStakeAmount - drippedFromStakeAmount
       expectedPool2_.depositAmount = 19e6; // depositAmount = originalDepositAmount - drippedFromDepositAmount
-      expectedPool2_.feeAmount = 10.5e6; // drippedFromStakeAmount + drippedFromDepositAmount
-      expectedPool2_.pendingUnstakesAmount = concreteReservePools_[1].pendingUnstakesAmount;
+      expectedPool2_.feeAmount = 1e6; // drippedFromDepositAmount
       expectedPool2_.pendingWithdrawalsAmount = concreteReservePools_[1].pendingWithdrawalsAmount;
-      expectedPool2_.rewardsPoolsWeight = concreteReservePools_[1].rewardsPoolsWeight;
       expectedPool2_.maxSlashPercentage = concreteReservePools_[1].maxSlashPercentage;
       expectedReservePools_[1] = expectedPool2_;
     }
@@ -240,16 +207,12 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     uint256 numReservePools_ = expectedReservePools_.length;
     for (uint16 i = 0; i < numReservePools_; i++) {
       ReservePool memory expectedReservePool_ = expectedReservePools_[i];
-      uint256 drippedFromStakeAmount_ = _calculateExpectedDripQuantity(
-        expectedReservePool_.stakeAmount - expectedReservePool_.pendingUnstakesAmount, dripRate_
-      );
       uint256 drippedFromDepositAmount_ = _calculateExpectedDripQuantity(
         expectedReservePool_.depositAmount - expectedReservePool_.pendingWithdrawalsAmount, dripRate_
       );
 
-      expectedReservePool_.stakeAmount -= drippedFromStakeAmount_;
       expectedReservePool_.depositAmount -= drippedFromDepositAmount_;
-      expectedReservePool_.feeAmount += drippedFromStakeAmount_ + drippedFromDepositAmount_;
+      expectedReservePool_.feeAmount += drippedFromDepositAmount_;
 
       expectedReservePools_[i] = expectedReservePool_;
     }
@@ -273,16 +236,12 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     uint16 feeDripPool_ = uint16(_randomUint256() % expectedReservePools_.length);
 
     ReservePool memory expectedReservePool_ = expectedReservePools_[feeDripPool_];
-    uint256 drippedFromStakeAmount_ = _calculateExpectedDripQuantity(
-      expectedReservePool_.stakeAmount - expectedReservePool_.pendingUnstakesAmount, dripRate_
-    );
     uint256 drippedFromDepositAmount_ = _calculateExpectedDripQuantity(
       expectedReservePool_.depositAmount - expectedReservePool_.pendingWithdrawalsAmount, dripRate_
     );
 
-    expectedReservePool_.stakeAmount -= drippedFromStakeAmount_;
     expectedReservePool_.depositAmount -= drippedFromDepositAmount_;
-    expectedReservePool_.feeAmount += drippedFromStakeAmount_ + drippedFromDepositAmount_;
+    expectedReservePool_.feeAmount += drippedFromDepositAmount_;
 
     expectedReservePools_[feeDripPool_] = expectedReservePool_;
 
@@ -334,19 +293,15 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
     skip(99);
 
     // First fee drip for reservePools[0]:
-    // drippedFromStakeAmount = (stakeAmount - pendingUnstakesAmount) * dripRate = 0e6 * 0.05 = 0e6
     // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 25e6 * 0.05 = 1.25e6
 
     // First fee drip for reservePools[1]:
-    // drippedFromStakeAmount = (stakeAmount - pendingUnstakesAmount) * dripRate = 190e6 * 0.05 = 9.5e6
     // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 20e6 * 0.05 = 1e6
 
     // Second fee drip for reservePools[0]:
-    // drippedFromStakeAmount = (stakeAmount - pendingUnstakesAmount) * dripRate = 0e6 * 0.05 = 0e6
     // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 23.75e6 * 0.05 = 1.1875e6
 
     // Second fee drip for reservePools[1]:
-    // drippedFromStakeAmount = (stakeAmount - pendingUnstakesAmount) * dripRate = 180.5e6 * 0.05 = 9.025e6
     // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 19e6 * 0.05 = 0.95e6
 
     IERC20 asset1_ = IERC20(address(component.getReservePool(0).asset));
@@ -357,7 +312,7 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
     _expectEmit();
     emit ClaimedFees(asset1_, 1.25e6 + 1.1875e6, owner_);
     _expectEmit();
-    emit ClaimedFees(asset2_, 10.5e6 + 9.975e6, owner_);
+    emit ClaimedFees(asset2_, 1e6 + 0.95e6, owner_);
 
     // Claim fees the second time.
     vm.startPrank(address(mockManager));
@@ -369,24 +324,21 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
 
     // `owner_` is transferred fee amounts from both fee drips
     assertEq(asset1_.balanceOf(owner_), 1.25e6 + 1.1875e6);
-    assertEq(asset2_.balanceOf(owner_), 10.5e6 + 9.975e6);
+    assertEq(asset2_.balanceOf(owner_), 1e6 + 0.95e6);
 
     // Fee pools are emptied.
     assertEq(reservePools_[0].feeAmount, 0);
     assertEq(reservePools_[1].feeAmount, 0);
 
-    // Stake and deposit amounts are correct.
-    assertEq(reservePools_[0].stakeAmount, 100e6); // stakeAmount - totalStakeFeesDripped = 100e6 - 0e6 - 0e6
+    // Deposit amounts are correct.
     assertEq(reservePools_[0].depositAmount, 47_562_500); // depositAmount - totalDepositFeesDripped = 50e6 - 1.25e6 -
       // 1.1875e6
-    assertEq(reservePools_[1].stakeAmount, 181_475_000); // stakeAmount - totalStakeFeesDripped = 200e6 - 9.5e6 -
-      // 9.025e6
     assertEq(reservePools_[1].depositAmount, 18_050_000); // depositAmount - totalDepositFeesDripped = 20e6 - 1e6 -
       // 0.95e6
 
     // Asset pools are updated.
-    assertEq(component.getAssetPool(asset1_).amount, 150e6 - 1.25e6 - 1.1875e6);
-    assertEq(component.getAssetPool(asset2_).amount, 220e6 - 10.5e6 - 9.975e6);
+    assertEq(component.getAssetPool(asset1_).amount, 50e6 - 1.25e6 - 1.1875e6);
+    assertEq(component.getAssetPool(asset2_).amount, 20e6 - 1e6 - 0.95e6);
   }
 
   function testFuzz_claimFees(uint64 timeElapsed_) public {
@@ -403,14 +355,11 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
     ReservePool[] memory newReservePools_ = component.getReservePools();
     for (uint16 i = 0; i < newReservePools_.length; i++) {
       IERC20 asset_ = newReservePools_[i].asset;
-      assertLe(newReservePools_[i].stakeAmount, oldReservePools_[i].stakeAmount);
       assertLe(newReservePools_[i].depositAmount, oldReservePools_[i].depositAmount);
-      assertEq(newReservePools_[i].pendingUnstakesAmount, oldReservePools_[i].pendingUnstakesAmount);
       assertEq(newReservePools_[i].pendingWithdrawalsAmount, oldReservePools_[i].pendingWithdrawalsAmount);
       assertEq(newReservePools_[i].feeAmount, 0);
-      // New fees transferred to owner are equal to the difference in the stake and deposit amount pools.
-      uint256 newFeesTransferred_ = oldReservePools_[i].stakeAmount - newReservePools_[i].stakeAmount
-        + oldReservePools_[i].depositAmount - newReservePools_[i].depositAmount;
+      // New fees transferred to owner are equal to the difference in the deposit amount pool.
+      uint256 newFeesTransferred_ = oldReservePools_[i].depositAmount - newReservePools_[i].depositAmount;
       assertEq(asset_.balanceOf(owner_), oldReservePools_[i].feeAmount + newFeesTransferred_);
     }
   }
@@ -422,20 +371,18 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
     MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
     ReservePool memory reservePool_ = ReservePool({
       asset: IERC20(address(mockAsset_)),
-      stkToken: IReceiptToken(address(0)),
-      depositToken: IReceiptToken(address(0)),
-      stakeAmount: 10_000,
+      depositReceiptToken: IReceiptToken(address(0)),
       depositAmount: 10_000,
-      pendingUnstakesAmount: 9000,
-      pendingWithdrawalsAmount: 10_000,
+      pendingWithdrawalsAmount: 9000,
       feeAmount: 50,
-      rewardsPoolsWeight: 0,
       maxSlashPercentage: MathConstants.WAD,
       lastFeesDripTime: 0
     });
     component.mockAddReservePool(reservePool_);
-    component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: 10_000 + 10_000 + 50}));
-    mockAsset_.mint(address(component), 10_000 + 10_000 + 50);
+    component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: 20_000 + 50}));
+    mockAsset_.mint(address(component), 20_000 + 50);
+
+    skip(10);
 
     address owner_ = _randomAddress();
     vm.startPrank(address(mockManager));
@@ -444,19 +391,15 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
 
     // Make sure owner received rewards from new reserve asset pool.
     // totalExistingFeeAmount = 50
-    // newDrippedDepositFees = (stakeAmount - pendingUnstakesAmount) * dripRate = (10_000 - 9_000) * 0.05
-    // newDrippedStakeFees = (depositAmount - pendingWithdrawalsAmount) * dripRate = (10_000 - 10_000) * 0.05
-    // totalNewFeeAmount = newDrippedStakeFees + newDrippedDepositFees = 50
-    // totalFeeAmount = totalExistingFeeAmount + totalNewFeeAmount = 50 + 50
+    // newDrippedDepositFees = (depositAmount - pendingWithdrawalAmount) * dripRate = (10_000 - 9_000) * 0.05 = 50
+    // totalFeeAmount = totalExistingFeeAmount + totalNewFeeAmount = 100
     assertEq(mockAsset_.balanceOf(owner_), 100);
 
     // Make sure reserve pools reflects the new reserve pool.
     ReservePool[] memory reservePools_ = component.getReservePools();
     assertEq(address(reservePools_[2].asset), address(mockAsset_));
-    assertEq(reservePools_[2].stakeAmount, 9950); // stakeAmount - feeAmount = 10_000 - 50
-    assertEq(reservePools_[2].depositAmount, 10_000); // depositAmount - feeAmount = 10_000 - 0
-    assertEq(reservePools_[2].pendingUnstakesAmount, 9000);
-    assertEq(reservePools_[2].pendingWithdrawalsAmount, 10_000);
+    assertEq(reservePools_[2].depositAmount, 9950); // depositAmount - feeAmount = 10_000 - 50
+    assertEq(reservePools_[2].pendingWithdrawalsAmount, 9000);
     assertEq(reservePools_[2].feeAmount, 0);
   }
 
@@ -495,7 +438,7 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
   }
 }
 
-contract TestableFeesHandler is RewardsHandler, Depositor, FeesHandler {
+contract TestableFeesHandler is Depositor, FeesHandler {
   constructor(IManager manager_) {
     cozyManager = manager_;
   }
@@ -527,19 +470,11 @@ contract TestableFeesHandler is RewardsHandler, Depositor, FeesHandler {
   }
 
   // -------- Overridden abstract function placeholders --------
-  function _updateUnstakesAfterTrigger(
-    uint16, /* reservePoolId_ */
-    ReservePool storage, /* reservePool_ */
-    uint256, /* oldStakeAmount_ */
-    uint256 /* slashAmount_ */
-  ) internal view override returns (uint256) {
-    __readStub__();
-  }
 
   function _updateWithdrawalsAfterTrigger(
     uint16, /* reservePoolId_ */
     ReservePool storage, /* reservePool_ */
-    uint256, /* oldStakeAmount_ */
+    uint256, /* oldDepositAmount_ */
     uint256 /* slashAmount_ */
   ) internal view override returns (uint256) {
     __readStub__();

@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {Clones} from "openzeppelin-contracts/contracts/proxy/Clones.sol";
-import {RewardPoolConfig, ReservePoolConfig} from "./lib/structs/Configs.sol";
+import {ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
 import {UpdateConfigsCalldataParams} from "./lib/structs/Configs.sol";
 import {IERC20} from "./interfaces/IERC20.sol";

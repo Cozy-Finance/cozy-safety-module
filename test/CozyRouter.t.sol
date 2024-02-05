@@ -12,14 +12,9 @@ import {SafetyModule} from "../src/SafetyModule.sol";
 import {MathConstants} from "../src/lib/MathConstants.sol";
 import {Ownable} from "../src/lib/Ownable.sol";
 import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
-import {
-  ReservePoolConfig,
-  TriggerConfig,
-  RewardPoolConfig,
-  UpdateConfigsCalldataParams
-} from "../src/lib/structs/Configs.sol";
+import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
-import {ReservePool, RewardPool} from "../src/lib/structs/Pools.sol";
+import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {TriggerMetadata} from "../src/lib/structs/Trigger.sol";
 import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
@@ -49,7 +44,7 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
   IUMATriggerFactory umaTriggerFactory = IUMATriggerFactory(address(new UMATriggerFactory(umaOracle)));
 
   IERC20 reserveAssetA = IERC20(address(new MockERC20("Mock Reserve Asset", "MOCKRES", 6)));
-  IERC20 rewardAssetA = IERC20(address(new MockERC20("Mock Reward Asset", "MOCKREW", 6)));
+  // IERC20 rewardAssetA = IERC20(address(new MockERC20("Mock Reward Asset", "MOCKREW", 6)));
   ITrigger trigger = ITrigger(new MockTrigger(TriggerState.ACTIVE));
 
   address alice = address(0xABCD);
@@ -78,29 +73,22 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
     super.setUp();
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
-    reservePoolConfigs_[0] = ReservePoolConfig({
-      maxSlashPercentage: 0,
-      asset: reserveAssetA,
-      rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2
-    });
-    reservePoolConfigs_[1] = ReservePoolConfig({
-      maxSlashPercentage: 0,
-      asset: IERC20(address(weth)),
-      rewardsPoolsWeight: uint16(MathConstants.ZOC) / 2
-    });
+    reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0, asset: reserveAssetA});
+    reservePoolConfigs_[1] = ReservePoolConfig({maxSlashPercentage: 0, asset: IERC20(address(weth))});
     wethReservePoolId = 1;
 
-    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](2);
-    rewardPoolConfigs_[0] = RewardPoolConfig({
-      asset: IERC20(address(weth)),
-      dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))
-    });
-    rewardPoolConfigs_[1] =
-      RewardPoolConfig({asset: rewardAssetA, dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))});
-    wethRewardPoolId = 0;
+    // RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](2);
+    // rewardPoolConfigs_[0] = RewardPoolConfig({
+    //   asset: IERC20(address(weth)),
+    //   dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))
+    // });
+    // rewardPoolConfigs_[1] =
+    //   RewardPoolConfig({asset: rewardAssetA, dripModel: IDripModel(address(new
+    // MockDripModel(DECAY_RATE_PER_SECOND)))});
+    // wethRewardPoolId = 0;
 
     Delays memory delaysConfig_ =
-      Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
+      Delays({withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
 
     TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](1);
     triggerConfig_[0] = TriggerConfig({trigger: trigger, payoutHandler: _randomAddress(), exists: true});
@@ -114,7 +102,6 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
               self,
               UpdateConfigsCalldataParams({
                 reservePoolConfigs: reservePoolConfigs_,
-                rewardPoolConfigs: rewardPoolConfigs_,
                 triggerConfigUpdates: triggerConfig_,
                 delaysConfig: delaysConfig_
               }),
@@ -154,7 +141,7 @@ contract CozyRouterAggregateTest is CozyRouterTestSetup {
 
     ReservePool memory reservePoolB_ = getReservePool(safetyModule, reservePoolId_);
 
-    assertEq(reservePoolB_.depositToken.balanceOf(address(this)), ethAmount_);
+    assertEq(reservePoolB_.depositReceiptToken.balanceOf(address(this)), ethAmount_);
     assertEq(weth.balanceOf(address(safetyModule)), ethAmount_);
     assertEq(weth.balanceOf(address(router)), 0);
     assertEq(address(router).balance, 0);
@@ -227,11 +214,11 @@ contract CozyRouterPermitTest is CozyRouterTestSetup {
     if (privateKey == 0) privateKey = 1;
 
     ReservePool memory reservePool_ = getReservePool(safetyModule, 0);
-    IERC20 depositToken_ = reservePool_.depositToken;
-    IERC20 stakeToken_ = reservePool_.stkToken;
+    IERC20 depositReceiptToken_ = reservePool_.depositReceiptToken;
+    // IERC20 stakeToken_ = reservePool_.stkToken;
 
-    _testPermitIERC20Token(depositToken_, privateKey, amount, deadline);
-    _testPermitIERC20Token(stakeToken_, privateKey, amount, deadline);
+    _testPermitIERC20Token(depositReceiptToken_, privateKey, amount, deadline);
+    // _testPermitIERC20Token(stakeToken_, privateKey, amount, deadline);
   }
 }
 
@@ -495,21 +482,20 @@ contract CozyRouterDepositTest is CozyRouterTestSetup {
     weth.approve(address(router), assets_);
 
     // Deposit WETH via the router.
-    uint256 shares = isReserveDeposit_
-      ? router.depositReserveAssets(safetyModule_, poolId_, assets_, user_, assets_)
-      : router.depositRewardAssets(safetyModule_, poolId_, assets_, user_, assets_);
+    uint256 shares = router.depositReserveAssets(safetyModule_, poolId_, assets_, user_, assets_);
+    // : router.depositRewardAssets(safetyModule_, poolId_, assets_, user_, assets_);
 
     vm.stopPrank();
 
     assertEq(weth.balanceOf(address(safetyModule_)), assets_);
     if (isReserveDeposit_) {
       ReservePool memory reservePool_ = getReservePool(safetyModule_, poolId_);
-      assertEq(reservePool_.depositToken.balanceOf(user_), shares);
+      assertEq(reservePool_.depositReceiptToken.balanceOf(user_), shares);
       assertEq(reservePool_.depositAmount, assets_);
     } else {
-      RewardPool memory rewardPool_ = getRewardPool(safetyModule_, poolId_);
-      assertEq(rewardPool_.depositToken.balanceOf(user_), shares);
-      assertEq(rewardPool_.undrippedRewards, assets_);
+      // RewardPool memory rewardPool_ = getRewardPool(safetyModule_, poolId_);
+      // assertEq(rewardPool_.depositToken.balanceOf(user_), shares);
+      // assertEq(rewardPool_.undrippedRewards, assets_);
     }
   }
 
@@ -527,13 +513,13 @@ contract CozyRouterDepositTest is CozyRouterTestSetup {
     vm.expectRevert(Ownable.InvalidAddress.selector);
 
     if (isReserveDeposit_) router.depositReserveAssets(safetyModule_, poolId_, 10, address(0), 10);
-    else router.depositRewardAssets(safetyModule_, poolId_, 10, address(0), 10);
+    // else router.depositRewardAssets(safetyModule_, poolId_, 10, address(0), 10);
 
     vm.stopPrank();
 
     vm.expectRevert(Ownable.InvalidAddress.selector);
     if (isReserveDeposit_) router.depositReserveAssetsWithoutTransfer(safetyModule_, poolId_, 10, address(0), 10);
-    else router.depositRewardAssetsWithoutTransfer(safetyModule_, poolId_, 10, address(0), 10);
+    // else router.depositRewardAssetsWithoutTransfer(safetyModule_, poolId_, 10, address(0), 10);
   }
 
   function testFuzz_DepositReserveAssets(address user_, uint256 assets_) public {
@@ -544,64 +530,64 @@ contract CozyRouterDepositTest is CozyRouterTestSetup {
     _depositAssets(true, safetyModule, wethReservePoolId, user_, assets_);
   }
 
-  function testFuzz_DepositRewardAssets(address user_, uint256 assets_) public {
-    vm.assume(user_ != address(0));
-    vm.assume(user_ != address(safetyModule));
-    assets_ = bound(assets_, 1, type(uint96).max);
+  // function testFuzz_DepositRewardAssets(address user_, uint256 assets_) public {
+  //   vm.assume(user_ != address(0));
+  //   vm.assume(user_ != address(safetyModule));
+  //   assets_ = bound(assets_, 1, type(uint96).max);
 
-    _depositAssets(false, safetyModule, wethRewardPoolId, user_, assets_);
-  }
+  //   _depositAssets(false, safetyModule, wethRewardPoolId, user_, assets_);
+  // }
 
   function test_DepositReserveAssetsRevertsIfRecipientIsZeroAddress() public {
     _depositReserveAssetsRevertsIfRecipientIsZeroAddress(true, safetyModule, wethReservePoolId);
   }
 
-  function test_DepositRewardAssetsRevertsIfRecipientIsZeroAddress() public {
-    _depositReserveAssetsRevertsIfRecipientIsZeroAddress(false, safetyModule, wethRewardPoolId);
-  }
+  // function test_DepositRewardAssetsRevertsIfRecipientIsZeroAddress() public {
+  //   _depositReserveAssetsRevertsIfRecipientIsZeroAddress(false, safetyModule, wethRewardPoolId);
+  // }
 }
 
-contract CozyRouterStakeTest is CozyRouterTestSetup {
-  function testFuzz_Stake(address user_, uint256 assets_) public {
-    vm.assume(user_ != address(0));
-    vm.assume(user_ != address(safetyModule));
-    assets_ = bound(assets_, 1, type(uint96).max);
+// contract CozyRouterStakeTest is CozyRouterTestSetup {
+//   function testFuzz_Stake(address user_, uint256 assets_) public {
+//     vm.assume(user_ != address(0));
+//     vm.assume(user_ != address(safetyModule));
+//     assets_ = bound(assets_, 1, type(uint96).max);
 
-    vm.startPrank(user_);
+//     vm.startPrank(user_);
 
-    // Mint some WETH.
-    vm.deal(user_, assets_);
-    weth.deposit{value: assets_}();
-    weth.approve(address(router), assets_);
+//     // Mint some WETH.
+//     vm.deal(user_, assets_);
+//     weth.deposit{value: assets_}();
+//     weth.approve(address(router), assets_);
 
-    // Deposit WETH via the router.
-    uint256 shares = router.stake(safetyModule, wethReservePoolId, assets_, user_, assets_);
+//     // Deposit WETH via the router.
+//     uint256 shares = router.stake(safetyModule, wethReservePoolId, assets_, user_, assets_);
 
-    vm.stopPrank();
+//     vm.stopPrank();
 
-    assertEq(weth.balanceOf(address(safetyModule)), assets_);
-    ReservePool memory reservePool_ = getReservePool(safetyModule, wethReservePoolId);
-    assertEq(reservePool_.stkToken.balanceOf(user_), shares);
-    assertEq(reservePool_.stakeAmount, assets_);
-  }
+//     assertEq(weth.balanceOf(address(safetyModule)), assets_);
+//     ReservePool memory reservePool_ = getReservePool(safetyModule, wethReservePoolId);
+//     assertEq(reservePool_.stkToken.balanceOf(user_), shares);
+//     assertEq(reservePool_.stakeAmount, assets_);
+//   }
 
-  function test_StakeIfRecipientIsZeroAddress() public {
-    vm.startPrank(address(0xBEEF));
+//   function test_StakeIfRecipientIsZeroAddress() public {
+//     vm.startPrank(address(0xBEEF));
 
-    // Deal some weth
-    vm.deal(address(0xBEEF), 10);
-    weth.deposit{value: 10}();
-    weth.approve(address(router), 10);
+//     // Deal some weth
+//     vm.deal(address(0xBEEF), 10);
+//     weth.deposit{value: 10}();
+//     weth.approve(address(router), 10);
 
-    vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.stake(safetyModule, wethReservePoolId, 10, address(0), 10);
+//     vm.expectRevert(Ownable.InvalidAddress.selector);
+//     router.stake(safetyModule, wethReservePoolId, 10, address(0), 10);
 
-    vm.stopPrank();
+//     vm.stopPrank();
 
-    vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.stakeWithoutTransfer(safetyModule, wethReservePoolId, 10, address(0), 10);
-  }
-}
+//     vm.expectRevert(Ownable.InvalidAddress.selector);
+//     router.stakeWithoutTransfer(safetyModule, wethReservePoolId, 10, address(0), 10);
+//   }
+// }
 
 contract CozyRouterConnectorSetup is CozyRouterTestSetup {
   MockConnector mockConnector;
@@ -624,13 +610,12 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     vm.startPrank(owner_);
     // Owner has to approve the router to transfer the base assets.
     connector_.baseAsset().approve(address(router), baseAssetsNeeded_);
-    uint256 ownerShares_ = isReserveDeposit_
-      ? router.wrapBaseAssetViaConnectorAndDepositReserveAssets(
-        connector_, safetyModule_, poolId_, baseAssetsNeeded_, owner_, 0
-      )
-      : router.wrapBaseAssetViaConnectorAndDepositRewardAssets(
-        connector_, safetyModule_, poolId_, baseAssetsNeeded_, owner_, 0
-      );
+    uint256 ownerShares_ = router.wrapBaseAssetViaConnectorAndDepositReserveAssets(
+      connector_, safetyModule_, poolId_, baseAssetsNeeded_, owner_, 0
+    );
+    // : router.wrapBaseAssetViaConnectorAndDepositRewardAssets(
+    //   connector_, safetyModule_, poolId_, baseAssetsNeeded_, owner_, 0
+    // );
     vm.stopPrank();
 
     // All base assets needed should have been transferred away from Owner.
@@ -639,11 +624,11 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     assertEq(connector_.wrappedAsset().balanceOf(address(safetyModule_)), wrappedAssetDepositAmount_);
 
     // Owner should have proper number of deposit tokens.
-    IERC20 depositToken_ = isReserveDeposit_
-      ? getReservePool(safetyModule_, poolId_).depositToken
-      : getRewardPool(safetyModule_, poolId_).depositToken;
-    assertEq(depositToken_.balanceOf(owner_), ownerShares_);
-    assertEq(depositToken_.balanceOf(owner_), wrappedAssetDepositAmount_); // 1:1 exchange rate for initial deposit.
+    IERC20 depositReceiptToken_ = getReservePool(safetyModule_, poolId_).depositReceiptToken;
+    // : getRewardPool(safetyModule_, poolId_).depositToken;
+    assertEq(depositReceiptToken_.balanceOf(owner_), ownerShares_);
+    assertEq(depositReceiptToken_.balanceOf(owner_), wrappedAssetDepositAmount_); // 1:1 exchange rate for initial
+      // deposit.
   }
 
   function _testWrapBaseAssetViaConnectorForDepositSlippage(
@@ -669,9 +654,9 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
         connector_, safetyModule_, poolId_, baseAssetsNeeded_, owner_, minSharesReceived_
       );
     } else {
-      router.wrapBaseAssetViaConnectorAndDepositRewardAssets(
-        connector_, safetyModule_, poolId_, baseAssetsNeeded_, owner_, minSharesReceived_
-      );
+      // router.wrapBaseAssetViaConnectorAndDepositRewardAssets(
+      //   connector_, safetyModule_, poolId_, baseAssetsNeeded_, owner_, minSharesReceived_
+      // );
     }
     vm.stopPrank();
   }
@@ -687,17 +672,17 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     assertEq(reservePool_.depositAmount, wrappedAssetDepositAmount_);
   }
 
-  function test_wrapBaseAssetViaConnectorForRewardDeposit() public {
-    mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(rewardAssetA)));
-    uint256 wrappedAssetDepositAmount_ = 500;
-    uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
-    _testWrapBaseAssetViaConnectorForDeposit(
-      false, mockConnector, safetyModule, 1, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
-    );
+  // function test_wrapBaseAssetViaConnectorForRewardDeposit() public {
+  //   mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(rewardAssetA)));
+  //   uint256 wrappedAssetDepositAmount_ = 500;
+  //   uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
+  //   _testWrapBaseAssetViaConnectorForDeposit(
+  //     false, mockConnector, safetyModule, 1, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
+  //   );
 
-    RewardPool memory rewardPool_ = getRewardPool(safetyModule, 1);
-    assertEq(rewardPool_.undrippedRewards, wrappedAssetDepositAmount_);
-  }
+  //   RewardPool memory rewardPool_ = getRewardPool(safetyModule, 1);
+  //   assertEq(rewardPool_.undrippedRewards, wrappedAssetDepositAmount_);
+  // }
 
   function test_WrapBaseAssetViaConnectorForReserveDepositSharesLowerThanMinSharesReceived() public {
     mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(reserveAssetA)));
@@ -708,63 +693,63 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     );
   }
 
-  function test_WrapBaseAssetViaConnectorForRewardDepositSharesLowerThanMinSharesReceived() public {
-    mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(rewardAssetA)));
-    uint256 wrappedAssetDepositAmount_ = 500;
-    uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
-    _testWrapBaseAssetViaConnectorForDepositSlippage(
-      false, mockConnector, safetyModule, 1, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
-    );
-  }
+  // function test_WrapBaseAssetViaConnectorForRewardDepositSharesLowerThanMinSharesReceived() public {
+  //   mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(rewardAssetA)));
+  //   uint256 wrappedAssetDepositAmount_ = 500;
+  //   uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
+  //   _testWrapBaseAssetViaConnectorForDepositSlippage(
+  //     false, mockConnector, safetyModule, 1, wrappedAssetDepositAmount_, baseAssetsNeeded_, alice
+  //   );
+  // }
 }
 
-contract CozyRouterWrapBaseAssetViaConnectorAndStakeTest is CozyRouterConnectorSetup {
-  function test_wrapBaseAssetViaConnectorForStake() public {
-    mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(reserveAssetA)));
-    uint256 wrappedAssetStakeAmount_ = 500;
-    uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
+// contract CozyRouterWrapBaseAssetViaConnectorAndStakeTest is CozyRouterConnectorSetup {
+//   function test_wrapBaseAssetViaConnectorForStake() public {
+//     mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(reserveAssetA)));
+//     uint256 wrappedAssetStakeAmount_ = 500;
+//     uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
 
-    // Deal owner sufficient base assets to stake.
-    deal(address(mockConnector.baseAsset()), alice, baseAssetsNeeded_, true);
+//     // Deal owner sufficient base assets to stake.
+//     deal(address(mockConnector.baseAsset()), alice, baseAssetsNeeded_, true);
 
-    vm.startPrank(alice);
-    // Owner has to approve the router to transfer the base assets.
-    mockConnector.baseAsset().approve(address(router), baseAssetsNeeded_);
-    uint256 ownerShares_ =
-      router.wrapBaseAssetViaConnectorAndStake(mockConnector, safetyModule, 0, baseAssetsNeeded_, alice, 0);
-    vm.stopPrank();
+//     vm.startPrank(alice);
+//     // Owner has to approve the router to transfer the base assets.
+//     mockConnector.baseAsset().approve(address(router), baseAssetsNeeded_);
+//     uint256 ownerShares_ =
+//       router.wrapBaseAssetViaConnectorAndStake(mockConnector, safetyModule, 0, baseAssetsNeeded_, alice, 0);
+//     vm.stopPrank();
 
-    // All base assets needed should have been transferred away from Owner.
-    assertEq(mockConnector.baseAsset().balanceOf(alice), 0);
-    // Wrapped assets should have been transferred to safety module.
-    assertEq(mockConnector.wrappedAsset().balanceOf(address(safetyModule)), wrappedAssetStakeAmount_);
+//     // All base assets needed should have been transferred away from Owner.
+//     assertEq(mockConnector.baseAsset().balanceOf(alice), 0);
+//     // Wrapped assets should have been transferred to safety module.
+//     assertEq(mockConnector.wrappedAsset().balanceOf(address(safetyModule)), wrappedAssetStakeAmount_);
 
-    // Owner should have proper number of deposit tokens.
-    IERC20 stkToken_ = getReservePool(safetyModule, 0).stkToken;
-    assertEq(stkToken_.balanceOf(alice), ownerShares_);
-    assertEq(stkToken_.balanceOf(alice), wrappedAssetStakeAmount_); // 1:1 exchange rate for initial deposit.
-  }
+//     // Owner should have proper number of deposit tokens.
+//     IERC20 stkToken_ = getReservePool(safetyModule, 0).stkToken;
+//     assertEq(stkToken_.balanceOf(alice), ownerShares_);
+//     assertEq(stkToken_.balanceOf(alice), wrappedAssetStakeAmount_); // 1:1 exchange rate for initial deposit.
+//   }
 
-  function test_WrapBaseAssetViaConnectorForStakeSharesLowerThanMinSharesReceived() public {
-    mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(reserveAssetA)));
-    uint256 wrappedAssetStakeAmount_ = 500;
-    uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
+//   function test_WrapBaseAssetViaConnectorForStakeSharesLowerThanMinSharesReceived() public {
+//     mockConnector = new MockConnector(MockERC20(address(baseAsset)), MockERC20(address(reserveAssetA)));
+//     uint256 wrappedAssetStakeAmount_ = 500;
+//     uint256 baseAssetsNeeded_ = 250; // assetsNeeded_ / assetToWrappedAssetRate = 500 / 2 = 250 (no rounding)
 
-    // Deal owner sufficient base assets to stake.
-    deal(address(mockConnector.baseAsset()), alice, baseAssetsNeeded_, true);
+//     // Deal owner sufficient base assets to stake.
+//     deal(address(mockConnector.baseAsset()), alice, baseAssetsNeeded_, true);
 
-    vm.startPrank(alice);
-    // Owner has to approve the router to transfer the base assets.
-    mockConnector.baseAsset().approve(address(router), baseAssetsNeeded_);
-    // Should revert because assets_ < minSharesReceived_.
-    vm.expectRevert(CozyRouter.SlippageExceeded.selector);
-    uint256 minSharesReceived_ = wrappedAssetStakeAmount_ + 1;
-    router.wrapBaseAssetViaConnectorAndStake(
-      mockConnector, safetyModule, 0, baseAssetsNeeded_, alice, minSharesReceived_
-    );
-    vm.stopPrank();
-  }
-}
+//     vm.startPrank(alice);
+//     // Owner has to approve the router to transfer the base assets.
+//     mockConnector.baseAsset().approve(address(router), baseAssetsNeeded_);
+//     // Should revert because assets_ < minSharesReceived_.
+//     vm.expectRevert(CozyRouter.SlippageExceeded.selector);
+//     uint256 minSharesReceived_ = wrappedAssetStakeAmount_ + 1;
+//     router.wrapBaseAssetViaConnectorAndStake(
+//       mockConnector, safetyModule, 0, baseAssetsNeeded_, alice, minSharesReceived_
+//     );
+//     vm.stopPrank();
+//   }
+// }
 
 contract CozyRouterUnwrapWrappedAssetViaConnectorForWithdraw is CozyRouterConnectorSetup {
   MockERC20 wrappedAsset;
@@ -851,25 +836,25 @@ contract CozyRouterWithdrawTest is CozyRouterTestSetup {
 
     // The router deposits assets on behalf of the user.
     uint256 preDepositBalance_ = weth.balanceOf(user_);
-    uint256 depositTokens_ = isReserveWithdraw_
-      ? router.depositReserveAssets(safetyModule_, poolId_, assets_, user_, assets_)
-      : router.depositRewardAssets(safetyModule_, poolId_, assets_, user_, assets_);
+    uint256 depositReceiptTokens_ = router.depositReserveAssets(safetyModule_, poolId_, assets_, user_, assets_);
+    // : router.depositRewardAssets(safetyModule_, poolId_, assets_, user_, assets_);
     uint256 postDepositBalance_ = weth.balanceOf(user_);
     assertGt(preDepositBalance_, postDepositBalance_);
 
     // Request WETH withdrawal via the router. This should fail because the user hasn't approved it.
     _expectPanic(PANIC_MATH_UNDEROVERFLOW);
-    if (isReserveWithdraw_) router.withdrawReservePoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
-    else router.withdrawRewardPoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
+    if (isReserveWithdraw_) {
+      router.withdrawReservePoolAssets(safetyModule_, poolId_, assets_, user_, depositReceiptTokens_);
+    }
+    // else router.withdrawRewardPoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
 
-    IERC20 depositToken_ = isReserveWithdraw_
-      ? getReservePool(safetyModule_, poolId_).depositToken
-      : getRewardPool(safetyModule_, poolId_).depositToken;
+    IERC20 depositReceiptToken_ = getReservePool(safetyModule_, poolId_).depositReceiptToken;
+    // : getRewardPool(safetyModule_, poolId_).depositToken;
 
     // Approve WETH withdrawal request, then router initiates it.
-    depositToken_.approve(address(router), depositTokens_);
+    depositReceiptToken_.approve(address(router), depositReceiptTokens_);
     if (isReserveWithdraw_) {
-      router.withdrawReservePoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
+      router.withdrawReservePoolAssets(safetyModule_, poolId_, assets_, user_, depositReceiptTokens_);
 
       // Fast-forward to end of delay period.
       skip(getDelays(safetyModule_).withdrawDelay);
@@ -877,7 +862,7 @@ contract CozyRouterWithdrawTest is CozyRouterTestSetup {
       router.completeWithdraw(safetyModule_, 0);
     } else {
       // Withdrawal from rewwards is instant.
-      router.withdrawRewardPoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
+      // router.withdrawRewardPoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
     }
     vm.stopPrank();
 
@@ -893,21 +878,21 @@ contract CozyRouterWithdrawTest is CozyRouterTestSetup {
     _testWithdrawRequiresAllowance(true, safetyModule, wethReservePoolId, user_, assets_);
   }
 
-  function testFuzz_WithdrawFromRewardsRequiresAllowance(address user_, uint256 assets_) public {
-    vm.assume(user_ != address(0));
-    vm.assume(user_ != address(safetyModule));
-    vm.assume(user_ != address(router));
-    assets_ = bound(assets_, 1, type(uint96).max);
+  // function testFuzz_WithdrawFromRewardsRequiresAllowance(address user_, uint256 assets_) public {
+  //   vm.assume(user_ != address(0));
+  //   vm.assume(user_ != address(safetyModule));
+  //   vm.assume(user_ != address(router));
+  //   assets_ = bound(assets_, 1, type(uint96).max);
 
-    _testWithdrawRequiresAllowance(false, safetyModule, wethRewardPoolId, user_, assets_);
-  }
+  //   _testWithdrawRequiresAllowance(false, safetyModule, wethRewardPoolId, user_, assets_);
+  // }
 
   function test_WithdrawRevertsIfReceiverIsZeroAddress() public {
     vm.expectRevert(Ownable.InvalidAddress.selector);
     router.withdrawReservePoolAssets(safetyModule, wethReservePoolId, 10, address(0), 10);
 
-    vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.withdrawRewardPoolAssets(safetyModule, wethRewardPoolId, 10, address(0), 10);
+    // vm.expectRevert(Ownable.InvalidAddress.selector);
+    // router.withdrawRewardPoolAssets(safetyModule, wethRewardPoolId, 10, address(0), 10);
   }
 }
 
@@ -928,14 +913,13 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
     // Grant full approval to the router.
     weth.approve(address(router), type(uint256).max);
     // Deposit assets.
-    uint256 depositTokenAmount_ = isReserveDeposit_
-      ? router.depositReserveAssets(safetyModule_, poolId_, initialAmount_, testRedeemer, initialAmount_)
-      : router.depositRewardAssets(safetyModule_, poolId_, initialAmount_, testRedeemer, initialAmount_);
+    uint256 depositReceiptTokenAmount_ =
+      router.depositReserveAssets(safetyModule_, poolId_, initialAmount_, testRedeemer, initialAmount_);
+    // : router.depositRewardAssets(safetyModule_, poolId_, initialAmount_, testRedeemer, initialAmount_);
     // Approve for test redemptions.
-    IERC20 depositToken_ = isReserveDeposit_
-      ? getReservePool(safetyModule_, poolId_).depositToken
-      : getRewardPool(safetyModule_, poolId_).depositToken;
-    depositToken_.approve(address(router), depositTokenAmount_);
+    IERC20 depositReceiptToken_ = getReservePool(safetyModule_, poolId_).depositReceiptToken;
+    // : getRewardPool(safetyModule_, poolId_).depositToken;
+    depositReceiptToken_.approve(address(router), depositReceiptTokenAmount_);
     vm.stopPrank();
   }
 
@@ -943,121 +927,122 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
     vm.assume(assets_ > 0 && assets_ <= type(uint128).max);
     _setUpWethBalances(true, safetyModule, wethReservePoolId, assets_);
     (uint64 redemptionId_, uint256 actualAssets_) =
-      router.redeemReservePoolDepositTokens(safetyModule, wethReservePoolId, assets_, testRedeemer, assets_);
+      router.redeemReservePoolDepositReceiptTokens(safetyModule, wethReservePoolId, assets_, testRedeemer, assets_);
     assertEq(actualAssets_, assets_);
     assertEq(redemptionId_, 0);
   }
 
-  function testFuzz_RedeemFromRewardPool(uint256 assets_) public {
-    vm.assume(assets_ > 0 && assets_ <= type(uint128).max);
-    _setUpWethBalances(false, safetyModule, wethRewardPoolId, assets_);
-    uint256 actualAssets_ =
-      router.redeemRewardPoolDepositTokens(safetyModule, wethRewardPoolId, assets_, testRedeemer, assets_);
-    assertEq(actualAssets_, assets_);
-  }
+  // function testFuzz_RedeemFromRewardPool(uint256 assets_) public {
+  //   vm.assume(assets_ > 0 && assets_ <= type(uint128).max);
+  //   _setUpWethBalances(false, safetyModule, wethRewardPoolId, assets_);
+  //   uint256 actualAssets_ =
+  //     router.redeemRewardPoolDepositTokens(safetyModule, wethRewardPoolId, assets_, testRedeemer, assets_);
+  //   assertEq(actualAssets_, assets_);
+  // }
 
   function test_RedeemRespectsMinAssetsOut() public {
     _setUpWethBalances(true, safetyModule, wethReservePoolId, 100);
     vm.expectRevert(CozyRouter.SlippageExceeded.selector);
-    router.redeemReservePoolDepositTokens(safetyModule, wethReservePoolId, 100, testRedeemer, 101);
+    router.redeemReservePoolDepositReceiptTokens(safetyModule, wethReservePoolId, 100, testRedeemer, 101);
 
-    _setUpWethBalances(false, safetyModule, wethRewardPoolId, 100);
-    vm.expectRevert(CozyRouter.SlippageExceeded.selector);
-    router.redeemRewardPoolDepositTokens(safetyModule, wethRewardPoolId, 100, testRedeemer, 101);
+    // _setUpWethBalances(false, safetyModule, wethRewardPoolId, 100);
+    // vm.expectRevert(CozyRouter.SlippageExceeded.selector);
+    // router.redeemRewardPoolDepositTokens(safetyModule, wethRewardPoolId, 100, testRedeemer, 101);
   }
 
   function test_RedeemRevertsIfReceiverIsZeroAddress() public {
     vm.expectRevert(CozyRouter.InvalidAddress.selector);
-    router.redeemReservePoolDepositTokens(safetyModule, wethReservePoolId, 100, address(0), 101);
+    router.redeemReservePoolDepositReceiptTokens(safetyModule, wethReservePoolId, 100, address(0), 101);
 
-    vm.expectRevert(CozyRouter.InvalidAddress.selector);
-    router.redeemRewardPoolDepositTokens(safetyModule, wethReservePoolId, 100, address(0), 101);
+    // vm.expectRevert(CozyRouter.InvalidAddress.selector);
+    // router.redeemRewardPoolDepositTokens(safetyModule, wethReservePoolId, 100, address(0), 101);
   }
 }
 
-contract CozyRouterUnstakeTest is CozyRouterTestSetup {
-  address testStaker = address(this);
-  uint256 shares;
+// contract CozyRouterUnstakeTest is CozyRouterTestSetup {
+//   address testStaker = address(this);
+//   uint256 shares;
 
-  function _setUpWethBalances(ISafetyModule safetyModule_, uint16 reservePoolId_, uint256 initialAmount_) internal {
-    vm.startPrank(testStaker);
-    // Mint some WETH and approve the router to move it.
-    vm.deal(testStaker, initialAmount_);
-    weth.deposit{value: initialAmount_}();
-    // Grant full approval to the router.
-    weth.approve(address(router), type(uint256).max);
-    // Stake assets.
-    uint256 stkTokenAmount_ = router.stake(safetyModule_, reservePoolId_, initialAmount_, testStaker, initialAmount_);
-    // Approve for test redemptions.
-    IERC20 stkToken_ = getReservePool(safetyModule_, reservePoolId_).stkToken;
-    stkToken_.approve(address(router), stkTokenAmount_);
-    vm.stopPrank();
-  }
+//   function _setUpWethBalances(ISafetyModule safetyModule_, uint16 reservePoolId_, uint256 initialAmount_) internal {
+//     vm.startPrank(testStaker);
+//     // Mint some WETH and approve the router to move it.
+//     vm.deal(testStaker, initialAmount_);
+//     weth.deposit{value: initialAmount_}();
+//     // Grant full approval to the router.
+//     weth.approve(address(router), type(uint256).max);
+//     // Stake assets.
+//     uint256 stkTokenAmount_ = router.stake(safetyModule_, reservePoolId_, initialAmount_, testStaker,
+// initialAmount_);
+//     // Approve for test redemptions.
+//     IERC20 stkToken_ = getReservePool(safetyModule_, reservePoolId_).stkToken;
+//     stkToken_.approve(address(router), stkTokenAmount_);
+//     vm.stopPrank();
+//   }
 
-  function testFuzz_Unstake(uint256 assets_) public {
-    vm.assume(assets_ > 0 && assets_ <= type(uint128).max);
-    _setUpWethBalances(safetyModule, wethReservePoolId, assets_);
-    (uint64 redemptionId_, uint256 actualAssets_) =
-      router.unstake(safetyModule, wethReservePoolId, assets_, testStaker, assets_);
-    assertEq(actualAssets_, assets_);
-    assertEq(redemptionId_, 0);
-  }
+//   function testFuzz_Unstake(uint256 assets_) public {
+//     vm.assume(assets_ > 0 && assets_ <= type(uint128).max);
+//     _setUpWethBalances(safetyModule, wethReservePoolId, assets_);
+//     (uint64 redemptionId_, uint256 actualAssets_) =
+//       router.unstake(safetyModule, wethReservePoolId, assets_, testStaker, assets_);
+//     assertEq(actualAssets_, assets_);
+//     assertEq(redemptionId_, 0);
+//   }
 
-  function test_UnstakeRespectsMinAssetsOut() public {
-    _setUpWethBalances(safetyModule, wethReservePoolId, 100);
-    vm.expectRevert(CozyRouter.SlippageExceeded.selector);
-    router.unstake(safetyModule, wethReservePoolId, 100, testStaker, 101);
-  }
+//   function test_UnstakeRespectsMinAssetsOut() public {
+//     _setUpWethBalances(safetyModule, wethReservePoolId, 100);
+//     vm.expectRevert(CozyRouter.SlippageExceeded.selector);
+//     router.unstake(safetyModule, wethReservePoolId, 100, testStaker, 101);
+//   }
 
-  function test_UnstakeRevertsIfReceiverIsZeroAddress() public {
-    vm.expectRevert(CozyRouter.InvalidAddress.selector);
-    router.unstake(safetyModule, wethReservePoolId, 100, address(0), 101);
-  }
-}
+//   function test_UnstakeRevertsIfReceiverIsZeroAddress() public {
+//     vm.expectRevert(CozyRouter.InvalidAddress.selector);
+//     router.unstake(safetyModule, wethReservePoolId, 100, address(0), 101);
+//   }
+// }
 
-contract CozyRouterUnstakeAssetAmountTest is CozyRouterTestSetup {
-  function testFuzz_UnstakeRequiresAllowance(address user_, uint256 assets_) public {
-    vm.assume(user_ != address(0));
-    vm.assume(user_ != address(safetyModule));
-    vm.assume(user_ != address(router));
-    assets_ = bound(assets_, 1, type(uint96).max);
+// contract CozyRouterUnstakeAssetAmountTest is CozyRouterTestSetup {
+//   function testFuzz_UnstakeRequiresAllowance(address user_, uint256 assets_) public {
+//     vm.assume(user_ != address(0));
+//     vm.assume(user_ != address(safetyModule));
+//     vm.assume(user_ != address(router));
+//     assets_ = bound(assets_, 1, type(uint96).max);
 
-    vm.startPrank(user_);
+//     vm.startPrank(user_);
 
-    // Mint some WETH and approve the router to move it.
-    vm.deal(user_, assets_);
-    weth.deposit{value: assets_}();
-    weth.approve(address(router), assets_);
+//     // Mint some WETH and approve the router to move it.
+//     vm.deal(user_, assets_);
+//     weth.deposit{value: assets_}();
+//     weth.approve(address(router), assets_);
 
-    // The router stakes assets on behalf of the user.
-    uint256 preStakeBalance_ = weth.balanceOf(user_);
-    uint256 depositTokens_ = router.stake(safetyModule, wethReservePoolId, assets_, user_, assets_);
-    uint256 postStakeBalance_ = weth.balanceOf(user_);
-    assertGt(preStakeBalance_, postStakeBalance_);
+//     // The router stakes assets on behalf of the user.
+//     uint256 preStakeBalance_ = weth.balanceOf(user_);
+//     uint256 depositTokens_ = router.stake(safetyModule, wethReservePoolId, assets_, user_, assets_);
+//     uint256 postStakeBalance_ = weth.balanceOf(user_);
+//     assertGt(preStakeBalance_, postStakeBalance_);
 
-    // Request WETH unstake via the router. This should fail because the user hasn't approved it.
-    _expectPanic(PANIC_MATH_UNDEROVERFLOW);
-    router.unstakeAssetAmount(safetyModule, wethReservePoolId, assets_, user_, depositTokens_);
+//     // Request WETH unstake via the router. This should fail because the user hasn't approved it.
+//     _expectPanic(PANIC_MATH_UNDEROVERFLOW);
+//     router.unstakeAssetAmount(safetyModule, wethReservePoolId, assets_, user_, depositTokens_);
 
-    IERC20 stkToken_ = getReservePool(safetyModule, wethReservePoolId).stkToken;
+//     IERC20 stkToken_ = getReservePool(safetyModule, wethReservePoolId).stkToken;
 
-    // Approve WETH unstake request, then router initiates it.
-    stkToken_.approve(address(router), depositTokens_);
-    router.unstakeAssetAmount(safetyModule, wethReservePoolId, assets_, user_, depositTokens_);
-    // Fast-forward to end of delay period.
-    skip(getDelays(safetyModule).unstakeDelay);
-    router.completeUnstake(safetyModule, 0);
+//     // Approve WETH unstake request, then router initiates it.
+//     stkToken_.approve(address(router), depositTokens_);
+//     router.unstakeAssetAmount(safetyModule, wethReservePoolId, assets_, user_, depositTokens_);
+//     // Fast-forward to end of delay period.
+//     skip(getDelays(safetyModule).unstakeDelay);
+//     router.completeUnstake(safetyModule, 0);
 
-    vm.stopPrank();
+//     vm.stopPrank();
 
-    assertEq(weth.balanceOf(user_), preStakeBalance_);
-  }
+//     assertEq(weth.balanceOf(user_), preStakeBalance_);
+//   }
 
-  function test_UnstakeAssetAmountRevertsIfReceiverIsZeroAddress() public {
-    vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.unstakeAssetAmount(safetyModule, wethReservePoolId, 10, address(0), 10);
-  }
-}
+//   function test_UnstakeAssetAmountRevertsIfReceiverIsZeroAddress() public {
+//     vm.expectRevert(Ownable.InvalidAddress.selector);
+//     router.unstakeAssetAmount(safetyModule, wethReservePoolId, 10, address(0), 10);
+//   }
+// }
 
 contract CozyRouterCompleteWithdrawRedeemTest is CozyRouterTestSetup {
   uint256 poolAssetAmount = 10_000;
@@ -1074,12 +1059,12 @@ contract CozyRouterCompleteWithdrawRedeemTest is CozyRouterTestSetup {
     weth.approve(address(router), type(uint256).max); // Grant full approval to the router.
 
     // The router deposits assets on behalf of alice.
-    uint256 depositTokens_ =
+    uint256 depositReceiptTokens_ =
       router.depositReserveAssets(safetyModule, wethReservePoolId, poolAssetAmount, testOwner, poolAssetAmount);
 
     // Initiate a WETH withdrawal request from the reserve pool, with bob as the receiver. The router is pre-approved.
-    getReservePool(safetyModule, wethReservePoolId).depositToken.approve(address(router), depositTokens_);
-    router.withdrawReservePoolAssets(safetyModule, wethReservePoolId, poolAssetAmount, receiver, depositTokens_);
+    getReservePool(safetyModule, wethReservePoolId).depositReceiptToken.approve(address(router), depositReceiptTokens_);
+    router.withdrawReservePoolAssets(safetyModule, wethReservePoolId, poolAssetAmount, receiver, depositReceiptTokens_);
     skip(getDelays(safetyModule).withdrawDelay);
 
     vm.stopPrank();
@@ -1130,30 +1115,28 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
     weth.transfer(address(safetyModule), 3 ether);
 
     uint16 poolId_ = isReserveDeposit_ ? wethReservePoolId : wethRewardPoolId;
-    IERC20 depositToken_ = isReserveDeposit_
-      ? getReservePool(safetyModule, poolId_).depositToken
-      : getRewardPool(safetyModule, poolId_).depositToken;
+    IERC20 depositReceiptToken_ = getReservePool(safetyModule, poolId_).depositReceiptToken;
+    // : getRewardPool(safetyModule, poolId_).depositToken;
 
     // Anyone can do arbitrary deposit operations with the excess ether.
     if (isReserveDeposit_) {
       router.depositReserveAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverA, 0);
-      assertEq(depositToken_.balanceOf(receiverA), 1 ether);
+      assertEq(depositReceiptToken_.balanceOf(receiverA), 1 ether);
       router.depositReserveAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverB, 0);
-      assertEq(depositToken_.balanceOf(receiverB), 1 ether);
+      assertEq(depositReceiptToken_.balanceOf(receiverB), 1 ether);
       router.depositReserveAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, bob, 0);
-      assertEq(depositToken_.balanceOf(bob), 1 ether);
+      assertEq(depositReceiptToken_.balanceOf(bob), 1 ether);
     } else {
-      router.depositRewardAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverA, 0);
-      assertEq(depositToken_.balanceOf(receiverA), 1 ether);
-      router.depositRewardAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverB, 0);
-      assertEq(depositToken_.balanceOf(receiverB), 1 ether);
-      router.depositRewardAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, bob, 0);
-      assertEq(depositToken_.balanceOf(bob), 1 ether);
+      // router.depositRewardAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverA, 0);
+      // assertEq(depositToken_.balanceOf(receiverA), 1 ether);
+      // router.depositRewardAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverB, 0);
+      // assertEq(depositToken_.balanceOf(receiverB), 1 ether);
+      // router.depositRewardAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, bob, 0);
+      // assertEq(depositToken_.balanceOf(bob), 1 ether);
     }
 
-    uint256 poolAmount_ = isReserveDeposit_
-      ? getReservePool(safetyModule, poolId_).depositAmount
-      : getRewardPool(safetyModule, poolId_).undrippedRewards;
+    uint256 poolAmount_ = getReservePool(safetyModule, poolId_).depositAmount;
+    // : getRewardPool(safetyModule, poolId_).undrippedRewards;
 
     assertEq(weth.balanceOf(address(safetyModule)) - poolAmount_, 0);
 
@@ -1166,9 +1149,9 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
     _testExcessAssetsCanBeSplitAmongstDeposits(true);
   }
 
-  function test_excessAssetsCanBeSplitAmongstRewardDeposits() public {
-    _testExcessAssetsCanBeSplitAmongstDeposits(false);
-  }
+  // function test_excessAssetsCanBeSplitAmongstRewardDeposits() public {
+  //   _testExcessAssetsCanBeSplitAmongstDeposits(false);
+  // }
 }
 
 contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
@@ -1357,20 +1340,16 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     );
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] =
-      ReservePoolConfig({maxSlashPercentage: 0, asset: reserveAssetA, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
-    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
-    rewardPoolConfigs_[0] =
-      RewardPoolConfig({asset: rewardAssetA, dripModel: IDripModel(address(new MockDripModel(DECAY_RATE_PER_SECOND)))});
+    reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0, asset: reserveAssetA});
     Delays memory delaysConfig_ =
-      Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
+      Delays({withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
     TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](3);
     triggerConfig_[0] = TriggerConfig({trigger: ITrigger(triggerA_), payoutHandler: _randomAddress(), exists: true});
     triggerConfig_[1] = TriggerConfig({trigger: ITrigger(triggerB_), payoutHandler: _randomAddress(), exists: true});
     triggerConfig_[2] = TriggerConfig({trigger: ITrigger(triggerC_), payoutHandler: _randomAddress(), exists: true});
 
     UpdateConfigsCalldataParams memory updateConfigsParams_ =
-      UpdateConfigsCalldataParams(reservePoolConfigs_, rewardPoolConfigs_, triggerConfig_, delaysConfig_);
+      UpdateConfigsCalldataParams(reservePoolConfigs_, triggerConfig_, delaysConfig_);
 
     {
       bytes[] memory calls_ = new bytes[](4);

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import {ReservePoolConfig, RewardPoolConfig} from "../lib/structs/Configs.sol";
+import {IERC20} from "./IERC20.sol";
+import {IReceiptToken} from "./IReceiptToken.sol";
+import {ReservePoolConfig} from "../lib/structs/Configs.sol";
 import {Delays} from "../lib/structs/Delays.sol";
 import {TriggerConfig} from "../lib/structs/Trigger.sol";
 
@@ -9,7 +11,6 @@ interface IConfiguratorEvents {
   /// @dev Emitted when a safety module owner queues a new configuration.
   event ConfigUpdatesQueued(
     ReservePoolConfig[] reservePoolConfigs,
-    RewardPoolConfig[] rewardPoolConfigs,
     TriggerConfig[] triggerConfigUpdates,
     Delays delaysConfig,
     uint256 updateTime,
@@ -18,17 +19,9 @@ interface IConfiguratorEvents {
 
   /// @dev Emitted when a safety module's queued configuration updates are applied.
   event ConfigUpdatesFinalized(
-    ReservePoolConfig[] reservePoolConfigs,
-    RewardPoolConfig[] rewardPoolConfigs,
-    TriggerConfig[] triggerConfigUpdates,
-    Delays delaysConfig
+    ReservePoolConfig[] reservePoolConfigs, TriggerConfig[] triggerConfigUpdates, Delays delaysConfig
   );
 
   /// @notice Emitted when a reserve pool is created.
-  event ReservePoolCreated(
-    uint16 indexed reservePoolId, address reserveAssetAddress, address stkTokenAddress, address depositTokenAddress
-  );
-
-  /// @notice Emitted when an reward pool is created.
-  event RewardPoolCreated(uint16 indexed rewardPoolid, address rewardAssetAddress, address depositTokenAddress);
+  event ReservePoolCreated(uint16 indexed reservePoolId, IERC20 reserveAsset, IReceiptToken depositReceiptToken);
 }

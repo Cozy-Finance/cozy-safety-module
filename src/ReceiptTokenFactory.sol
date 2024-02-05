@@ -7,29 +7,30 @@ import {IReceiptTokenFactory} from "./interfaces/IReceiptTokenFactory.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 
 /**
- * @notice Deploys new DepositTokens and stkTokens, which implement the IReceiptToken interface.
+ * @notice Deploys new depositReceiptTokens and stkReceiptTokens, which implement the IReceiptToken interface.
  * @dev ReceiptTokens are compliant with ERC-20 and ERC-2612.
  */
 contract ReceiptTokenFactory is IReceiptTokenFactory {
   using Clones for address;
 
-  /// @notice Address of the DepositToken logic contract used to deploy new DepositToken.
-  IReceiptToken public immutable depositTokenLogic;
+  /// @notice Address of the depositReceiptToken logic contract used to deploy new depositReceiptToken.
+  IReceiptToken public immutable depositReceiptTokenLogic;
 
-  /// @notice Address of the stkToken logic contract used to deploy new stkToken.
-  IReceiptToken public immutable stkTokenLogic;
+  /// @notice Address of the stkReceiptToken logic contract used to deploy new stkToken.
+  IReceiptToken public immutable stkReceiptTokenLogic;
 
   /// @dev Thrown if an address parameter is invalid.
   error InvalidAddress();
 
-  /// @param depositTokenLogic_ Logic contract for deploying new DepositTokens.
-  /// @param stkTokenLogic_ Logic contract for deploying new stkTokens.
-  /// @dev stkTokens are only different from DepositTokens in that they have special logic when they are transferred.
-  constructor(IReceiptToken depositTokenLogic_, IReceiptToken stkTokenLogic_) {
-    _assertAddressNotZero(address(depositTokenLogic_));
-    _assertAddressNotZero(address(stkTokenLogic_));
-    depositTokenLogic = depositTokenLogic_;
-    stkTokenLogic = stkTokenLogic_;
+  /// @param depositReceiptTokenLogic_ Logic contract for deploying new depositReceiptTokens.
+  /// @param stkReceiptTokenLogic_ Logic contract for deploying new stkReceiptTokens.
+  /// @dev stkReceiptTokens are only different from depositReceiptTokens in that they have special logic when they are
+  /// transferred.
+  constructor(IReceiptToken depositReceiptTokenLogic_, IReceiptToken stkReceiptTokenLogic_) {
+    _assertAddressNotZero(address(depositReceiptTokenLogic_));
+    _assertAddressNotZero(address(stkReceiptTokenLogic_));
+    depositReceiptTokenLogic = depositReceiptTokenLogic_;
+    stkReceiptTokenLogic = stkReceiptTokenLogic_;
   }
 
   /// @notice Creates a new ReceiptToken contract with the given number of `decimals_`. The ReceiptToken's safety module
@@ -42,7 +43,8 @@ contract ReceiptTokenFactory is IReceiptTokenFactory {
     // The caller is the safety module.
     ISafetyModule safetyModule_ = ISafetyModule(msg.sender);
 
-    address tokenLogicContract_ = poolType_ == PoolType.STAKE ? address(stkTokenLogic) : address(depositTokenLogic);
+    address tokenLogicContract_ =
+      poolType_ == PoolType.STAKE ? address(stkReceiptTokenLogic) : address(depositReceiptTokenLogic);
     string memory name_ = poolType_ == PoolType.STAKE
       ? "Cozy Stake Token"
       : (poolType_ == PoolType.RESERVE ? "Cozy Reserve Deposit Token" : "Cozy Reward Deposit Token");
@@ -64,7 +66,8 @@ contract ReceiptTokenFactory is IReceiptTokenFactory {
     view
     returns (address)
   {
-    address tokenLogicContract_ = poolType_ == PoolType.STAKE ? address(stkTokenLogic) : address(depositTokenLogic);
+    address tokenLogicContract_ =
+      poolType_ == PoolType.STAKE ? address(stkReceiptTokenLogic) : address(depositReceiptTokenLogic);
     return
       Clones.predictDeterministicAddress(tokenLogicContract_, salt(safetyModule_, poolId_, poolType_), address(this));
   }

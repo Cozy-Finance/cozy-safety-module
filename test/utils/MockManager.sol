@@ -31,8 +31,4 @@ contract MockManager is Governable {
   function setAllowedReservePools(uint256 allowedReservePools_) external {
     allowedReservePools = allowedReservePools_;
   }
-
-  function setAllowedRewardPools(uint256 allowedRewardPools_) external {
-    allowedRewardPools = allowedRewardPools_;
-  }
 }

@@ -10,13 +10,7 @@ import {ReceiptToken} from "../src/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {SafetyModuleFactory} from "../src/SafetyModuleFactory.sol";
-import {StkToken} from "../src/StkToken.sol";
-import {
-  ReservePoolConfig,
-  TriggerConfig,
-  RewardPoolConfig,
-  UpdateConfigsCalldataParams
-} from "../src/lib/structs/Configs.sol";
+import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
@@ -79,7 +73,6 @@ contract DeployProtocol is ScriptUtils {
 
   // Global restrictions on the number of reserve and reward pools.
   uint256 allowedReservePools;
-  uint256 allowedRewardPools;
 
   // Contracts to define per-network.
   IERC20 asset;
@@ -96,7 +89,7 @@ contract DeployProtocol is ScriptUtils {
   SafetyModule safetyModuleLogic;
   SafetyModuleFactory safetyModuleFactory;
   ReceiptToken depositTokenLogic;
-  StkToken stkTokenLogic;
+  // StkToken stkTokenLogic; TODO: Deploy and initialize stkTokenLogic.
   ReceiptTokenFactory receiptTokenFactory;
 
   // Peripheral contracts to deploy.
@@ -138,7 +131,6 @@ contract DeployProtocol is ScriptUtils {
 
     // -------- Reserve Pool Limits --------
     allowedReservePools = json_.readUint(".allowedReservePools");
-    allowedRewardPools = json_.readUint(".allowedRewardPools");
 
     // -------------------------------------
     // -------- Address Computation --------
@@ -152,10 +144,10 @@ contract DeployProtocol is ScriptUtils {
       ISafetyModuleFactory(vm.computeCreateAddress(msg.sender, nonce_ + 3));
     IReceiptToken computedAddrDepositTokenLogic_ = IReceiptToken(vm.computeCreateAddress(msg.sender, nonce_ + 4));
     // nonce + 5 is initialization of the DepositToken logic.
-    IReceiptToken computedAddrStkTokenLogic_ = IReceiptToken(vm.computeCreateAddress(msg.sender, nonce_ + 6));
-    // nonce + 7 is initialization of the StkToken logic.
+    // TODO Deploy an init stkTokenLogic.
+    // IReceiptToken computedAddrStkTokenLogic_ = IReceiptToken(vm.computeCreateAddress(msg.sender, nonce_ + 6));
     IReceiptTokenFactory computedAddrReceiptTokenFactory_ =
-      IReceiptTokenFactory(vm.computeCreateAddress(msg.sender, nonce_ + 8));
+      IReceiptTokenFactory(vm.computeCreateAddress(msg.sender, nonce_ + 6));
 
     // ------------------------------------------
     // -------- Core Protocol Deployment --------
@@ -163,9 +155,7 @@ contract DeployProtocol is ScriptUtils {
 
     // -------- Deploy: Manager --------
     vm.broadcast();
-    manager = new Manager(
-      owner, pauser, computedAddrSafetyModuleFactory_, feeDripModel, allowedReservePools, allowedRewardPools
-    );
+    manager = new Manager(owner, pauser, computedAddrSafetyModuleFactory_, feeDripModel, allowedReservePools);
     console2.log("Manager deployed:", address(manager));
     require(address(manager) == address(computedAddrManager_), "Manager address mismatch");
 
@@ -183,9 +173,8 @@ contract DeployProtocol is ScriptUtils {
       address(0),
       UpdateConfigsCalldataParams({
         reservePoolConfigs: new ReservePoolConfig[](0),
-        rewardPoolConfigs: new RewardPoolConfig[](0),
         triggerConfigUpdates: new TriggerConfig[](0),
-        delaysConfig: Delays({configUpdateDelay: 0, configUpdateGracePeriod: 0, unstakeDelay: 0, withdrawDelay: 0})
+        delaysConfig: Delays({configUpdateDelay: 0, configUpdateGracePeriod: 0, withdrawDelay: 0})
       })
     );
 
@@ -208,18 +197,20 @@ contract DeployProtocol is ScriptUtils {
     vm.broadcast();
     depositTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
 
+    // TODO: Deploy StkToken logic and initialize
     // -------- Deploy: StkToken Logic --------
-    vm.broadcast();
-    stkTokenLogic = new StkToken();
-    console2.log("StkToken logic deployed:", address(stkTokenLogic));
-    require(address(stkTokenLogic) == address(computedAddrStkTokenLogic_), "StkToken logic address mismatch");
+    // vm.broadcast();
+    // stkTokenLogic = new StkToken();
+    // console2.log("StkToken logic deployed:", address(stkTokenLogic));
+    // require(address(stkTokenLogic) == address(computedAddrStkTokenLogic_), "StkToken logic address mismatch");
 
-    vm.broadcast();
-    stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    // vm.broadcast();
+    // stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
 
     // -------- Deploy: ReceiptTokenFactory --------
     vm.broadcast();
-    receiptTokenFactory = new ReceiptTokenFactory(computedAddrDepositTokenLogic_, computedAddrStkTokenLogic_);
+    // TODO: Use computed stk token logic address.
+    receiptTokenFactory = new ReceiptTokenFactory(computedAddrDepositTokenLogic_, IReceiptToken(address(0)));
     console2.log("ReceiptTokenFactory deployed:", address(receiptTokenFactory));
     require(
       address(receiptTokenFactory) == address(computedAddrReceiptTokenFactory_), "ReceiptTokenFactory address mismatch"

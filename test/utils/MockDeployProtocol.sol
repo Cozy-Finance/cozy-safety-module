@@ -12,9 +12,8 @@ import {Manager} from "../../src/Manager.sol";
 import {SafetyModule} from "../../src/SafetyModule.sol";
 import {SafetyModuleFactory} from "../../src/SafetyModuleFactory.sol";
 import {ReceiptToken} from "../../src/ReceiptToken.sol";
-import {StkToken} from "../../src/StkToken.sol";
 import {ReceiptTokenFactory} from "../../src/ReceiptTokenFactory.sol";
-import {ReservePoolConfig, RewardPoolConfig, UpdateConfigsCalldataParams} from "../../src/lib/structs/Configs.sol";
+import {ReservePoolConfig, UpdateConfigsCalldataParams} from "../../src/lib/structs/Configs.sol";
 import {Delays} from "../../src/lib/structs/Delays.sol";
 import {TriggerConfig} from "../../src/lib/structs/Trigger.sol";
 import {MockDripModel} from "./MockDripModel.sol";
@@ -23,8 +22,8 @@ import {TestBase} from "../utils/TestBase.sol";
 contract MockDeployer is TestBase {
   Manager manager;
   SafetyModuleFactory safetyModuleFactory;
-  ReceiptToken depositTokenLogic;
-  StkToken stkTokenLogic;
+  ReceiptToken depositReceiptTokenLogic;
+  ReceiptToken stkReceiptTokenLogic;
   ReceiptTokenFactory receiptTokenFactory;
   MockDripModel feeDripModel;
   ISafetyModule safetyModuleLogic;
@@ -51,20 +50,14 @@ contract MockDeployer is TestBase {
     ISafetyModule computedAddrSafetyModuleLogic_ = ISafetyModule(vm.computeCreateAddress(address(this), nonce_ + 2));
     ISafetyModuleFactory computedAddrSafetyModuleFactory_ =
       ISafetyModuleFactory(vm.computeCreateAddress(address(this), nonce_ + 3));
-    IReceiptToken depositTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 4));
-    IReceiptToken stkTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 5));
+    IReceiptToken depositReceiptTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 4));
+    IReceiptToken stkReceiptTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 5));
     IReceiptTokenFactory computedAddrReceiptTokenFactory_ =
       IReceiptTokenFactory(vm.computeCreateAddress(address(this), nonce_ + 6));
 
     feeDripModel = new MockDripModel(DEFAULT_FEE_DRIP_MODEL_CONSTANT);
-    manager = new Manager(
-      owner,
-      pauser,
-      computedAddrSafetyModuleFactory_,
-      computedAddrFeeDripModel_,
-      ALLOWED_RESERVE_POOLS,
-      ALLOWED_REWARD_POOLS
-    );
+    manager =
+      new Manager(owner, pauser, computedAddrSafetyModuleFactory_, computedAddrFeeDripModel_, ALLOWED_RESERVE_POOLS);
 
     safetyModuleLogic = ISafetyModule(address(new SafetyModule(computedAddrManager_, computedAddrReceiptTokenFactory_)));
     safetyModuleLogic.initialize(
@@ -72,18 +65,17 @@ contract MockDeployer is TestBase {
       address(0),
       UpdateConfigsCalldataParams({
         reservePoolConfigs: new ReservePoolConfig[](0),
-        rewardPoolConfigs: new RewardPoolConfig[](0),
         triggerConfigUpdates: new TriggerConfig[](0),
-        delaysConfig: Delays({configUpdateDelay: 0, configUpdateGracePeriod: 0, unstakeDelay: 0, withdrawDelay: 0})
+        delaysConfig: Delays({configUpdateDelay: 0, configUpdateGracePeriod: 0, withdrawDelay: 0})
       })
     );
     safetyModuleFactory = new SafetyModuleFactory(computedAddrManager_, computedAddrSafetyModuleLogic_);
 
-    depositTokenLogic = new ReceiptToken();
-    stkTokenLogic = new StkToken();
-    depositTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
-    stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
-    receiptTokenFactory = new ReceiptTokenFactory(depositTokenLogic_, stkTokenLogic_);
+    depositReceiptTokenLogic = new ReceiptToken();
+    stkReceiptTokenLogic = new ReceiptToken();
+    depositReceiptTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    stkReceiptTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    receiptTokenFactory = new ReceiptTokenFactory(depositReceiptTokenLogic_, stkReceiptTokenLogic_);
   }
 }
 

@@ -6,13 +6,9 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {ReservePool, AssetPool} from "./structs/Pools.sol";
 import {Ownable} from "./Ownable.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
-import {SafeCastLib} from "./SafeCastLib.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
-import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
-import {SafeCastLib} from "./SafeCastLib.sol";
 import {MathConstants} from "./MathConstants.sol";
-import {RewardPool, IdLookup} from "./structs/Pools.sol";
 import {IReceiptToken} from "../interfaces/IReceiptToken.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
@@ -69,17 +65,27 @@ abstract contract FeesHandler is SafetyModuleCommon {
     uint256 dripFactor_ = dripModel_.dripFactor(reservePool_.lastFeesDripTime);
     if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
 
-    uint256 drippedFromStakeAmount_ =
-      _computeNextDripAmount(reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount, dripFactor_);
-    uint256 drippedFromDepositAmount_ =
-      _computeNextDripAmount(reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount, dripFactor_);
+    uint256 drippedFromDepositAmount_ = _getNextDripAmount(
+      reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount, dripModel_, reservePool_.lastFeesDripTime
+    );
 
-    if (drippedFromStakeAmount_ > 0 || drippedFromDepositAmount_ > 0) {
-      reservePool_.feeAmount += drippedFromStakeAmount_ + drippedFromDepositAmount_;
-      reservePool_.stakeAmount -= drippedFromStakeAmount_;
+    if (drippedFromDepositAmount_ > 0) {
+      reservePool_.feeAmount += drippedFromDepositAmount_;
       reservePool_.depositAmount -= drippedFromDepositAmount_;
     }
 
     reservePool_.lastFeesDripTime = uint128(block.timestamp);
+  }
+
+  function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_)
+    internal
+    view
+    override
+    returns (uint256)
+  {
+    uint256 dripFactor_ = dripModel_.dripFactor(lastDripTime_);
+    if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
+
+    return totalBaseAmount_.mulWadDown(dripFactor_);
   }
 }

@@ -8,9 +8,9 @@ import {IRedemptionErrors} from "../interfaces/IRedemptionErrors.sol";
 import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
-import {AssetPool, ReservePool, RewardPool} from "./structs/Pools.sol";
+import {AssetPool, ReservePool} from "./structs/Pools.sol";
 import {MathConstants} from "./MathConstants.sol";
-import {PendingRedemptionAccISFs, Redemption, RedemptionPreview} from "./structs/Redemptions.sol";
+import {Redemption, RedemptionPreview} from "./structs/Redemptions.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {CozyMath} from "./CozyMath.sol";
 import {RedemptionLib} from "./RedemptionLib.sol";
@@ -25,18 +25,17 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   using CozyMath for uint256;
 
   /// @notice List of accumulated inverse scaling factors for redemption, with the last value being the latest,
-  ///         on a reward pool basis.
+  ///         on a reserve pool basis.
   /// @dev Every time there is a trigger, a scaling factor is retroactively applied to every pending
   ///      redemption equiv to:
-  ///        x = 1 - slashedAmount / reservePool.depositAmount (or stakeAmount for unstakes)
+  ///        x = 1 - slashedAmount / reservePool.depositAmount
   ///      The last value of this array (a) will be updated to be a = a * 1 / x (scaled by WAD).
   ///      Because x will always be <= 1, the accumulated scaling factor will always INCREASE by a factor of 1/x
   ///      and can run out of usable bits (see RedemptionLib.MAX_SAFE_ACCUM_INV_SCALING_FACTOR_VALUE).
   ///      This can even happen after a single trigger if 100% of pool is consumed because 1/0 = INF.
   ///      If this happens, a new entry (1.0) is appended to the end of this array and the next trigger
   ///      will accumulate on that value.
-  mapping(uint16 reservePoolId_ => PendingRedemptionAccISFs reservePoolPendingRedemptionAccISFs) internal
-    pendingRedemptionAccISFs;
+  mapping(uint16 reservePoolId_ => uint256[] reservePoolPendingRedemptionAccISFs) internal pendingRedemptionAccISFs;
 
   /// @notice ID of next redemption.
   uint64 internal redemptionIdCounter;
@@ -64,66 +63,18 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint64 redemptionId_
   );
 
-  /// @dev Emitted when a user redeems rewards.
-  event RedeemedUndrippedRewards(
-    address caller_,
-    address indexed receiver_,
-    address indexed owner_,
-    IReceiptToken indexed depositToken_,
-    uint256 depositTokenAmount_,
-    uint256 rewardAssetAmount_
-  );
-
-  /// @notice Redeems by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
+  /// @notice Redeems by burning `depositReceiptTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and
+  /// sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeem(uint16 reservePoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeem(uint16 reservePoolId_, uint256 depositReceiptTokenAmount_, address receiver_, address owner_)
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     _dripFeesFromReservePool(reservePool_, cozyManager.getFeeDripModel(ISafetyModule(address(this))));
     (redemptionId_, reserveAssetAmount_) =
-      _redeem(reservePoolId_, reservePool_, false, depositTokenAmount_, receiver_, owner_);
-  }
-
-  /// @notice Unstakes by burning `stkTokenAmount_` of `reservePoolId_` reserve pool stake tokens and sending
-  /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`. Also claims any outstanding rewards
-  /// and sends them to `receiver_`.
-  /// @dev Assumes that user has approved the SafetyModule to spend its stake tokens.
-  function unstake(uint16 reservePoolId_, uint256 stkTokenAmount_, address receiver_, address owner_)
-    external
-    returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
-  {
-    ReservePool storage reservePool_ = reservePools[reservePoolId_];
-    _dripFeesFromReservePool(reservePool_, cozyManager.getFeeDripModel(ISafetyModule(address(this))));
-    claimRewards(reservePoolId_, receiver_);
-    (redemptionId_, reserveAssetAmount_) =
-      _redeem(reservePoolId_, reservePool_, true, stkTokenAmount_, receiver_, owner_);
-  }
-
-  /// @notice Redeem by burning `depositTokenAmount_` of `rewardPoolId_` reward pool deposit tokens and sending
-  /// `rewardAssetAmount_` of `rewardPoolId_` reward pool assets to `receiver_`. Reward pool assets can only be redeemed
-  /// if they have not been dripped yet.
-  /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeemUndrippedRewards(uint16 rewardPoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
-    external
-    returns (uint256 rewardAssetAmount_)
-  {
-    RewardPool storage rewardPool_ = rewardPools[rewardPoolId_];
-    _dripRewardPool(rewardPool_);
-
-    IReceiptToken depositToken_ = rewardPool_.depositToken;
-    rewardAssetAmount_ = _previewRedemption(
-      depositToken_, depositTokenAmount_, rewardPool_.dripModel, rewardPool_.undrippedRewards, rewardPool_.lastDripTime
-    );
-
-    depositToken_.burn(msg.sender, owner_, depositTokenAmount_);
-    rewardPool_.undrippedRewards -= rewardAssetAmount_;
-    assetPools[rewardPool_.asset].amount -= rewardAssetAmount_;
-    rewardPool_.asset.safeTransfer(receiver_, rewardAssetAmount_);
-
-    emit RedeemedUndrippedRewards(msg.sender, receiver_, owner_, depositToken_, depositTokenAmount_, rewardAssetAmount_);
+      _redeem(reservePoolId_, reservePool_, depositReceiptTokenAmount_, receiver_, owner_);
   }
 
   /// @notice Completes the redemption request for the specified redemption ID.
@@ -135,7 +86,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their redemption (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
-  function previewRedemption(uint16 reservePoolId_, uint256 receiptTokenAmount_, bool isUnstake_)
+  function previewRedemption(uint16 reservePoolId_, uint256 receiptTokenAmount_)
     external
     view
     returns (uint256 reserveAssetAmount_)
@@ -145,12 +96,10 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 lastDripTime_ = reservePool_.lastFeesDripTime;
 
     reserveAssetAmount_ = _previewRedemption(
-      isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken,
+      reservePool_.depositReceiptToken,
       receiptTokenAmount_,
       feeDripModel_,
-      isUnstake_
-        ? reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount
-        : reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount,
+      reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount,
       lastDripTime_
     );
   }
@@ -168,28 +117,11 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       receiptToken: redemption_.receiptToken,
       receiptTokenAmount: redemption_.receiptTokenAmount,
       reserveAssetAmount: _computeFinalReserveAssetsRedeemed(
-        redemption_.reservePoolId,
-        redemption_.assetAmount,
-        redemption_.queuedAccISF,
-        redemption_.queuedAccISFsLength,
-        redemption_.isUnstake
+        redemption_.reservePoolId, redemption_.assetAmount, redemption_.queuedAccISF, redemption_.queuedAccISFsLength
         ),
       owner: redemption_.owner,
       receiver: redemption_.receiver
     });
-  }
-
-  function previewUndrippedRewardsRedemption(uint16 rewardPoolId_, uint256 depositTokenAmount_)
-    external
-    view
-    returns (uint256 rewardAssetAmount_)
-  {
-    RewardPool storage rewardPool_ = rewardPools[rewardPoolId_];
-    uint256 lastDripTime_ = rewardPool_.lastDripTime;
-
-    rewardAssetAmount_ = _previewRedemption(
-      rewardPool_.depositToken, depositTokenAmount_, rewardPool_.dripModel, rewardPool_.undrippedRewards, lastDripTime_
-    );
   }
 
   function _previewRedemption(
@@ -215,17 +147,14 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   function _redeem(
     uint16 reservePoolId_,
     ReservePool storage reservePool_,
-    bool isUnstake_,
     uint256 receiptTokenAmount_,
     address receiver_,
     address owner_
   ) internal returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
-    IReceiptToken receiptToken_ = isUnstake_ ? reservePool_.stkToken : reservePool_.depositToken;
+    IReceiptToken receiptToken_ = reservePool_.depositReceiptToken;
 
     {
-      uint256 assetsAvailableForRedemption_ = isUnstake_
-        ? (reservePool_.stakeAmount - reservePool_.pendingUnstakesAmount)
-        : (reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount);
+      uint256 assetsAvailableForRedemption_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
       if (assetsAvailableForRedemption_ == 0) revert NoAssetsToRedeem();
 
       reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
@@ -236,14 +165,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     }
 
     redemptionId_ = _queueRedemption(
-      owner_,
-      receiver_,
-      reservePool_,
-      receiptToken_,
-      receiptTokenAmount_,
-      reserveAssetAmount_,
-      reservePoolId_,
-      isUnstake_
+      owner_, receiver_, reservePool_, receiptToken_, receiptTokenAmount_, reserveAssetAmount_, reservePoolId_
     );
   }
 
@@ -255,8 +177,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     IReceiptToken receiptToken_,
     uint256 receiptTokenAmount_,
     uint256 reserveAssetAmount_,
-    uint16 reservePoolId_,
-    bool isUnstake_
+    uint16 reservePoolId_
   ) internal returns (uint64 redemptionId_) {
     SafetyModuleState safetyModuleState_ = safetyModuleState;
     if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert InvalidState();
@@ -267,13 +188,10 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       // Increments can never realistically overflow. Even with a uint64, you'd need to have 1000 redemptions per
       // second for 584,542,046 years.
       redemptionIdCounter = redemptionId_ + 1;
-      if (isUnstake_) reservePool_.pendingUnstakesAmount += reserveAssetAmount_;
-      else reservePool_.pendingWithdrawalsAmount += reserveAssetAmount_;
+      reservePool_.pendingWithdrawalsAmount += reserveAssetAmount_;
     }
 
-    uint256[] storage reservePoolPendingAccISFs = isUnstake_
-      ? pendingRedemptionAccISFs[reservePoolId_].unstakes
-      : pendingRedemptionAccISFs[reservePoolId_].withdrawals;
+    uint256[] storage reservePoolPendingAccISFs = pendingRedemptionAccISFs[reservePoolId_];
     uint256 numScalingFactors_ = reservePoolPendingAccISFs.length;
     Redemption memory redemption_ = Redemption({
       reservePoolId: reservePoolId_,
@@ -283,12 +201,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       owner: owner_,
       receiver: receiver_,
       queueTime: uint40(block.timestamp),
-      delay: safetyModuleState_ == SafetyModuleState.PAUSED
-        ? 0
-        : isUnstake_ ? uint40(delays.unstakeDelay) : uint40(delays.withdrawDelay),
+      delay: safetyModuleState_ == SafetyModuleState.PAUSED ? 0 : uint40(delays.withdrawDelay),
       queuedAccISFsLength: uint32(numScalingFactors_),
-      queuedAccISF: numScalingFactors_ == 0 ? MathConstants.WAD : reservePoolPendingAccISFs[numScalingFactors_ - 1],
-      isUnstake: isUnstake_
+      queuedAccISF: numScalingFactors_ == 0 ? MathConstants.WAD : reservePoolPendingAccISFs[numScalingFactors_ - 1]
     });
 
     if (redemption_.delay == 0) {
@@ -319,20 +234,11 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     // Compute the final reserve assets to redemptions, which can be scaled down if triggers have occurred
     // since the redemption was queued.
     reserveAssetAmountRedeemed_ = _computeFinalReserveAssetsRedeemed(
-      redemption_.reservePoolId,
-      redemption_.assetAmount,
-      redemption_.queuedAccISF,
-      redemption_.queuedAccISFsLength,
-      redemption_.isUnstake
+      redemption_.reservePoolId, redemption_.assetAmount, redemption_.queuedAccISF, redemption_.queuedAccISFsLength
     );
     if (reserveAssetAmountRedeemed_ != 0) {
-      if (redemption_.isUnstake) {
-        reservePool_.stakeAmount -= reserveAssetAmountRedeemed_;
-        reservePool_.pendingUnstakesAmount -= reserveAssetAmountRedeemed_;
-      } else {
-        reservePool_.depositAmount -= reserveAssetAmountRedeemed_;
-        reservePool_.pendingWithdrawalsAmount -= reserveAssetAmountRedeemed_;
-      }
+      reservePool_.depositAmount -= reserveAssetAmountRedeemed_;
+      reservePool_.pendingWithdrawalsAmount -= reserveAssetAmountRedeemed_;
       assetPools[reserveAsset_].amount -= reserveAssetAmountRedeemed_;
       reserveAsset_.safeTransfer(redemption_.receiver, reserveAssetAmountRedeemed_);
     }
@@ -355,22 +261,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 oldDepositAmount_,
     uint256 slashAmount_
   ) internal override returns (uint256 newPendingWithdrawalsAmount_) {
-    uint256[] storage reservePoolPendingRedemptionsAccISFs = pendingRedemptionAccISFs[reservePoolId_].withdrawals;
+    uint256[] storage reservePoolPendingRedemptionsAccISFs = pendingRedemptionAccISFs[reservePoolId_];
     newPendingWithdrawalsAmount_ = RedemptionLib.updateRedemptionsAfterTrigger(
       reservePool_.pendingWithdrawalsAmount, oldDepositAmount_, slashAmount_, reservePoolPendingRedemptionsAccISFs
-    );
-  }
-
-  /// @inheritdoc SafetyModuleCommon
-  function _updateUnstakesAfterTrigger(
-    uint16 reservePoolId_,
-    ReservePool storage reservePool_,
-    uint256 oldStakeAmount_,
-    uint256 slashAmount_
-  ) internal override returns (uint256 newPendingUnstakesAmount_) {
-    uint256[] storage reservePoolPendingUnstakesAccISFs = pendingRedemptionAccISFs[reservePoolId_].unstakes;
-    newPendingUnstakesAmount_ = RedemptionLib.updateRedemptionsAfterTrigger(
-      reservePool_.pendingUnstakesAmount, oldStakeAmount_, slashAmount_, reservePoolPendingUnstakesAccISFs
     );
   }
 
@@ -385,12 +278,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint16 reservePoolId_,
     uint128 queuedReserveAssetAmount_,
     uint256 queuedAccISF_,
-    uint32 queuedAccISFLength_,
-    bool isUnstake_
+    uint32 queuedAccISFLength_
   ) internal view returns (uint128) {
-    uint256[] storage reservePoolPendingAccISFs_ = isUnstake_
-      ? pendingRedemptionAccISFs[reservePoolId_].unstakes
-      : pendingRedemptionAccISFs[reservePoolId_].withdrawals;
+    uint256[] storage reservePoolPendingAccISFs_ = pendingRedemptionAccISFs[reservePoolId_];
     return RedemptionLib.computeFinalReserveAssetsRedeemed(
       reservePoolPendingAccISFs_, queuedReserveAssetAmount_, queuedAccISF_, queuedAccISFLength_
     );

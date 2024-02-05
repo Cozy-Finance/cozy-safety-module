@@ -5,7 +5,7 @@ import {DripModelExponential} from "cozy-safety-module-models/DripModelExponenti
 import {SafetyModule} from "../../../src/SafetyModule.sol";
 import {MathConstants} from "../../../src/lib/MathConstants.sol";
 import {TriggerState} from "../../../src/lib/SafetyModuleStates.sol";
-import {ReservePoolConfig, RewardPoolConfig, UpdateConfigsCalldataParams} from "../../../src/lib/structs/Configs.sol";
+import {ReservePoolConfig, UpdateConfigsCalldataParams} from "../../../src/lib/structs/Configs.sol";
 import {Delays} from "../../../src/lib/structs/Delays.sol";
 import {TriggerConfig} from "../../../src/lib/structs/Trigger.sol";
 import {IDripModel} from "../../../src/interfaces/IDripModel.sol";
@@ -28,14 +28,9 @@ abstract contract InvariantBaseDeploy is TestBase, MockDeployer {
   ISafetyModule public safetyModule;
   SafetyModuleHandler public safetyModuleHandler;
 
-  // Deploy with some sane params for default models.
-  IDripModel public dripDecayModel = IDripModel(address(new DripModelExponential(9_116_094_774)));
-
-  Delays public delays =
-    Delays({unstakeDelay: 2 days, withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
+  Delays public delays = Delays({withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
 
   uint256 public numReservePools;
-  uint256 public numRewardPools;
   ITrigger[] public triggers;
   IERC20[] public assets;
 
@@ -54,35 +49,23 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
   }
 
   function _fuzzedSelectors() internal pure virtual returns (bytes4[] memory) {
-    bytes4[] memory selectors = new bytes4[](22);
+    bytes4[] memory selectors = new bytes4[](11);
     selectors[0] = SafetyModuleHandler.depositReserveAssets.selector;
     selectors[1] = SafetyModuleHandler.depositReserveAssetsWithExistingActor.selector;
     selectors[2] = SafetyModuleHandler.depositReserveAssetsWithoutTransfer.selector;
     selectors[3] = SafetyModuleHandler.depositReserveAssetsWithoutTransferWithExistingActor.selector;
-    selectors[4] = SafetyModuleHandler.depositRewardAssets.selector;
-    selectors[5] = SafetyModuleHandler.depositRewardAssetsWithExistingActor.selector;
-    selectors[6] = SafetyModuleHandler.depositRewardAssetsWithoutTransfer.selector;
-    selectors[7] = SafetyModuleHandler.depositRewardAssetsWithoutTransferWithExistingActor.selector;
-    selectors[8] = SafetyModuleHandler.stake.selector;
-    selectors[9] = SafetyModuleHandler.stakeWithExistingActor.selector;
-    selectors[10] = SafetyModuleHandler.stakeWithoutTransfer.selector;
-    selectors[11] = SafetyModuleHandler.stakeWithoutTransferWithExistingActor.selector;
-    selectors[12] = SafetyModuleHandler.redeem.selector;
-    selectors[13] = SafetyModuleHandler.unstake.selector;
-    selectors[14] = SafetyModuleHandler.claimRewards.selector;
-    selectors[15] = SafetyModuleHandler.completeRedemption.selector;
-    selectors[16] = SafetyModuleHandler.dripFees.selector;
-    selectors[17] = SafetyModuleHandler.pause.selector;
-    selectors[18] = SafetyModuleHandler.unpause.selector;
-    selectors[19] = SafetyModuleHandler.trigger.selector;
-    selectors[20] = SafetyModuleHandler.slash.selector;
-    selectors[21] = SafetyModuleHandler.redeemUndrippedRewards.selector;
+    selectors[4] = SafetyModuleHandler.redeem.selector;
+    selectors[5] = SafetyModuleHandler.completeRedemption.selector;
+    selectors[6] = SafetyModuleHandler.dripFees.selector;
+    selectors[7] = SafetyModuleHandler.pause.selector;
+    selectors[8] = SafetyModuleHandler.unpause.selector;
+    selectors[9] = SafetyModuleHandler.trigger.selector;
+    selectors[10] = SafetyModuleHandler.slash.selector;
     return selectors;
   }
 
   function _initHandler() internal {
-    safetyModuleHandler =
-      new SafetyModuleHandler(manager, safetyModule, numReservePools, numRewardPools, triggers, block.timestamp);
+    safetyModuleHandler = new SafetyModuleHandler(manager, safetyModule, numReservePools, triggers, block.timestamp);
     targetSelector(FuzzSelector({addr: address(safetyModuleHandler), selectors: _fuzzedSelectors()}));
     targetContract(address(safetyModuleHandler));
   }
@@ -104,17 +87,13 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
   }
 }
 
-abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is InvariantBaseDeploy {
+abstract contract InvariantTestWithSingleReservePool is InvariantBaseDeploy {
   function _initSafetyModule() internal override {
     IERC20 asset_ = IERC20(address(new MockERC20("Mock Asset", "MOCK", 6)));
     assets.push(asset_);
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] =
-      ReservePoolConfig({maxSlashPercentage: 0.5e18, asset: asset_, rewardsPoolsWeight: uint16(MathConstants.ZOC)});
-
-    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
-    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: dripDecayModel});
+    reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0.5e18, asset: asset_});
 
     triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
 
@@ -123,56 +102,35 @@ abstract contract InvariantTestWithSingleReservePoolAndSingleRewardPool is Invar
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
-      rewardPoolConfigs: rewardPoolConfigs_,
       triggerConfigUpdates: triggerConfig_,
       delaysConfig: delays
     });
 
     numReservePools = reservePoolConfigs_.length;
-    numRewardPools = rewardPoolConfigs_.length;
     safetyModule = manager.createSafetyModule(owner, pauser, configs_, _randomBytes32());
 
-    vm.label(address(getReservePool(safetyModule, 0).depositToken), "reservePool0DepositToken");
-    vm.label(address(getReservePool(safetyModule, 0).stkToken), "reservePool0StkToken");
-    vm.label(address(getRewardPool(safetyModule, 0).depositToken), "rewardPool0DepositToken");
+    vm.label(address(getReservePool(safetyModule, 0).depositReceiptToken), "reservePool0DepositReceiptToken");
   }
 }
 
-abstract contract InvariantTestWithMultipleReservePoolsAndMultipleRewardPools is InvariantBaseDeploy {
+abstract contract InvariantTestWithMultipleReservePools is InvariantBaseDeploy {
   uint16 internal constant MAX_RESERVE_POOLS = 10;
-  uint16 internal constant MAX_REWARD_POOLS = 10;
 
   function _initSafetyModule() internal override {
     uint256 numReservePools_ = _randomUint256InRange(1, MAX_RESERVE_POOLS);
-    uint256 numRewardPools_ = _randomUint256InRange(1, MAX_REWARD_POOLS);
 
     // Create some unique assets to use for the pools. We want to make sure the invariant tests cover the case where the
-    // same asset is used for multiple reserve/reward pools.
-    uint256 uniqueNumAssets_ = _randomUint256InRange(1, numReservePools_ + numRewardPools_);
+    // same asset is used for multiple reserve pools.
+    uint256 uniqueNumAssets_ = _randomUint256InRange(1, numReservePools_);
     for (uint256 i_; i_ < uniqueNumAssets_; i_++) {
       assets.push(IERC20(address(new MockERC20("Mock Asset", "MOCK", 6))));
     }
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numReservePools_);
-    uint256 rewardsPoolsWeightSum_ = 0;
     for (uint256 i_; i_ < numReservePools_; i_++) {
-      uint256 rewardsPoolsWeight_ = i_ < numReservePools_ - 1
-        ? _randomUint256InRange(0, MathConstants.ZOC - rewardsPoolsWeightSum_)
-        : MathConstants.ZOC - rewardsPoolsWeightSum_;
-      rewardsPoolsWeightSum_ += rewardsPoolsWeight_;
-
       reservePoolConfigs_[i_] = ReservePoolConfig({
         maxSlashPercentage: _randomUint256InRange(1, MathConstants.WAD),
-        asset: assets[_randomUint256InRange(0, uniqueNumAssets_ - 1)],
-        rewardsPoolsWeight: uint16(rewardsPoolsWeight_)
-      });
-    }
-
-    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](numRewardPools_);
-    for (uint256 i_; i_ < numRewardPools_; i_++) {
-      rewardPoolConfigs_[i_] = RewardPoolConfig({
-        asset: assets[_randomUint256InRange(0, uniqueNumAssets_ - 1)],
-        dripModel: IDripModel(address(new DripModelExponential(DEFAULT_DRIP_RATE)))
+        asset: assets[_randomUint256InRange(0, uniqueNumAssets_ - 1)]
       });
     }
 
@@ -183,30 +141,17 @@ abstract contract InvariantTestWithMultipleReservePoolsAndMultipleRewardPools is
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
-      rewardPoolConfigs: rewardPoolConfigs_,
       triggerConfigUpdates: triggerConfig_,
       delaysConfig: delays
     });
 
     numReservePools = reservePoolConfigs_.length;
-    numRewardPools = rewardPoolConfigs_.length;
     safetyModule = manager.createSafetyModule(owner, pauser, configs_, _randomBytes32());
 
     for (uint256 i_; i_ < numReservePools_; i_++) {
       vm.label(
-        address(getReservePool(safetyModule, i_).depositToken),
-        string.concat("reservePool", Strings.toString(i_), "DepositToken")
-      );
-      vm.label(
-        address(getReservePool(safetyModule, i_).stkToken),
-        string.concat("reservePool", Strings.toString(i_), "StkToken")
-      );
-    }
-
-    for (uint256 i_; i_ < numRewardPools_; i_++) {
-      vm.label(
-        address(getRewardPool(safetyModule, i_).depositToken),
-        string.concat("rewardPool", Strings.toString(i_), "DepositToken")
+        address(getReservePool(safetyModule, i_).depositReceiptToken),
+        string.concat("reservePool", Strings.toString(i_), "DepositReceiptToken")
       );
     }
   }

@@ -6,7 +6,7 @@ import {IDripModel} from "./interfaces/IDripModel.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
-import {RewardPoolConfig, UpdateConfigsCalldataParams, ReservePoolConfig} from "./lib/structs/Configs.sol";
+import {UpdateConfigsCalldataParams, ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
 import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
 import {Governable} from "./lib/Governable.sol";
@@ -19,9 +19,6 @@ contract Manager is Governable, IManager {
 
   /// @notice The max number of reserve pools allowed per safety module.
   uint256 public immutable allowedReservePools;
-
-  /// @notice The max number of reward pools allowed per safety module.
-  uint256 public immutable allowedRewardPools;
 
   /// @notice Cozy protocol SafetyModuleFactory.
   ISafetyModuleFactory public immutable safetyModuleFactory;
@@ -42,13 +39,13 @@ contract Manager is Governable, IManager {
   /// @param pauser_ The Cozy protocol pauser.
   /// @param safetyModuleFactory_ The Cozy protocol SafetyModuleFactory.
   /// @param feeDripModel_ The default fee drip model for all fees.
+  /// @param allowedReservePools_ The max number of reserve pools allowed per safety module.
   constructor(
     address owner_,
     address pauser_,
     ISafetyModuleFactory safetyModuleFactory_,
     IDripModel feeDripModel_,
-    uint256 allowedReservePools_,
-    uint256 allowedRewardPools_
+    uint256 allowedReservePools_
   ) {
     _assertAddressNotZero(owner_);
     _assertAddressNotZero(address(safetyModuleFactory_));
@@ -57,7 +54,6 @@ contract Manager is Governable, IManager {
 
     safetyModuleFactory = safetyModuleFactory_;
     allowedReservePools = allowedReservePools_;
-    allowedRewardPools = allowedRewardPools_;
 
     _updateFeeDripModel(feeDripModel_);
   }
@@ -132,15 +128,10 @@ contract Manager is Governable, IManager {
     _assertAddressNotZero(owner_);
     _assertAddressNotZero(pauser_);
 
-    if (
-      !ConfiguratorLib.isValidConfiguration(
-        configs_.reservePoolConfigs,
-        configs_.rewardPoolConfigs,
-        configs_.delaysConfig,
-        allowedReservePools,
-        allowedRewardPools
-      )
-    ) revert InvalidConfiguration();
+    if (!ConfiguratorLib.isValidConfiguration(configs_.reservePoolConfigs, configs_.delaysConfig, allowedReservePools))
+    {
+      revert InvalidConfiguration();
+    }
 
     isSafetyModule[ISafetyModule(safetyModuleFactory.computeAddress(salt_))] = true;
     safetyModule_ = safetyModuleFactory.deploySafetyModule(owner_, pauser_, configs_, salt_);
