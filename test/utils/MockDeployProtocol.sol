@@ -22,8 +22,8 @@ import {TestBase} from "../utils/TestBase.sol";
 contract MockDeployer is TestBase {
   Manager manager;
   SafetyModuleFactory safetyModuleFactory;
-  ReceiptToken depositTokenLogic;
-  ReceiptToken stkTokenLogic;
+  ReceiptToken depositReceiptTokenLogic;
+  ReceiptToken stkReceiptTokenLogic;
   ReceiptTokenFactory receiptTokenFactory;
   MockDripModel feeDripModel;
   ISafetyModule safetyModuleLogic;
@@ -50,8 +50,8 @@ contract MockDeployer is TestBase {
     ISafetyModule computedAddrSafetyModuleLogic_ = ISafetyModule(vm.computeCreateAddress(address(this), nonce_ + 2));
     ISafetyModuleFactory computedAddrSafetyModuleFactory_ =
       ISafetyModuleFactory(vm.computeCreateAddress(address(this), nonce_ + 3));
-    IReceiptToken depositTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 4));
-    IReceiptToken stkTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 5));
+    IReceiptToken depositReceiptTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 4));
+    IReceiptToken stkReceiptTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 5));
     IReceiptTokenFactory computedAddrReceiptTokenFactory_ =
       IReceiptTokenFactory(vm.computeCreateAddress(address(this), nonce_ + 6));
 
@@ -71,11 +71,11 @@ contract MockDeployer is TestBase {
     );
     safetyModuleFactory = new SafetyModuleFactory(computedAddrManager_, computedAddrSafetyModuleLogic_);
 
-    depositTokenLogic = new ReceiptToken();
-    stkTokenLogic = new ReceiptToken();
-    depositTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
-    stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
-    receiptTokenFactory = new ReceiptTokenFactory(depositTokenLogic_, stkTokenLogic_);
+    depositReceiptTokenLogic = new ReceiptToken();
+    stkReceiptTokenLogic = new ReceiptToken();
+    depositReceiptTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    stkReceiptTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    receiptTokenFactory = new ReceiptTokenFactory(depositReceiptTokenLogic_, stkReceiptTokenLogic_);
   }
 }
 

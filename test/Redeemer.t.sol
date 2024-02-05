@@ -30,8 +30,8 @@ import "./utils/Stub.sol";
 abstract contract ReedemerUnitTestBase is TestBase {
   using SafeCastLib for uint256;
 
-  IReceiptToken stkToken;
-  IReceiptToken depositToken;
+  IReceiptToken stkReceiptToken;
+  IReceiptToken depositReceiptToken;
   MockManager public mockManager = new MockManager();
   TestableRedeemer component = new TestableRedeemer(IManager(address(mockManager)));
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
@@ -82,10 +82,13 @@ abstract contract ReedemerUnitTestBase is TestBase {
     _deposit(reservePoolId_, owner_, reserveAssetAmount_, receiptTokenAmount_);
   }
 
-  function _deposit(uint16 reservePoolId_, address owner_, uint256 reserveAssetAmount_, uint256 depositTokenAmount_)
-    internal
-  {
-    component.mockDeposit(reservePoolId_, owner_, reserveAssetAmount_, depositTokenAmount_);
+  function _deposit(
+    uint16 reservePoolId_,
+    address owner_,
+    uint256 reserveAssetAmount_,
+    uint256 depositReceiptTokenAmount_
+  ) internal {
+    component.mockDeposit(reservePoolId_, owner_, reserveAssetAmount_, depositReceiptTokenAmount_);
   }
 
   function _depositAssets(uint16 reservePoolId_, uint256 amount_) internal {
@@ -123,12 +126,12 @@ abstract contract ReedemerUnitTestBase is TestBase {
   }
 
   function _mintReceiptToken(uint16 reservePoolId_, address receiver_, uint256 amount_) internal {
-    component.mockMintDepositTokens(reservePoolId_, receiver_, amount_);
+    component.mockMintDepositReceiptTokens(reservePoolId_, receiver_, amount_);
   }
 
   function _getReceiptToken(uint16 reservePoolId_) internal view returns (IERC20) {
     ReservePool memory reservePool_ = component.getReservePool(reservePoolId_);
-    return reservePool_.depositToken;
+    return reservePool_.depositReceiptToken;
   }
 
   function _setNextDripAmount(uint256 amount_) internal {
@@ -154,16 +157,16 @@ abstract contract ReedemerUnitTestBase is TestBase {
       new ReceiptTokenFactory(IReceiptToken(address(receiptTokenLogic_)), IReceiptToken(address(receiptTokenLogic_)));
 
     vm.startPrank(address(component));
-    stkToken =
+    stkReceiptToken =
       IReceiptToken(address(receiptTokenFactory.deployReceiptToken(0, IReceiptTokenFactory.PoolType.STAKE, 18)));
-    depositToken =
+    depositReceiptToken =
       IReceiptToken(address(receiptTokenFactory.deployReceiptToken(0, IReceiptTokenFactory.PoolType.RESERVE, 18)));
     vm.stopPrank();
 
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
-        depositToken: IReceiptToken(address(depositToken)),
+        depositReceiptToken: IReceiptToken(address(depositReceiptToken)),
         depositAmount: 0,
         feeAmount: 0,
         pendingWithdrawalsAmount: 0,
@@ -173,7 +176,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
     );
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: 0}));
 
-    testReceiptToken = depositToken;
+    testReceiptToken = depositReceiptToken;
   }
 }
 
@@ -930,10 +933,10 @@ contract TestableRedeemer is Redeemer {
     uint16 reservePoolId_,
     address depositor_,
     uint256 reserveAssetAmountDeposited_,
-    uint256 depositTokenAmount_
+    uint256 depositReceiptTokenAmount_
   ) external {
     mockDepositAssets(reservePoolId_, reserveAssetAmountDeposited_);
-    mockMintDepositTokens(reservePoolId_, depositor_, depositTokenAmount_);
+    mockMintDepositReceiptTokens(reservePoolId_, depositor_, depositReceiptTokenAmount_);
   }
 
   function mockDepositAssets(uint16 reservePoolId_, uint256 reserveAssetAmountDeposited_) public {
@@ -945,9 +948,11 @@ contract TestableRedeemer is Redeemer {
     }
   }
 
-  function mockMintDepositTokens(uint16 reservePoolId_, address depositor_, uint256 depositTokenAmount_) public {
-    if (depositTokenAmount_ > 0) {
-      MockERC20(address(reservePools[reservePoolId_].depositToken)).mint(depositor_, depositTokenAmount_);
+  function mockMintDepositReceiptTokens(uint16 reservePoolId_, address depositor_, uint256 depositReceiptTokenAmount_)
+    public
+  {
+    if (depositReceiptTokenAmount_ > 0) {
+      MockERC20(address(reservePools[reservePoolId_].depositReceiptToken)).mint(depositor_, depositReceiptTokenAmount_);
     }
   }
 

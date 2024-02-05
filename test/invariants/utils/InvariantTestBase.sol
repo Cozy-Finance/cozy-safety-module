@@ -109,7 +109,7 @@ abstract contract InvariantTestWithSingleReservePool is InvariantBaseDeploy {
     numReservePools = reservePoolConfigs_.length;
     safetyModule = manager.createSafetyModule(owner, pauser, configs_, _randomBytes32());
 
-    vm.label(address(getReservePool(safetyModule, 0).depositToken), "reservePool0DepositToken");
+    vm.label(address(getReservePool(safetyModule, 0).depositReceiptToken), "reservePool0DepositReceiptToken");
   }
 }
 
@@ -150,8 +150,8 @@ abstract contract InvariantTestWithMultipleReservePools is InvariantBaseDeploy {
 
     for (uint256 i_; i_ < numReservePools_; i_++) {
       vm.label(
-        address(getReservePool(safetyModule, i_).depositToken),
-        string.concat("reservePool", Strings.toString(i_), "DepositToken")
+        address(getReservePool(safetyModule, i_).depositReceiptToken),
+        string.concat("reservePool", Strings.toString(i_), "DepositReceiptToken")
       );
     }
   }

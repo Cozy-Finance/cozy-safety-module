@@ -107,7 +107,7 @@ contract TestBase is Test, TestAssertions {
 
   function copyReservePool(ReservePool memory original_) internal pure returns (ReservePool memory copied_) {
     copied_.asset = original_.asset;
-    copied_.depositToken = original_.depositToken;
+    copied_.depositReceiptToken = original_.depositReceiptToken;
     copied_.depositAmount = original_.depositAmount;
     copied_.pendingWithdrawalsAmount = original_.pendingWithdrawalsAmount;
     copied_.feeAmount = original_.feeAmount;

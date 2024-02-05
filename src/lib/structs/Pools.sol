@@ -20,7 +20,7 @@ struct ReservePool {
   /// slashes.
   uint256 maxSlashPercentage;
   IERC20 asset;
-  IReceiptToken depositToken;
+  IReceiptToken depositReceiptToken;
   uint128 lastFeesDripTime;
 }
 

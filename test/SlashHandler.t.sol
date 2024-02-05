@@ -58,7 +58,7 @@ contract SlashHandlerTest is TestBase {
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
-        depositToken: IReceiptToken(address(0)),
+        depositReceiptToken: IReceiptToken(address(0)),
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
@@ -136,7 +136,7 @@ contract SlashHandlerTest is TestBase {
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
-        depositToken: IReceiptToken(address(0)),
+        depositReceiptToken: IReceiptToken(address(0)),
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
@@ -148,7 +148,7 @@ contract SlashHandlerTest is TestBase {
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
-        depositToken: IReceiptToken(address(0)),
+        depositReceiptToken: IReceiptToken(address(0)),
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
@@ -160,7 +160,7 @@ contract SlashHandlerTest is TestBase {
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
-        depositToken: IReceiptToken(address(0)),
+        depositReceiptToken: IReceiptToken(address(0)),
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
@@ -253,7 +253,7 @@ contract SlashHandlerTest is TestBase {
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
-        depositToken: IReceiptToken(address(0)),
+        depositReceiptToken: IReceiptToken(address(0)),
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
@@ -264,7 +264,7 @@ contract SlashHandlerTest is TestBase {
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
-        depositToken: IReceiptToken(address(0)),
+        depositReceiptToken: IReceiptToken(address(0)),
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
@@ -295,7 +295,7 @@ contract SlashHandlerTest is TestBase {
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
-        depositToken: IReceiptToken(address(0)),
+        depositReceiptToken: IReceiptToken(address(0)),
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
@@ -306,7 +306,7 @@ contract SlashHandlerTest is TestBase {
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
-        depositToken: IReceiptToken(address(0)),
+        depositReceiptToken: IReceiptToken(address(0)),
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),

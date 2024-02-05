@@ -22,7 +22,9 @@ abstract contract TestAssertions is Test {
 
   function assertEq(ReservePool memory actual_, ReservePool memory expected_) internal {
     assertEq(address(actual_.asset), address(expected_.asset), "ReservePool.asset");
-    assertEq(address(actual_.depositToken), address(expected_.depositToken), "ReservePool.depositToken");
+    assertEq(
+      address(actual_.depositReceiptToken), address(expected_.depositReceiptToken), "ReservePool.depositReceiptToken"
+    );
     assertEq(actual_.depositAmount, expected_.depositAmount, "ReservePool.depositAmount");
     assertEq(
       actual_.pendingWithdrawalsAmount, expected_.pendingWithdrawalsAmount, "ReservePool.pendingWithdrawalsAmount"

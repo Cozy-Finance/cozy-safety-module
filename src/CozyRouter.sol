@@ -211,7 +211,7 @@ contract CozyRouter {
   // -------- Deposit / Stake --------
   // ---------------------------------
 
-  /// @notice Deposits assets into a `safetyModule_` reserve pool. Mints `depositTokenAmount_` to `receiver_` by
+  /// @notice Deposits assets into a `safetyModule_` reserve pool. Mints `depositReceiptTokenAmount_` to `receiver_` by
   /// depositing exactly `reserveAssetAmount_` of the reserve pool's underlying tokens into the `safetyModule_`,
   /// and reverts if less than `minReceiptTokensReceived_` are minted. The specified amount of assets are transferred
   /// from the caller to the Safety Module.
@@ -221,12 +221,12 @@ contract CozyRouter {
     uint256 reserveAssetAmount_,
     address receiver_,
     uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
-  ) external payable returns (uint256 depositTokenAmount_) {
+  ) external payable returns (uint256 depositReceiptTokenAmount_) {
     // Caller must first approve this router to spend the reserve pool's asset.
     IERC20 asset_ = safetyModule_.reservePools(reservePoolId_).asset;
     asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);
 
-    depositTokenAmount_ = depositReserveAssetsWithoutTransfer(
+    depositReceiptTokenAmount_ = depositReserveAssetsWithoutTransfer(
       safetyModule_, reservePoolId_, reserveAssetAmount_, receiver_, minReceiptTokensReceived_
     );
   }
@@ -265,11 +265,11 @@ contract CozyRouter {
     uint256 reserveAssetAmount_,
     address receiver_,
     uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
-  ) public payable returns (uint256 depositTokenAmount_) {
+  ) public payable returns (uint256 depositReceiptTokenAmount_) {
     _assertAddressNotZero(receiver_);
-    depositTokenAmount_ =
+    depositReceiptTokenAmount_ =
       safetyModule_.depositReserveAssetsWithoutTransfer(reservePoolId_, reserveAssetAmount_, receiver_);
-    if (depositTokenAmount_ < minReceiptTokensReceived_) revert SlippageExceeded();
+    if (depositReceiptTokenAmount_ < minReceiptTokensReceived_) revert SlippageExceeded();
   }
 
   /// TODO
@@ -344,9 +344,9 @@ contract CozyRouter {
     uint256 baseAssetAmount_,
     address receiver_,
     uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
-  ) external payable returns (uint256 depositTokenAmount_) {
+  ) external payable returns (uint256 depositReceiptTokenAmount_) {
     uint256 depositAssetAmount_ = _wrapBaseAssetViaConnector(connector_, safetyModule_, baseAssetAmount_);
-    depositTokenAmount_ = depositReserveAssetsWithoutTransfer(
+    depositReceiptTokenAmount_ = depositReserveAssetsWithoutTransfer(
       safetyModule_, reservePoolId_, depositAssetAmount_, receiver_, minReceiptTokensReceived_
     );
   }
@@ -391,7 +391,8 @@ contract CozyRouter {
   // -------- Withdrawal / Unstake --------
   // --------------------------------------
 
-  /// @notice Removes assets from a `safetyModule_` reserve pool. Burns `depositTokenAmount_` from owner and sends
+  /// @notice Removes assets from a `safetyModule_` reserve pool. Burns `depositReceiptTokenAmount_` from owner and
+  /// sends
   /// exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and reverts if
   /// more than `maxReceiptTokensBurned_` are burned. If the safety module is PAUSED, withdrawal can be completed
   /// immediately, otherwise this queues a redemption which can be completed once sufficient delay has elapsed.
@@ -401,28 +402,31 @@ contract CozyRouter {
     uint256 reserveAssetAmount_,
     address receiver_,
     uint256 maxReceiptTokensBurned_
-  ) external payable returns (uint64 redemptionId_, uint256 depositTokenAmount_) {
+  ) external payable returns (uint64 redemptionId_, uint256 depositReceiptTokenAmount_) {
     _assertAddressNotZero(receiver_);
-    depositTokenAmount_ = safetyModule_.convertToReserveDepositTokenAmount(reservePoolId_, reserveAssetAmount_);
-    if (depositTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
+    depositReceiptTokenAmount_ =
+      safetyModule_.convertToReserveDepositReceiptTokenAmount(reservePoolId_, reserveAssetAmount_);
+    if (depositReceiptTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
     // Caller must first approve the CozyRouter to spend the deposit tokens.
-    (redemptionId_,) = safetyModule_.redeem(reservePoolId_, depositTokenAmount_, receiver_, msg.sender);
+    (redemptionId_,) = safetyModule_.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, msg.sender);
   }
 
-  /// @notice Removes assets from a `safetyModule_` reserve pool. Burns `depositTokenAmount_` from owner and sends
+  /// @notice Removes assets from a `safetyModule_` reserve pool. Burns `depositReceiptTokenAmount_` from owner and
+  /// sends
   /// exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and reverts if less
   /// than `minAssetsReceived_` would be received. If the safety module is PAUSED, withdrawal can be completed
   /// immediately, otherwise this queues a redemption which can be completed once sufficient delay has elapsed.
-  function redeemReservePoolDepositTokens(
+  function redeemReservePoolDepositReceiptTokens(
     ISafetyModule safetyModule_,
     uint16 reservePoolId_,
-    uint256 depositTokenAmount_,
+    uint256 depositReceiptTokenAmount_,
     address receiver_,
     uint256 minAssetsReceived_
   ) external payable returns (uint64 redemptionId_, uint256 assetsReceived_) {
     _assertAddressNotZero(receiver_);
     // Caller must first approve the CozyRouter to spend the deposit tokens.
-    (redemptionId_, assetsReceived_) = safetyModule_.redeem(reservePoolId_, depositTokenAmount_, receiver_, msg.sender);
+    (redemptionId_, assetsReceived_) =
+      safetyModule_.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, msg.sender);
     if (assetsReceived_ < minAssetsReceived_) revert SlippageExceeded();
   }
 

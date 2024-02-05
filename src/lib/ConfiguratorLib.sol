@@ -197,14 +197,14 @@ library ConfiguratorLib {
   ) internal {
     uint16 reservePoolId_ = uint16(reservePools_.length);
 
-    IReceiptToken reserveDepositToken_ = receiptTokenFactory_.deployReceiptToken(
+    IReceiptToken reserveDepositReceiptToken_ = receiptTokenFactory_.deployReceiptToken(
       reservePoolId_, IReceiptTokenFactory.PoolType.RESERVE, reservePoolConfig_.asset.decimals()
     );
 
     reservePools_.push(
       ReservePool({
         asset: reservePoolConfig_.asset,
-        depositToken: reserveDepositToken_,
+        depositReceiptToken: reserveDepositReceiptToken_,
         depositAmount: 0,
         pendingWithdrawalsAmount: 0,
         feeAmount: 0,
@@ -213,6 +213,6 @@ library ConfiguratorLib {
       })
     );
 
-    emit IConfiguratorEvents.ReservePoolCreated(reservePoolId_, reservePoolConfig_.asset, reserveDepositToken_);
+    emit IConfiguratorEvents.ReservePoolCreated(reservePoolId_, reservePoolConfig_.asset, reserveDepositReceiptToken_);
   }
 }

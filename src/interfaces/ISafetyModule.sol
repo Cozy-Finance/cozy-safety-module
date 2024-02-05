@@ -23,15 +23,15 @@ interface ISafetyModule {
 
   function completeRedemption(uint64 redemptionId_) external returns (uint256 assetAmount_);
 
-  function convertToReserveDepositTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
+  function convertToReserveDepositReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
     external
     view
-    returns (uint256 depositTokenAmount_);
+    returns (uint256 depositReceiptTokenAmount_);
 
-  function convertReserveDepositTokenToReserveAssetAmount(uint256 reservePoolId_, uint256 depositTokenAmount_)
-    external
-    view
-    returns (uint256 reserveAssetAmount_);
+  function convertReserveDepositReceiptTokenToReserveAssetAmount(
+    uint256 reservePoolId_,
+    uint256 depositReceiptTokenAmount_
+  ) external view returns (uint256 reserveAssetAmount_);
 
   /// @notice Address of the Cozy protocol manager.
   function cozyManager() external view returns (IManager);
@@ -52,12 +52,12 @@ interface ISafetyModule {
   /// `reservePools[reservePoolId_].asset` so it can `transferFrom`
   function depositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
     external
-    returns (uint256 depositTokenAmount_);
+    returns (uint256 depositReceiptTokenAmount_);
 
   /// @dev Expects depositer to transfer assets to the SafetyModule beforehand.
   function depositReserveAssetsWithoutTransfer(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
     external
-    returns (uint256 depositTokenAmount_);
+    returns (uint256 depositReceiptTokenAmount_);
 
   function dripFees() external;
 
@@ -92,10 +92,11 @@ interface ISafetyModule {
   /// @notice Address of the Cozy protocol ReceiptTokenFactory.
   function receiptTokenFactory() external view returns (IReceiptTokenFactory);
 
-  /// @notice Redeems by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
+  /// @notice Redeems by burning `depositReceiptTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and
+  /// sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeem(uint16 reservePoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeem(uint16 reservePoolId_, uint256 depositReceiptTokenAmount_, address receiver_, address owner_)
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_);
 

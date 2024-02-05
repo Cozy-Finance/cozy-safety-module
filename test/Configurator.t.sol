@@ -61,7 +61,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     reservePool1 = ReservePool({
       asset: IERC20(_randomAddress()),
-      depositToken: IReceiptToken(_randomAddress()),
+      depositReceiptToken: IReceiptToken(_randomAddress()),
       depositAmount: _randomUint256(),
       pendingWithdrawalsAmount: _randomUint256(),
       feeAmount: _randomUint256(),
@@ -70,7 +70,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     });
     reservePool2 = ReservePool({
       asset: IERC20(_randomAddress()),
-      depositToken: IReceiptToken(_randomAddress()),
+      depositReceiptToken: IReceiptToken(_randomAddress()),
       depositAmount: _randomUint256(),
       pendingWithdrawalsAmount: _randomUint256(),
       feeAmount: _randomUint256(),
@@ -576,11 +576,11 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     ReservePoolConfig memory newReservePoolConfig_ = _generateValidReservePoolConfig(MathConstants.WAD);
 
     IReceiptTokenFactory receiptTokenFactory_ = component.getReceiptTokenFactory();
-    address depositTokenAddress_ =
+    address depositReceiptTokenAddress_ =
       receiptTokenFactory_.computeAddress(ISafetyModule(address(component)), 1, IReceiptTokenFactory.PoolType.RESERVE);
 
     _expectEmit();
-    emit ReservePoolCreated(1, newReservePoolConfig_.asset, IReceiptToken(depositTokenAddress_));
+    emit ReservePoolCreated(1, newReservePoolConfig_.asset, IReceiptToken(depositReceiptTokenAddress_));
     component.initializeReservePool(newReservePoolConfig_);
 
     // One reserve pool was added, so two total reserve pools.

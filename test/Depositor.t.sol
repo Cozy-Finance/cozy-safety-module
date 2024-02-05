@@ -18,16 +18,16 @@ import "./utils/Stub.sol";
 
 contract DepositorUnitTest is TestBase {
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
-  MockERC20 mockReserveDepositToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
+  MockERC20 mockReserveDepositReceiptToken = new MockERC20("Mock Cozy Deposit Token", "cozyDep", 6);
   TestableDepositor component = new TestableDepositor();
 
   /// @dev Emitted when a user deposits.
   event Deposited(
     address indexed caller_,
     address indexed receiver_,
-    IReceiptToken indexed depositToken_,
+    IReceiptToken indexed depositReceiptToken_,
     uint256 assetAmount_,
-    uint256 depositTokenAmount_
+    uint256 depositReceiptTokenAmount_
   );
 
   uint256 initialSafetyModuleBal = 50e18;
@@ -35,7 +35,7 @@ contract DepositorUnitTest is TestBase {
   function setUp() public {
     ReservePool memory initialReservePool_ = ReservePool({
       asset: IERC20(address(mockAsset)),
-      depositToken: IReceiptToken(address(mockReserveDepositToken)),
+      depositReceiptToken: IReceiptToken(address(mockReserveDepositReceiptToken)),
       depositAmount: 50e18,
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
@@ -54,15 +54,15 @@ contract DepositorUnitTest is TestBase {
     uint256 amountToDeposit_,
     address receiver_,
     address depositor_
-  ) internal returns (uint256 depositTokenAmount_) {
+  ) internal returns (uint256 depositReceiptTokenAmount_) {
     if (withoutTransfer_) {
-      depositTokenAmount_ = component.depositReserveAssetsWithoutTransfer(poolId_, amountToDeposit_, receiver_);
+      depositReceiptTokenAmount_ = component.depositReserveAssetsWithoutTransfer(poolId_, amountToDeposit_, receiver_);
     } else {
-      depositTokenAmount_ = component.depositReserveAssets(poolId_, amountToDeposit_, receiver_, depositor_);
+      depositReceiptTokenAmount_ = component.depositReserveAssets(poolId_, amountToDeposit_, receiver_, depositor_);
     }
   }
 
-  function test_depositReserve_DepositTokensAndStorageUpdates() external {
+  function test_depositReserve_DepositReceiptTokensAndStorageUpdates() external {
     address depositor_ = _randomAddress();
     address receiver_ = _randomAddress();
     uint128 amountToDeposit_ = 10e18;
@@ -75,21 +75,21 @@ contract DepositorUnitTest is TestBase {
     vm.prank(depositor_);
     mockAsset.approve(address(component), amountToDeposit_);
 
-    // `depositToken.totalSupply() == 0`, so should be minted 1-1 with reserve assets deposited.
-    uint256 expectedDepositTokenAmount_ = 10e18;
+    // `depositReceiptToken.totalSupply() == 0`, so should be minted 1-1 with reserve assets deposited.
+    uint256 expectedDepositReceiptTokenAmount_ = 10e18;
     _expectEmit();
     emit Deposited(
       depositor_,
       receiver_,
-      IReceiptToken(address(mockReserveDepositToken)),
+      IReceiptToken(address(mockReserveDepositReceiptToken)),
       amountToDeposit_,
-      expectedDepositTokenAmount_
+      expectedDepositReceiptTokenAmount_
     );
 
     vm.prank(depositor_);
-    uint256 depositTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
+    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
 
-    assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
+    assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
@@ -100,10 +100,10 @@ contract DepositorUnitTest is TestBase {
     assertEq(mockAsset.balanceOf(address(component)), 60e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(depositor_), 0);
-    assertEq(mockReserveDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
+    assertEq(mockReserveDepositReceiptToken.balanceOf(receiver_), expectedDepositReceiptTokenAmount_);
   }
 
-  function test_depositReserve_DepositTokensAndStorageUpdatesNonZeroSupply() external {
+  function test_depositReserve_DepositReceiptTokensAndStorageUpdatesNonZeroSupply() external {
     address depositor_ = _randomAddress();
     address receiver_ = _randomAddress();
     uint128 amountToDeposit_ = 20e18;
@@ -112,28 +112,28 @@ contract DepositorUnitTest is TestBase {
     mockAsset.mint(address(component), initialSafetyModuleBal);
     // Mint initial balance for depositor.
     mockAsset.mint(depositor_, amountToDeposit_);
-    // Mint/burn some depositTokens.
-    uint256 initialDepositTokenSupply_ = 50e18;
-    mockReserveDepositToken.mint(address(0), initialDepositTokenSupply_);
+    // Mint/burn some depositReceiptTokens.
+    uint256 initialDepositReceiptTokenSupply_ = 50e18;
+    mockReserveDepositReceiptToken.mint(address(0), initialDepositReceiptTokenSupply_);
     // Approve safety module to spend asset.
     vm.prank(depositor_);
     mockAsset.approve(address(component), amountToDeposit_);
 
-    // `depositToken.totalSupply() == 50e18`, so we have (20e18 / 50e18) * 50e18 = 20e18.
-    uint256 expectedDepositTokenAmount_ = 20e18;
+    // `depositReceiptToken.totalSupply() == 50e18`, so we have (20e18 / 50e18) * 50e18 = 20e18.
+    uint256 expectedDepositReceiptTokenAmount_ = 20e18;
     _expectEmit();
     emit Deposited(
       depositor_,
       receiver_,
-      IReceiptToken(address(mockReserveDepositToken)),
+      IReceiptToken(address(mockReserveDepositReceiptToken)),
       amountToDeposit_,
-      expectedDepositTokenAmount_
+      expectedDepositReceiptTokenAmount_
     );
 
     vm.prank(depositor_);
-    uint256 depositTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
+    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
 
-    assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
+    assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
@@ -144,7 +144,7 @@ contract DepositorUnitTest is TestBase {
     assertEq(finalAssetPool_.amount, 70e18);
     assertEq(mockAsset.balanceOf(address(component)), 70e18 + initialSafetyModuleBal);
     assertEq(mockAsset.balanceOf(depositor_), 0);
-    assertEq(mockReserveDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
+    assertEq(mockReserveDepositReceiptToken.balanceOf(receiver_), expectedDepositReceiptTokenAmount_);
   }
 
   function testFuzz_depositReserve_RevertSafetyModulePaused(uint256 amountToDeposit_) external {
@@ -159,9 +159,9 @@ contract DepositorUnitTest is TestBase {
     mockAsset.mint(address(component), 150e18);
     // Mint initial balance for depositor.
     mockAsset.mint(depositor_, amountToDeposit_);
-    // Mint/burn some depositTokens.
-    uint256 initialDepositTokenSupply_ = 50e18;
-    mockReserveDepositToken.mint(address(0), initialDepositTokenSupply_);
+    // Mint/burn some depositReceiptTokens.
+    uint256 initialDepositReceiptTokenSupply_ = 50e18;
+    mockReserveDepositReceiptToken.mint(address(0), initialDepositReceiptTokenSupply_);
     // Approve safety module to spend asset.
     vm.prank(depositor_);
     mockAsset.approve(address(component), amountToDeposit_);
@@ -197,7 +197,7 @@ contract DepositorUnitTest is TestBase {
     _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
   }
 
-  function test_depositReserveAssetsWithoutTransfer_DepositTokensAndStorageUpdates() external {
+  function test_depositReserveAssetsWithoutTransfer_DepositReceiptTokensAndStorageUpdates() external {
     address depositor_ = _randomAddress();
     address receiver_ = _randomAddress();
     uint128 amountToDeposit_ = 10e18;
@@ -210,21 +210,21 @@ contract DepositorUnitTest is TestBase {
     vm.prank(depositor_);
     mockAsset.transfer(address(component), amountToDeposit_);
 
-    // `depositToken.totalSupply() == 0`, so should be minted 1-1 with reserve assets deposited.
-    uint256 expectedDepositTokenAmount_ = 10e18;
+    // `depositReceiptToken.totalSupply() == 0`, so should be minted 1-1 with reserve assets deposited.
+    uint256 expectedDepositReceiptTokenAmount_ = 10e18;
     _expectEmit();
     emit Deposited(
       depositor_,
       receiver_,
-      IReceiptToken(address(mockReserveDepositToken)),
+      IReceiptToken(address(mockReserveDepositReceiptToken)),
       amountToDeposit_,
-      expectedDepositTokenAmount_
+      expectedDepositReceiptTokenAmount_
     );
 
     vm.prank(depositor_);
-    uint256 depositTokenAmount_ = _deposit(true, 0, amountToDeposit_, receiver_, receiver_);
+    uint256 depositReceiptTokenAmount_ = _deposit(true, 0, amountToDeposit_, receiver_, receiver_);
 
-    assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
+    assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
@@ -235,10 +235,10 @@ contract DepositorUnitTest is TestBase {
     assertEq(mockAsset.balanceOf(address(component)), 60e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(depositor_), 0);
-    assertEq(mockReserveDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
+    assertEq(mockReserveDepositReceiptToken.balanceOf(receiver_), expectedDepositReceiptTokenAmount_);
   }
 
-  function test_depositReserveAssetsWithoutTransfer_DepositTokensAndStorageUpdatesNonZeroSupply() external {
+  function test_depositReserveAssetsWithoutTransfer_DepositReceiptTokensAndStorageUpdatesNonZeroSupply() external {
     address depositor_ = _randomAddress();
     address receiver_ = _randomAddress();
     uint128 amountToDeposit_ = 20e18;
@@ -247,28 +247,28 @@ contract DepositorUnitTest is TestBase {
     mockAsset.mint(address(component), initialSafetyModuleBal);
     // Mint initial balance for depositor.
     mockAsset.mint(depositor_, amountToDeposit_);
-    // Mint/burn some depositTokens.
-    uint256 initialDepositTokenSupply_ = 50e18;
-    mockReserveDepositToken.mint(address(0), initialDepositTokenSupply_);
+    // Mint/burn some depositReceiptTokens.
+    uint256 initialDepositReceiptTokenSupply_ = 50e18;
+    mockReserveDepositReceiptToken.mint(address(0), initialDepositReceiptTokenSupply_);
     // Transfer to safety module.
     vm.prank(depositor_);
     mockAsset.transfer(address(component), amountToDeposit_);
 
-    // `depositToken.totalSupply() == 50e18`, so we have (20e18 / 50e18) * 50e18 = 20e18.
-    uint256 expectedDepositTokenAmount_ = 20e18;
+    // `depositReceiptToken.totalSupply() == 50e18`, so we have (20e18 / 50e18) * 50e18 = 20e18.
+    uint256 expectedDepositReceiptTokenAmount_ = 20e18;
     _expectEmit();
     emit Deposited(
       depositor_,
       receiver_,
-      IReceiptToken(address(mockReserveDepositToken)),
+      IReceiptToken(address(mockReserveDepositReceiptToken)),
       amountToDeposit_,
-      expectedDepositTokenAmount_
+      expectedDepositReceiptTokenAmount_
     );
 
     vm.prank(depositor_);
-    uint256 depositTokenAmount_ = _deposit(true, 0, amountToDeposit_, receiver_, receiver_);
+    uint256 depositReceiptTokenAmount_ = _deposit(true, 0, amountToDeposit_, receiver_, receiver_);
 
-    assertEq(depositTokenAmount_, expectedDepositTokenAmount_);
+    assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
 
     ReservePool memory finalReservePool_ = component.getReservePool(0);
     AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
@@ -279,7 +279,7 @@ contract DepositorUnitTest is TestBase {
     assertEq(mockAsset.balanceOf(address(component)), 70e18 + initialSafetyModuleBal);
 
     assertEq(mockAsset.balanceOf(depositor_), 0);
-    assertEq(mockReserveDepositToken.balanceOf(receiver_), expectedDepositTokenAmount_);
+    assertEq(mockReserveDepositReceiptToken.balanceOf(receiver_), expectedDepositReceiptTokenAmount_);
   }
 
   function testFuzz_depositReserveAssetsWithoutTransfer_RevertSafetyModulePaused(uint256 amountToDeposit_) external {
@@ -294,9 +294,9 @@ contract DepositorUnitTest is TestBase {
     mockAsset.mint(address(component), 150e18);
     // Mint initial balance for depositor.
     mockAsset.mint(depositor_, amountToDeposit_);
-    // Mint/burn some depositTokens.
-    uint256 initialDepositTokenSupply_ = 50e18;
-    mockReserveDepositToken.mint(address(0), initialDepositTokenSupply_);
+    // Mint/burn some depositReceiptTokens.
+    uint256 initialDepositReceiptTokenSupply_ = 50e18;
+    mockReserveDepositReceiptToken.mint(address(0), initialDepositReceiptTokenSupply_);
     // Transfer to safety module.
     vm.prank(depositor_);
     mockAsset.transfer(address(component), amountToDeposit_);

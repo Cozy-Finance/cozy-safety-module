@@ -26,8 +26,8 @@ contract SafetyModuleFactoryTest is TestBase {
   SafetyModule safetyModuleLogic;
   SafetyModuleFactory safetyModuleFactory;
 
-  ReceiptToken depositTokenLogic;
-  ReceiptToken stkTokenLogic;
+  ReceiptToken depositReceiptTokenLogic;
+  ReceiptToken stkReceiptTokenLogic;
   IReceiptTokenFactory receiptTokenFactory;
 
   IManager mockManager = IManager(_randomAddress());
@@ -36,14 +36,15 @@ contract SafetyModuleFactoryTest is TestBase {
   event SafetyModuleDeployed(ISafetyModule safetyModule);
 
   function setUp() public {
-    depositTokenLogic = new ReceiptToken();
-    stkTokenLogic = new ReceiptToken();
+    depositReceiptTokenLogic = new ReceiptToken();
+    stkReceiptTokenLogic = new ReceiptToken();
 
-    depositTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
-    stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    depositReceiptTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    stkReceiptTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
 
-    receiptTokenFactory =
-      new ReceiptTokenFactory(IReceiptToken(address(depositTokenLogic)), IReceiptToken(address(stkTokenLogic)));
+    receiptTokenFactory = new ReceiptTokenFactory(
+      IReceiptToken(address(depositReceiptTokenLogic)), IReceiptToken(address(stkReceiptTokenLogic))
+    );
 
     safetyModuleLogic = new SafetyModule(mockManager, receiptTokenFactory);
     safetyModuleLogic.initialize(

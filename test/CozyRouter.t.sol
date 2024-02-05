@@ -141,7 +141,7 @@ contract CozyRouterAggregateTest is CozyRouterTestSetup {
 
     ReservePool memory reservePoolB_ = getReservePool(safetyModule, reservePoolId_);
 
-    assertEq(reservePoolB_.depositToken.balanceOf(address(this)), ethAmount_);
+    assertEq(reservePoolB_.depositReceiptToken.balanceOf(address(this)), ethAmount_);
     assertEq(weth.balanceOf(address(safetyModule)), ethAmount_);
     assertEq(weth.balanceOf(address(router)), 0);
     assertEq(address(router).balance, 0);
@@ -214,10 +214,10 @@ contract CozyRouterPermitTest is CozyRouterTestSetup {
     if (privateKey == 0) privateKey = 1;
 
     ReservePool memory reservePool_ = getReservePool(safetyModule, 0);
-    IERC20 depositToken_ = reservePool_.depositToken;
+    IERC20 depositReceiptToken_ = reservePool_.depositReceiptToken;
     // IERC20 stakeToken_ = reservePool_.stkToken;
 
-    _testPermitIERC20Token(depositToken_, privateKey, amount, deadline);
+    _testPermitIERC20Token(depositReceiptToken_, privateKey, amount, deadline);
     // _testPermitIERC20Token(stakeToken_, privateKey, amount, deadline);
   }
 }
@@ -490,7 +490,7 @@ contract CozyRouterDepositTest is CozyRouterTestSetup {
     assertEq(weth.balanceOf(address(safetyModule_)), assets_);
     if (isReserveDeposit_) {
       ReservePool memory reservePool_ = getReservePool(safetyModule_, poolId_);
-      assertEq(reservePool_.depositToken.balanceOf(user_), shares);
+      assertEq(reservePool_.depositReceiptToken.balanceOf(user_), shares);
       assertEq(reservePool_.depositAmount, assets_);
     } else {
       // RewardPool memory rewardPool_ = getRewardPool(safetyModule_, poolId_);
@@ -624,10 +624,11 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     assertEq(connector_.wrappedAsset().balanceOf(address(safetyModule_)), wrappedAssetDepositAmount_);
 
     // Owner should have proper number of deposit tokens.
-    IERC20 depositToken_ = getReservePool(safetyModule_, poolId_).depositToken;
+    IERC20 depositReceiptToken_ = getReservePool(safetyModule_, poolId_).depositReceiptToken;
     // : getRewardPool(safetyModule_, poolId_).depositToken;
-    assertEq(depositToken_.balanceOf(owner_), ownerShares_);
-    assertEq(depositToken_.balanceOf(owner_), wrappedAssetDepositAmount_); // 1:1 exchange rate for initial deposit.
+    assertEq(depositReceiptToken_.balanceOf(owner_), ownerShares_);
+    assertEq(depositReceiptToken_.balanceOf(owner_), wrappedAssetDepositAmount_); // 1:1 exchange rate for initial
+      // deposit.
   }
 
   function _testWrapBaseAssetViaConnectorForDepositSlippage(
@@ -835,23 +836,25 @@ contract CozyRouterWithdrawTest is CozyRouterTestSetup {
 
     // The router deposits assets on behalf of the user.
     uint256 preDepositBalance_ = weth.balanceOf(user_);
-    uint256 depositTokens_ = router.depositReserveAssets(safetyModule_, poolId_, assets_, user_, assets_);
+    uint256 depositReceiptTokens_ = router.depositReserveAssets(safetyModule_, poolId_, assets_, user_, assets_);
     // : router.depositRewardAssets(safetyModule_, poolId_, assets_, user_, assets_);
     uint256 postDepositBalance_ = weth.balanceOf(user_);
     assertGt(preDepositBalance_, postDepositBalance_);
 
     // Request WETH withdrawal via the router. This should fail because the user hasn't approved it.
     _expectPanic(PANIC_MATH_UNDEROVERFLOW);
-    if (isReserveWithdraw_) router.withdrawReservePoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
+    if (isReserveWithdraw_) {
+      router.withdrawReservePoolAssets(safetyModule_, poolId_, assets_, user_, depositReceiptTokens_);
+    }
     // else router.withdrawRewardPoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
 
-    IERC20 depositToken_ = getReservePool(safetyModule_, poolId_).depositToken;
+    IERC20 depositReceiptToken_ = getReservePool(safetyModule_, poolId_).depositReceiptToken;
     // : getRewardPool(safetyModule_, poolId_).depositToken;
 
     // Approve WETH withdrawal request, then router initiates it.
-    depositToken_.approve(address(router), depositTokens_);
+    depositReceiptToken_.approve(address(router), depositReceiptTokens_);
     if (isReserveWithdraw_) {
-      router.withdrawReservePoolAssets(safetyModule_, poolId_, assets_, user_, depositTokens_);
+      router.withdrawReservePoolAssets(safetyModule_, poolId_, assets_, user_, depositReceiptTokens_);
 
       // Fast-forward to end of delay period.
       skip(getDelays(safetyModule_).withdrawDelay);
@@ -910,13 +913,13 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
     // Grant full approval to the router.
     weth.approve(address(router), type(uint256).max);
     // Deposit assets.
-    uint256 depositTokenAmount_ =
+    uint256 depositReceiptTokenAmount_ =
       router.depositReserveAssets(safetyModule_, poolId_, initialAmount_, testRedeemer, initialAmount_);
     // : router.depositRewardAssets(safetyModule_, poolId_, initialAmount_, testRedeemer, initialAmount_);
     // Approve for test redemptions.
-    IERC20 depositToken_ = getReservePool(safetyModule_, poolId_).depositToken;
+    IERC20 depositReceiptToken_ = getReservePool(safetyModule_, poolId_).depositReceiptToken;
     // : getRewardPool(safetyModule_, poolId_).depositToken;
-    depositToken_.approve(address(router), depositTokenAmount_);
+    depositReceiptToken_.approve(address(router), depositReceiptTokenAmount_);
     vm.stopPrank();
   }
 
@@ -924,7 +927,7 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
     vm.assume(assets_ > 0 && assets_ <= type(uint128).max);
     _setUpWethBalances(true, safetyModule, wethReservePoolId, assets_);
     (uint64 redemptionId_, uint256 actualAssets_) =
-      router.redeemReservePoolDepositTokens(safetyModule, wethReservePoolId, assets_, testRedeemer, assets_);
+      router.redeemReservePoolDepositReceiptTokens(safetyModule, wethReservePoolId, assets_, testRedeemer, assets_);
     assertEq(actualAssets_, assets_);
     assertEq(redemptionId_, 0);
   }
@@ -940,7 +943,7 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
   function test_RedeemRespectsMinAssetsOut() public {
     _setUpWethBalances(true, safetyModule, wethReservePoolId, 100);
     vm.expectRevert(CozyRouter.SlippageExceeded.selector);
-    router.redeemReservePoolDepositTokens(safetyModule, wethReservePoolId, 100, testRedeemer, 101);
+    router.redeemReservePoolDepositReceiptTokens(safetyModule, wethReservePoolId, 100, testRedeemer, 101);
 
     // _setUpWethBalances(false, safetyModule, wethRewardPoolId, 100);
     // vm.expectRevert(CozyRouter.SlippageExceeded.selector);
@@ -949,7 +952,7 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
 
   function test_RedeemRevertsIfReceiverIsZeroAddress() public {
     vm.expectRevert(CozyRouter.InvalidAddress.selector);
-    router.redeemReservePoolDepositTokens(safetyModule, wethReservePoolId, 100, address(0), 101);
+    router.redeemReservePoolDepositReceiptTokens(safetyModule, wethReservePoolId, 100, address(0), 101);
 
     // vm.expectRevert(CozyRouter.InvalidAddress.selector);
     // router.redeemRewardPoolDepositTokens(safetyModule, wethReservePoolId, 100, address(0), 101);
@@ -1056,12 +1059,12 @@ contract CozyRouterCompleteWithdrawRedeemTest is CozyRouterTestSetup {
     weth.approve(address(router), type(uint256).max); // Grant full approval to the router.
 
     // The router deposits assets on behalf of alice.
-    uint256 depositTokens_ =
+    uint256 depositReceiptTokens_ =
       router.depositReserveAssets(safetyModule, wethReservePoolId, poolAssetAmount, testOwner, poolAssetAmount);
 
     // Initiate a WETH withdrawal request from the reserve pool, with bob as the receiver. The router is pre-approved.
-    getReservePool(safetyModule, wethReservePoolId).depositToken.approve(address(router), depositTokens_);
-    router.withdrawReservePoolAssets(safetyModule, wethReservePoolId, poolAssetAmount, receiver, depositTokens_);
+    getReservePool(safetyModule, wethReservePoolId).depositReceiptToken.approve(address(router), depositReceiptTokens_);
+    router.withdrawReservePoolAssets(safetyModule, wethReservePoolId, poolAssetAmount, receiver, depositReceiptTokens_);
     skip(getDelays(safetyModule).withdrawDelay);
 
     vm.stopPrank();
@@ -1112,17 +1115,17 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
     weth.transfer(address(safetyModule), 3 ether);
 
     uint16 poolId_ = isReserveDeposit_ ? wethReservePoolId : wethRewardPoolId;
-    IERC20 depositToken_ = getReservePool(safetyModule, poolId_).depositToken;
+    IERC20 depositReceiptToken_ = getReservePool(safetyModule, poolId_).depositReceiptToken;
     // : getRewardPool(safetyModule, poolId_).depositToken;
 
     // Anyone can do arbitrary deposit operations with the excess ether.
     if (isReserveDeposit_) {
       router.depositReserveAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverA, 0);
-      assertEq(depositToken_.balanceOf(receiverA), 1 ether);
+      assertEq(depositReceiptToken_.balanceOf(receiverA), 1 ether);
       router.depositReserveAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverB, 0);
-      assertEq(depositToken_.balanceOf(receiverB), 1 ether);
+      assertEq(depositReceiptToken_.balanceOf(receiverB), 1 ether);
       router.depositReserveAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, bob, 0);
-      assertEq(depositToken_.balanceOf(bob), 1 ether);
+      assertEq(depositReceiptToken_.balanceOf(bob), 1 ether);
     } else {
       // router.depositRewardAssetsWithoutTransfer(safetyModule, poolId_, 1 ether, receiverA, 0);
       // assertEq(depositToken_.balanceOf(receiverA), 1 ether);

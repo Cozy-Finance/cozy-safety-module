@@ -50,7 +50,7 @@ contract FeesHandlerUnitTest is TestBase {
 
       ReservePool memory reservePool_ = ReservePool({
         asset: IERC20(address(mockAsset_)),
-        depositToken: IReceiptToken(address(0)),
+        depositReceiptToken: IReceiptToken(address(0)),
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: 0,
@@ -74,7 +74,7 @@ contract FeesHandlerUnitTest is TestBase {
     MockERC20 mockAsset1_ = new MockERC20("Mock Asset", "MOCK", 6);
     ReservePool memory reservePool1_ = ReservePool({
       asset: IERC20(address(mockAsset1_)),
-      depositToken: IReceiptToken(address(0)),
+      depositReceiptToken: IReceiptToken(address(0)),
       depositAmount: 50e6,
       pendingWithdrawalsAmount: 25e6,
       feeAmount: 0,
@@ -88,7 +88,7 @@ contract FeesHandlerUnitTest is TestBase {
     MockERC20 mockAsset2_ = new MockERC20("Mock Asset", "MOCK", 6);
     ReservePool memory reservePool2_ = ReservePool({
       asset: IERC20(address(mockAsset2_)),
-      depositToken: IReceiptToken(address(0)),
+      depositReceiptToken: IReceiptToken(address(0)),
       depositAmount: 20e6,
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
@@ -147,7 +147,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     {
       ReservePool memory expectedPool1_;
       expectedPool1_.asset = concreteReservePools_[0].asset;
-      expectedPool1_.depositToken = concreteReservePools_[0].depositToken;
+      expectedPool1_.depositReceiptToken = concreteReservePools_[0].depositReceiptToken;
       // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 25e6 * 0.05 = 1.25e6
       expectedPool1_.depositAmount = 48.75e6; // depositAmount = originalDepositAmount - drippedFromDepositAmount
       expectedPool1_.feeAmount = 1.25e6; // drippedFromDepositAmount
@@ -158,7 +158,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     {
       ReservePool memory expectedPool2_;
       expectedPool2_.asset = concreteReservePools_[1].asset;
-      expectedPool2_.depositToken = concreteReservePools_[1].depositToken;
+      expectedPool2_.depositReceiptToken = concreteReservePools_[1].depositReceiptToken;
       expectedPool2_.depositAmount = 19e6; // depositAmount = originalDepositAmount - drippedFromDepositAmount
       expectedPool2_.feeAmount = 1e6; // drippedFromDepositAmount
       expectedPool2_.pendingWithdrawalsAmount = concreteReservePools_[1].pendingWithdrawalsAmount;
@@ -179,7 +179,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     {
       ReservePool memory expectedPool2_;
       expectedPool2_.asset = concreteReservePools_[1].asset;
-      expectedPool2_.depositToken = concreteReservePools_[1].depositToken;
+      expectedPool2_.depositReceiptToken = concreteReservePools_[1].depositReceiptToken;
       // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 20e6 * 0.05 = 1e6
       expectedPool2_.depositAmount = 19e6; // depositAmount = originalDepositAmount - drippedFromDepositAmount
       expectedPool2_.feeAmount = 1e6; // drippedFromDepositAmount
@@ -371,7 +371,7 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
     MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
     ReservePool memory reservePool_ = ReservePool({
       asset: IERC20(address(mockAsset_)),
-      depositToken: IReceiptToken(address(0)),
+      depositReceiptToken: IReceiptToken(address(0)),
       depositAmount: 10_000,
       pendingWithdrawalsAmount: 9000,
       feeAmount: 50,

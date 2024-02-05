@@ -13,7 +13,7 @@ import {
 abstract contract DepositInvariants is InvariantTestBase {
   using FixedPointMathLib for uint256;
 
-  function invariant_reserveDepositTokenTotalSupplyIncreasesOnReserveDeposit()
+  function invariant_reserveDepositReceiptTokenTotalSupplyIncreasesOnReserveDeposit()
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
@@ -23,13 +23,13 @@ abstract contract DepositInvariants is InvariantTestBase {
     uint256[] memory totalSupplyBeforeDepositReserves_ = new uint256[](numReservePools);
     for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       totalSupplyBeforeDepositReserves_[reservePoolId_] =
-        getReservePool(safetyModule, reservePoolId_).depositToken.totalSupply();
+        getReservePool(safetyModule, reservePoolId_).depositReceiptToken.totalSupply();
     }
 
     safetyModuleHandler.depositReserveAssetsWithExistingActorWithoutCountingCall(_randomUint256());
 
     for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
-      uint256 currentTotalSupply_ = getReservePool(safetyModule, reservePoolId_).depositToken.totalSupply();
+      uint256 currentTotalSupply_ = getReservePool(safetyModule, reservePoolId_).depositReceiptToken.totalSupply();
 
       // safetyModuleHandler.currentReservePoolId is set to the reserve pool that was just deposited into during
       // this invariant test.

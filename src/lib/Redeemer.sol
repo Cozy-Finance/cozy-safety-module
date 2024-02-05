@@ -63,16 +63,18 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint64 redemptionId_
   );
 
-  /// @notice Redeems by burning `depositTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and sending
+  /// @notice Redeems by burning `depositReceiptTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and
+  /// sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeem(uint16 reservePoolId_, uint256 depositTokenAmount_, address receiver_, address owner_)
+  function redeem(uint16 reservePoolId_, uint256 depositReceiptTokenAmount_, address receiver_, address owner_)
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     _dripFeesFromReservePool(reservePool_, cozyManager.getFeeDripModel(ISafetyModule(address(this))));
-    (redemptionId_, reserveAssetAmount_) = _redeem(reservePoolId_, reservePool_, depositTokenAmount_, receiver_, owner_);
+    (redemptionId_, reserveAssetAmount_) =
+      _redeem(reservePoolId_, reservePool_, depositReceiptTokenAmount_, receiver_, owner_);
   }
 
   /// @notice Completes the redemption request for the specified redemption ID.
@@ -94,7 +96,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 lastDripTime_ = reservePool_.lastFeesDripTime;
 
     reserveAssetAmount_ = _previewRedemption(
-      reservePool_.depositToken,
+      reservePool_.depositReceiptToken,
       receiptTokenAmount_,
       feeDripModel_,
       reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount,
@@ -149,7 +151,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     address receiver_,
     address owner_
   ) internal returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
-    IReceiptToken receiptToken_ = reservePool_.depositToken;
+    IReceiptToken receiptToken_ = reservePool_.depositReceiptToken;
 
     {
       uint256 assetsAvailableForRedemption_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;

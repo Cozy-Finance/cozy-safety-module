@@ -91,14 +91,15 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
 
   function _setUpRedeem(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
     internal
-    returns (uint256 depositTokenAmount_)
+    returns (uint256 depositReceiptTokenAmount_)
   {
     _depositReserveAssets(reservePoolId_, reserveAssetAmount_, receiver_);
 
-    depositTokenAmount_ = safetyModule.convertToReserveDepositTokenAmount(reservePoolId_, reserveAssetAmount_);
+    depositReceiptTokenAmount_ =
+      safetyModule.convertToReserveDepositReceiptTokenAmount(reservePoolId_, reserveAssetAmount_);
     vm.startPrank(receiver_);
-    getReservePool(ISafetyModule(address(safetyModule)), reservePoolId_).depositToken.approve(
-      address(safetyModule), depositTokenAmount_
+    getReservePool(ISafetyModule(address(safetyModule)), reservePoolId_).depositReceiptToken.approve(
+      address(safetyModule), depositReceiptTokenAmount_
     );
     vm.stopPrank();
   }
@@ -146,21 +147,21 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
 
   function test_redeem() public {
     (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture();
-    uint256 depositTokenAmount_ = _setUpRedeem(reservePoolId_, reserveAssetAmount_, receiver_);
+    uint256 depositReceiptTokenAmount_ = _setUpRedeem(reservePoolId_, reserveAssetAmount_, receiver_);
 
     vm.startPrank(receiver_);
     uint256 gasInitial_ = gasleft();
-    safetyModule.redeem(reservePoolId_, depositTokenAmount_, receiver_, receiver_);
+    safetyModule.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, receiver_);
     console2.log("Gas used for redeem: %s", gasInitial_ - gasleft());
     vm.stopPrank();
   }
 
   function test_completeRedemption() public {
     (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture();
-    uint256 depositTokenAmount_ = _setUpRedeem(reservePoolId_, reserveAssetAmount_, receiver_);
+    uint256 depositReceiptTokenAmount_ = _setUpRedeem(reservePoolId_, reserveAssetAmount_, receiver_);
 
     vm.startPrank(receiver_);
-    (uint64 redemptionId_,) = safetyModule.redeem(reservePoolId_, depositTokenAmount_, receiver_, receiver_);
+    (uint64 redemptionId_,) = safetyModule.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, receiver_);
     vm.stopPrank();
 
     (,, uint64 withdrawDelay_) = safetyModule.delays();

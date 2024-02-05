@@ -23,5 +23,5 @@ interface IConfiguratorEvents {
   );
 
   /// @notice Emitted when a reserve pool is created.
-  event ReservePoolCreated(uint16 indexed reservePoolId, IERC20 reserveAsset, IReceiptToken depositToken);
+  event ReservePoolCreated(uint16 indexed reservePoolId, IERC20 reserveAsset, IReceiptToken depositReceiptToken);
 }
