@@ -276,7 +276,7 @@ contract CozyRouter {
   /// sending the resulting deposit tokens to `receiver_`. This method does not transfer the assets to the Rewards
   /// Manager which are necessary for the deposit, thus the caller should ensure that a transfer to the Rewards Manager
   /// with the needed amount of assets (`rewardAssetAmount_`) of the reward pool's underlying asset (viewable with
-  /// `rewardsManager.rewardPools(rewardPoolId_)`) is transferred to the Reawrds Manager before calling this
+  /// `rewardsManager.rewardPools(rewardPoolId_)`) is transferred to the Rewards Manager before calling this
   /// method. In general, prefer using `CozyRouter.depositRewardAssets` to deposit into a Rewards Manager reward pool,
   /// this method is here to facilitate MultiCall transactions.
   function depositRewardAssetsWithoutTransfer(
