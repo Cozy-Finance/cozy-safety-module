@@ -54,7 +54,7 @@ contract FeesHandlerUnitTest is TestBase {
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: 0,
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         lastFeesDripTime: uint128(block.timestamp)
       });
       component.mockAddReservePool(reservePool_);
@@ -78,7 +78,7 @@ contract FeesHandlerUnitTest is TestBase {
       depositAmount: 50e6,
       pendingWithdrawalsAmount: 25e6,
       feeAmount: 0,
-      maxSlashPercentage: MathConstants.WAD,
+      maxSlashPercentage: MathConstants.ZOC,
       lastFeesDripTime: 0
     });
     component.mockAddReservePool(reservePool1_);
@@ -92,7 +92,7 @@ contract FeesHandlerUnitTest is TestBase {
       depositAmount: 20e6,
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
-      maxSlashPercentage: MathConstants.WAD,
+      maxSlashPercentage: MathConstants.ZOC,
       lastFeesDripTime: 0
     });
     component.mockAddReservePool(reservePool2_);
@@ -375,7 +375,7 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
       depositAmount: 10_000,
       pendingWithdrawalsAmount: 9000,
       feeAmount: 50,
-      maxSlashPercentage: MathConstants.WAD,
+      maxSlashPercentage: MathConstants.ZOC,
       lastFeesDripTime: 0
     });
     component.mockAddReservePool(reservePool_);

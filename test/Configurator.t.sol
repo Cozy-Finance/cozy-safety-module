@@ -65,7 +65,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       depositAmount: _randomUint256(),
       pendingWithdrawalsAmount: _randomUint256(),
       feeAmount: _randomUint256(),
-      maxSlashPercentage: 0.5e18,
+      maxSlashPercentage: 0.5e4,
       lastFeesDripTime: uint128(block.timestamp)
     });
     reservePool2 = ReservePool({
@@ -74,7 +74,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       depositAmount: _randomUint256(),
       pendingWithdrawalsAmount: _randomUint256(),
       feeAmount: _randomUint256(),
-      maxSlashPercentage: MathConstants.WAD,
+      maxSlashPercentage: MathConstants.ZOC,
       lastFeesDripTime: uint128(block.timestamp)
     });
   }
@@ -140,8 +140,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
   function test_updateConfigs() external {
     Delays memory delaysConfig_ = _generateValidDelays();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
-    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.WAD);
-    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.WAD);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.ZOC);
+    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.ZOC);
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](2);
     triggerConfigUpdates_[0] = _generateValidTriggerConfig();
     triggerConfigUpdates_[1] = _generateValidTriggerConfig();
@@ -174,7 +174,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
   function test_updateConfigs_revertNonOwner() external {
     Delays memory delaysConfig_ = _generateValidDelays();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.WAD);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.ZOC);
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
     triggerConfigUpdates_[0] = _generateValidTriggerConfig();
 
@@ -192,8 +192,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
   function test_isValidConfiguration_TrueValidConfig() external {
     Delays memory delayConfig_ = _generateValidDelays();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
-    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.WAD);
-    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.WAD);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.ZOC);
+    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.ZOC);
 
     assertTrue(component.isValidConfiguration(reservePoolConfigs_, delayConfig_));
   }
@@ -204,8 +204,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     mockManager.setAllowedReservePools(1);
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
-    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.WAD);
-    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.WAD);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.ZOC);
+    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.ZOC);
 
     assertFalse(component.isValidConfiguration(reservePoolConfigs_, delayConfig_));
   }
@@ -215,8 +215,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     delayConfig_.configUpdateDelay = uint64(bound(_randomUint256(), 0, delayConfig_.withdrawDelay));
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
-    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.WAD);
-    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.WAD);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.ZOC);
+    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.ZOC);
 
     assertFalse(component.isValidConfiguration(reservePoolConfigs_, delayConfig_));
   }
@@ -225,9 +225,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     Delays memory delayConfig_ = _generateValidDelays();
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
-    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.WAD);
-    ReservePoolConfig memory reservePoolConfig2_ = _generateValidReservePoolConfig(MathConstants.WAD);
-    reservePoolConfig2_.maxSlashPercentage = MathConstants.WAD + 1;
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.ZOC);
+    ReservePoolConfig memory reservePoolConfig2_ = _generateValidReservePoolConfig(MathConstants.ZOC);
+    reservePoolConfig2_.maxSlashPercentage = MathConstants.ZOC + 1;
     reservePoolConfigs_[1] = reservePoolConfig2_;
 
     assertFalse(component.isValidConfiguration(reservePoolConfigs_, delayConfig_));
@@ -237,8 +237,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     Delays memory delayConfig_ = _generateValidDelays();
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
-    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.WAD);
-    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.WAD);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.ZOC);
+    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.ZOC);
 
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](2);
     triggerConfigUpdates_[0] = _generateValidTriggerConfig();
@@ -255,7 +255,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     );
 
     // Max slassh percentage should be <= 100%, simulate isValidConfiguration returning false.
-    reservePoolConfigs_[0].maxSlashPercentage = MathConstants.WAD + 1;
+    reservePoolConfigs_[0].maxSlashPercentage = MathConstants.ZOC + 1;
     assertFalse(
       component.isValidUpdate(
         UpdateConfigsCalldataParams({
@@ -274,9 +274,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     // Two possible reserve pool configs.
     ReservePoolConfig memory reservePoolConfig1_ =
-      ReservePoolConfig({asset: reservePool1.asset, maxSlashPercentage: MathConstants.WAD});
+      ReservePoolConfig({asset: reservePool1.asset, maxSlashPercentage: MathConstants.ZOC});
     ReservePoolConfig memory reservePoolConfig2_ =
-      ReservePoolConfig({asset: reservePool2.asset, maxSlashPercentage: MathConstants.WAD});
+      ReservePoolConfig({asset: reservePool2.asset, maxSlashPercentage: MathConstants.ZOC});
 
     // Generate valid new configs for delays.
     Delays memory delayConfig_ = _generateValidDelays();
@@ -302,7 +302,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     invalidReservePoolConfigs_ = new ReservePoolConfig[](2);
     invalidReservePoolConfigs_[0] = reservePoolConfig1_;
     invalidReservePoolConfigs_[1] =
-      ReservePoolConfig({asset: IERC20(_randomAddress()), maxSlashPercentage: MathConstants.WAD});
+      ReservePoolConfig({asset: IERC20(_randomAddress()), maxSlashPercentage: MathConstants.ZOC});
     assertFalse(
       component.isValidUpdate(
         UpdateConfigsCalldataParams({
@@ -317,7 +317,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     ReservePoolConfig[] memory validReservePoolConfigs_ = new ReservePoolConfig[](3);
     validReservePoolConfigs_[0] = reservePoolConfig1_;
     validReservePoolConfigs_[1] = reservePoolConfig2_;
-    validReservePoolConfigs_[2] = _generateValidReservePoolConfig(MathConstants.WAD);
+    validReservePoolConfigs_[2] = _generateValidReservePoolConfig(MathConstants.ZOC);
     assertTrue(
       component.isValidUpdate(
         UpdateConfigsCalldataParams({
@@ -333,8 +333,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     Delays memory delayConfig_ = _generateValidDelays();
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](2);
-    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.WAD);
-    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.WAD);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.ZOC);
+    reservePoolConfigs_[1] = _generateValidReservePoolConfig(MathConstants.ZOC);
 
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
     triggerConfigUpdates_[0] = _generateValidTriggerConfig();
@@ -385,9 +385,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     // Create valid config update.
     Delays memory delayConfig_ = _generateValidDelays();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](3);
-    reservePoolConfigs_[0] = ReservePoolConfig({asset: reservePool1.asset, maxSlashPercentage: MathConstants.WAD});
-    reservePoolConfigs_[1] = ReservePoolConfig({asset: reservePool2.asset, maxSlashPercentage: MathConstants.WAD});
-    reservePoolConfigs_[2] = _generateValidReservePoolConfig(MathConstants.WAD);
+    reservePoolConfigs_[0] = ReservePoolConfig({asset: reservePool1.asset, maxSlashPercentage: MathConstants.ZOC});
+    reservePoolConfigs_[1] = ReservePoolConfig({asset: reservePool2.asset, maxSlashPercentage: MathConstants.ZOC});
+    reservePoolConfigs_[2] = _generateValidReservePoolConfig(MathConstants.ZOC);
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](2);
     triggerConfigUpdates_[0] = _generateValidTriggerConfig();
     triggerConfigUpdates_[1] = _generateValidTriggerConfig();
@@ -573,7 +573,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     // One existing reserve pool.
     component.mockAddReservePool(reservePool1);
     // New reserve pool config.
-    ReservePoolConfig memory newReservePoolConfig_ = _generateValidReservePoolConfig(MathConstants.WAD);
+    ReservePoolConfig memory newReservePoolConfig_ = _generateValidReservePoolConfig(MathConstants.ZOC);
 
     IReceiptTokenFactory receiptTokenFactory_ = component.getReceiptTokenFactory();
     address depositReceiptTokenAddress_ =

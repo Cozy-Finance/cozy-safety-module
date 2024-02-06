@@ -102,7 +102,7 @@ contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](ALLOWED_RESERVE_POOLS + 1);
     for (uint256 i = 0; i < ALLOWED_RESERVE_POOLS + 1; i++) {
       reservePoolConfigs_[i] = ReservePoolConfig({
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         asset: IERC20(address(new MockERC20("MockAsset", "MOCK", 18)))
       });
     }
