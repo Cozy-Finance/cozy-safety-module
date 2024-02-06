@@ -502,7 +502,7 @@ contract CozyRouter {
     // Exchange rate between rewards manager stake tokens and safety module deposit receipt tokens is 1:1.
     unstake(rewardsManager_, stakePoolId_, depositReceiptTokenAmount_, address(this), 0);
 
-    (redemptionId_, reserveAssetAmount_) =
+    (redemptionId_,) =
       safetyModule_.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, address(this));
   }
 
