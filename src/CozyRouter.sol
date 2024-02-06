@@ -13,6 +13,7 @@ import {IChainlinkTriggerFactory} from "src/interfaces/IChainlinkTriggerFactory.
 import {IConnector} from "./interfaces/IConnector.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {IOwnableTriggerFactory} from "./interfaces/IOwnableTriggerFactory.sol";
+import {IRewardsManager} from "./interfaces/IRewardsManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {IWeth} from "./interfaces/IWeth.sol";
 import {IStETH} from "./interfaces/IStETH.sol";
@@ -221,7 +222,7 @@ contract CozyRouter {
     uint256 reserveAssetAmount_,
     address receiver_,
     uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
-  ) external payable returns (uint256 depositReceiptTokenAmount_) {
+  ) public payable returns (uint256 depositReceiptTokenAmount_) {
     // Caller must first approve this router to spend the reserve pool's asset.
     IERC20 asset_ = safetyModule_.reservePools(reservePoolId_).asset;
     asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);
@@ -231,26 +232,25 @@ contract CozyRouter {
     );
   }
 
-  /// TODO
-  /// @notice Deposits assets into a `safetyModule_` reward pool. Mints `depositTokenAmount_` to `receiver_`
-  /// by depositing exactly `reserveAssetAmount_` of the reward pool's underlying tokens into the `safetyModule_`, and
+  /// @notice Deposits assets into a `rewardsManager_` reward pool. Mints `depositReceiptTokenAmount_` to `receiver_`
+  /// by depositing exactly `rewardAssetAmount_` of the reward pool's underlying tokens into the `rewardsManager_`, and
   /// reverts if less than `minReceiptTokensReceived_` are minted. The specified amount of assets are transferred from
-  /// the caller to the Safety Module.
-  // function depositRewardAssets(
-  //   ISafetyModule safetyModule_,
-  //   uint16 rewardPoolId_,
-  //   uint256 reserveAssetAmount_,
-  //   address receiver_,
-  //   uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
-  // ) external payable returns (uint256 depositTokenAmount_) {
-  // // Caller must first approve this router to spend the reward pool's asset.
-  // (,,, IERC20 asset_,,) = safetyModule_.rewardPools(rewardPoolId_);
-  // asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);
+  /// the caller to the `rewardsManager_`.
+  function depositRewardAssets(
+    IRewardsManager rewardsManager_,
+    uint16 rewardPoolId_,
+    uint256 rewardAssetAmount_,
+    address receiver_,
+    uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
+  ) external payable returns (uint256 depositReceiptTokenAmount_) {
+    // Caller must first approve this router to spend the reward pool's asset.
+    IERC20 asset_ = rewardsManager_.rewardPools(rewardPoolId_).asset;
+    asset_.safeTransferFrom(msg.sender, address(rewardsManager_), rewardAssetAmount_);
 
-  // depositTokenAmount_ = depositRewardAssetsWithoutTransfer(
-  //   safetyModule_, rewardPoolId_, reserveAssetAmount_, receiver_, minReceiptTokensReceived_
-  // );
-  // }
+    depositReceiptTokenAmount_ = depositRewardAssetsWithoutTransfer(
+      rewardsManager_, rewardPoolId_, rewardAssetAmount_, receiver_, minReceiptTokensReceived_
+    );
+  }
 
   /// @notice Executes a deposit into `safetyModule_` in the reserve pool corresponding to `reservePoolId_`, sending
   /// the resulting deposit tokens to `receiver_`. This method does not transfer the assets to the Safety Module which
@@ -272,67 +272,64 @@ contract CozyRouter {
     if (depositReceiptTokenAmount_ < minReceiptTokensReceived_) revert SlippageExceeded();
   }
 
-  /// TODO
-  /// @notice Executes a deposit into `safetyModule_` in the reward pool corresponding to `rewardPoolId`,
-  /// sending the resulting deposit tokens to `receiver_`. This method does not transfer the assets to the Safety
-  /// Module which are necessary for the deposit, thus the caller should ensure that a transfer to the Safety Module
+  /// @notice Executes a deposit into `rewardsManager_` in the reward pool corresponding to `rewardPoolId_`,
+  /// sending the resulting deposit tokens to `receiver_`. This method does not transfer the assets to the Rewards
+  /// Manager which are necessary for the deposit, thus the caller should ensure that a transfer to the Rewards Manager
   /// with the needed amount of assets (`rewardAssetAmount_`) of the reward pool's underlying asset (viewable with
-  /// `safetyModule.rewardPools(rewardPoolId_)`) is transferred to the Safety Module before calling this
-  /// method. In general, prefer using `CozyRouter.depositRewardAssets` to deposit into a Safety Module reward pool,
+  /// `rewardsManager.rewardPools(rewardPoolId_)`) is transferred to the Reawrds Manager before calling this
+  /// method. In general, prefer using `CozyRouter.depositRewardAssets` to deposit into a Rewards Manager reward pool,
   /// this method is here to facilitate MultiCall transactions.
-  // function depositRewardAssetsWithoutTransfer(
-  //   ISafetyModule safetyModule_,
-  //   uint16 rewardPoolId_,
-  //   uint256 rewardAssetAmount_,
-  //   address receiver_,
-  //   uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
-  // ) public payable returns (uint256 depositTokenAmount_) {
-  // _assertAddressNotZero(receiver_);
-  // depositTokenAmount_ = safetyModule_.depositRewardAssetsWithoutTransfer(rewardPoolId_, rewardAssetAmount_,
-  // receiver_);
-  // if (depositTokenAmount_ < minReceiptTokensReceived_) revert SlippageExceeded();
-  // }
+  function depositRewardAssetsWithoutTransfer(
+    IRewardsManager rewardsManager_,
+    uint16 rewardPoolId_,
+    uint256 rewardAssetAmount_,
+    address receiver_,
+    uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
+  ) public payable returns (uint256 depositReceiptTokenAmount_) {
+    _assertAddressNotZero(receiver_);
+    depositReceiptTokenAmount_ =
+      rewardsManager_.depositRewardAssetsWithoutTransfer(rewardPoolId_, rewardAssetAmount_, receiver_);
+    if (depositReceiptTokenAmount_ < minReceiptTokensReceived_) revert SlippageExceeded();
+  }
 
-  // TODO
-  // /// @notice Stakes assets into the `safetyModule_`. Mints `stakeTokenAmount_` to `receiver_` by staking exactly
-  // /// `assets_` of the reserve pool's underlying tokens into the `safetyModule_`, and reverts if less than
-  // ///`minReceiptTokensReceived_` are minted. The specified amount of assets are transferred from the caller to the
-  // /// Safety Module.
-  // function stake(
-  //   ISafetyModule safetyModule_,
-  //   uint16 reservePoolId_,
-  //   uint256 reserveAssetAmount_,
-  //   address receiver_,
-  //   uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
-  // ) external payable returns (uint256 stakeTokenAmount_) {
-  //   _assertAddressNotZero(receiver_);
-  //   // Caller must first approve this router to spend the reserve pool's asset.
-  //   (,,,,,, IERC20 asset_,,,,) = safetyModule_.reservePools(reservePoolId_);
-  //   asset_.safeTransferFrom(msg.sender, address(safetyModule_), reserveAssetAmount_);
+  /// @notice Stakes assets into the `rewardsManager_`. Mints `stakeTokenAmount_` to `receiver_` by staking exactly
+  /// `stakeAssetAmount_` of the stake pool's underlying tokens into the `rewardsManager_`, and reverts if less than
+  ///`minReceiptTokensReceived_` are minted. The specified amount of assets are transferred from the caller to the
+  /// Safety Module.
+  function stake(
+    IRewardsManager rewardsManager_,
+    uint16 stakePoolId_,
+    uint256 stakeAssetAmount_,
+    address receiver_,
+    uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
+  ) external payable returns (uint256 stakeReceiptTokenAmount_) {
+    _assertAddressNotZero(receiver_);
+    // Caller must first approve this router to spend the stake pool's asset.
+    IERC20 asset_ = rewardsManager_.stakePools(stakePoolId_).asset;
+    asset_.safeTransferFrom(msg.sender, address(rewardsManager_), stakeAssetAmount_);
 
-  //   stakeTokenAmount_ =
-  //     stakeWithoutTransfer(safetyModule_, reservePoolId_, reserveAssetAmount_, receiver_, minReceiptTokensReceived_);
-  // }
+    stakeReceiptTokenAmount_ =
+      stakeWithoutTransfer(rewardsManager_, stakePoolId_, stakeAssetAmount_, receiver_, minReceiptTokensReceived_);
+  }
 
-  // TODO
-  // /// @notice Executes a stake against `safetyModule_` in the reserve pool corresponding to `reservePoolId_`, sending
-  // /// the resulting stake tokens to `receiver_`. This method does not transfer the assets to the Safety Module which
-  // /// are necessary for the stake, thus the caller should ensure that a transfer to the Safety Module with the
-  // /// needed amount of assets (`reserveAssetAmount_`) of the reserve pool's underlying asset (viewable with
-  // /// `safetyModule.reservePools(reservePoolId_)`) is transferred to the Safety Module before calling this method.
-  // /// In general, prefer using `CozyRouter.stake` to stake into a Safety Module, this method is here to facilitate
-  // /// MultiCall transactions.
-  // function stakeWithoutTransfer(
-  //   ISafetyModule safetyModule_,
-  //   uint16 reservePoolId_,
-  //   uint256 reserveAssetAmount_,
-  //   address receiver_,
-  //   uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
-  // ) public payable returns (uint256 stakeTokenAmount_) {
-  //   _assertAddressNotZero(receiver_);
-  //   stakeTokenAmount_ = safetyModule_.stakeWithoutTransfer(reservePoolId_, reserveAssetAmount_, receiver_);
-  //   if (stakeTokenAmount_ < minReceiptTokensReceived_) revert SlippageExceeded();
-  // }
+  /// @notice Executes a stake against `rewardsManager_` in the stake pool corresponding to `stakePoolId_`, sending
+  /// the resulting stake tokens to `receiver_`. This method does not transfer the assets to the Rewards Manager which
+  /// are necessary for the stake, thus the caller should ensure that a transfer to the Rewards Manager with the
+  /// needed amount of assets (`stakeAssetAmount_`) of the stake pool's underlying asset (viewable with
+  /// `rewardsManager.stakePools(stakePoolId_)`) is transferred to the Rewards Manager before calling this method.
+  /// In general, prefer using `CozyRouter.stake` to stake into a Rewards Manager, this method is here to facilitate
+  /// MultiCall transactions.
+  function stakeWithoutTransfer(
+    IRewardsManager rewardsManager_,
+    uint16 stakePoolId_,
+    uint256 stakeAssetAmount_,
+    address receiver_,
+    uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
+  ) public payable returns (uint256 stakeReceiptTokenAmount_) {
+    _assertAddressNotZero(receiver_);
+    stakeReceiptTokenAmount_ = rewardsManager_.stakeWithoutTransfer(stakePoolId_, stakeAssetAmount_, receiver_);
+    if (stakeReceiptTokenAmount_ < minReceiptTokensReceived_) revert SlippageExceeded();
+  }
 
   /// @notice Calls the connector to wrap the base asset, send the wrapped assets to `safetyModule_`, and then
   /// `depositReserveAssetsWithoutTransfer`.
@@ -345,53 +342,34 @@ contract CozyRouter {
     address receiver_,
     uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
   ) external payable returns (uint256 depositReceiptTokenAmount_) {
-    uint256 depositAssetAmount_ = _wrapBaseAssetViaConnector(connector_, safetyModule_, baseAssetAmount_);
+    uint256 depositAssetAmount_ = _wrapBaseAssetViaConnector(connector_, address(safetyModule_), baseAssetAmount_);
     depositReceiptTokenAmount_ = depositReserveAssetsWithoutTransfer(
       safetyModule_, reservePoolId_, depositAssetAmount_, receiver_, minReceiptTokensReceived_
     );
   }
 
-  // TODO
-  // /// @notice Calls the connector to wrap the base asset, send the wrapped assets to `safetyModule_`, and then
-  // /// `depositRewardAssetsWithoutTransfer`.
-  // /// @dev This will revert if the router is not approved for at least `baseAssetAmount_` of the base asset.
-  // function wrapBaseAssetViaConnectorAndDepositRewardAssets(
-  //   IConnector connector_,
-  //   ISafetyModule safetyModule_,
-  //   uint16 reservePoolId_,
-  //   uint256 baseAssetAmount_,
-  //   address receiver_,
-  //   uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
-  // ) external payable returns (uint256 depositTokenAmount_) {
-  //   uint256 depositAssetAmount_ = _wrapBaseAssetViaConnector(connector_, safetyModule_, baseAssetAmount_);
-  //   depositTokenAmount_ = depositRewardAssetsWithoutTransfer(
-  //     safetyModule_, reservePoolId_, depositAssetAmount_, receiver_, minReceiptTokensReceived_
-  //   );
-  // }
-
-  // TODO
-  // /// @notice Calls the connector to wrap the base asset, send the wrapped assets to `safetyModule_`, and then
-  // /// `stakeWithoutTransfer`.
-  // /// @dev This will revert if the router is not approved for at least `baseAssetAmount_` of the base asset.
-  // function wrapBaseAssetViaConnectorAndStake(
-  //   IConnector connector_,
-  //   ISafetyModule safetyModule_,
-  //   uint16 reservePoolId_,
-  //   uint256 baseAssetAmount_,
-  //   address receiver_,
-  //   uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
-  // ) external payable returns (uint256 depositTokenAmount_) {
-  //   connector_.baseAsset().safeTransferFrom(msg.sender, address(connector_), baseAssetAmount_);
-  //   uint256 depositAssetAmount_ = connector_.wrapBaseAsset(address(safetyModule_), baseAssetAmount_);
-  //   depositTokenAmount_ =
-  //     stakeWithoutTransfer(safetyModule_, reservePoolId_, depositAssetAmount_, receiver_, minReceiptTokensReceived_);
-  // }
+  /// @notice Calls the connector to wrap the base asset, send the wrapped assets to `rewardsManager_`, and then
+  /// `depositRewardAssetsWithoutTransfer`.
+  /// @dev This will revert if the router is not approved for at least `baseAssetAmount_` of the base asset.
+  function wrapBaseAssetViaConnectorAndDepositRewardAssets(
+    IConnector connector_,
+    IRewardsManager rewardsManager_,
+    uint16 reservePoolId_,
+    uint256 baseAssetAmount_,
+    address receiver_,
+    uint256 minReceiptTokensReceived_ // The minimum amount of receipt tokens the user expects to receive.
+  ) external payable returns (uint256 depositReceiptTokenAmount_) {
+    uint256 depositAssetAmount_ = _wrapBaseAssetViaConnector(connector_, address(rewardsManager_), baseAssetAmount_);
+    depositReceiptTokenAmount_ = depositRewardAssetsWithoutTransfer(
+      rewardsManager_, reservePoolId_, depositAssetAmount_, receiver_, minReceiptTokensReceived_
+    );
+  }
 
   // --------------------------------------
   // -------- Withdrawal / Unstake --------
   // --------------------------------------
 
-  /// @notice Removes assets from a `safetyModule_` reserve pool. Burns `depositReceiptTokenAmount_` from owner and
+  /// @notice Removes assets from a `safetyModule_` reserve pool. Burns `depositReceiptTokenAmount_` from caller and
   /// sends
   /// exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and reverts if
   /// more than `maxReceiptTokensBurned_` are burned. If the safety module is PAUSED, withdrawal can be completed
@@ -410,7 +388,7 @@ contract CozyRouter {
     (redemptionId_,) = safetyModule_.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, msg.sender);
   }
 
-  /// @notice Removes assets from a `safetyModule_` reserve pool. Burns `depositReceiptTokenAmount_` from owner and
+  /// @notice Removes assets from a `safetyModule_` reserve pool. Burns `depositReceiptTokenAmount_` from caller and
   /// sends
   /// exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and reverts if less
   /// than `minAssetsReceived_` would be received. If the safety module is PAUSED, withdrawal can be completed
@@ -429,82 +407,132 @@ contract CozyRouter {
     if (assetsReceived_ < minAssetsReceived_) revert SlippageExceeded();
   }
 
-  // TODO
-  // /// @notice Removes assets from a `safetyModule_` reward pool. Burns `depositTokenAmount_` from owner and
-  // /// sends exactly `rewardAssetAmount_` of the reward pool's underlying tokens to the `receiver_`, and reverts if
-  // /// more than `maxReceiptTokensBurned_` are burned. Withdrawal of assets from reward pools can be completed
-  // /// instantly.
-  // function withdrawRewardPoolAssets(
-  //   ISafetyModule safetyModule_,
-  //   uint16 rewardPoolId_,
-  //   uint256 rewardAssetAmount_,
-  //   address receiver_,
-  //   uint256 maxReceiptTokensBurned_
-  // ) external payable returns (uint256 depositTokenAmount_) {
-  //   _assertAddressNotZero(receiver_);
-  //   depositTokenAmount_ = safetyModule_.convertToRewardDepositTokenAmount(rewardPoolId_, rewardAssetAmount_);
-  //   if (depositTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
-  //   // Caller must first approve the CozyRouter to spend the deposit tokens.
-  //   safetyModule_.redeemUndrippedRewards(rewardPoolId_, depositTokenAmount_, receiver_, msg.sender);
-  // }
+  /// @notice Removes assets from a `rewardsManager_` reward pool. Burns `depositReceiptTokenAmount_` from caller and
+  /// sends exactly `rewardAssetAmount_` of the reward pool's underlying tokens to the `receiver_`, and reverts if
+  /// more than `maxReceiptTokensBurned_` are burned. Withdrawal of undripped assets from reward pools can be completed
+  /// instantly.
+  function withdrawRewardPoolAssets(
+    IRewardsManager rewardsManager_,
+    uint16 rewardPoolId_,
+    uint256 rewardAssetAmount_,
+    address receiver_,
+    uint256 maxReceiptTokensBurned_
+  ) external payable returns (uint256 depositReceiptTokenAmount_) {
+    _assertAddressNotZero(receiver_);
+    depositReceiptTokenAmount_ =
+      rewardsManager_.convertRewardAssetToReceiptTokenAmount(rewardPoolId_, rewardAssetAmount_);
+    if (depositReceiptTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
+    // Caller must first approve the CozyRouter to spend the deposit receipt tokens.
+    rewardsManager_.redeemUndrippedRewards(rewardPoolId_, depositReceiptTokenAmount_, receiver_, msg.sender);
+  }
 
-  // TODO
-  // // @notice Removes assets from a `safetyModule_` reward pool. Burns `depositTokenAmount_` from owner and
-  // /// sends exactly `rewardAssetAmount_` of the reward pool's underlying tokens to the `receiver_`, and reverts if
-  // /// less than `minAssetsReceived_` would be received. Withdrawal of assets from reward pools can be
-  // /// completed instantly.
-  // function redeemRewardPoolDepositTokens(
-  //   ISafetyModule safetyModule_,
-  //   uint16 poolId_,
-  //   uint256 depositTokenAmount_,
-  //   address receiver_,
-  //   uint256 minAssetsReceived_
-  // ) external payable returns (uint256 assetsReceived_) {
-  //   _assertAddressNotZero(receiver_);
-  //   // Caller must first approve the CozyRouter to spend the deposit tokens.
-  //   assetsReceived_ = safetyModule_.redeemUndrippedRewards(poolId_, depositTokenAmount_, receiver_, msg.sender);
-  //   if (assetsReceived_ < minAssetsReceived_) revert SlippageExceeded();
-  // }
+  // @notice Removes assets from a `rewardsManager_` reward pool. Burns `depositReceiptTokenAmount_` from caller and
+  /// sends exactly `rewardAssetAmount_` of the reward pool's underlying tokens to the `receiver_`, and reverts if
+  /// less than `minAssetsReceived_` would be received. Withdrawal of undripped assets from reward pools can be
+  /// completed instantly.
+  function redeemRewardPoolDepositReceiptTokens(
+    IRewardsManager rewardsManager_,
+    uint16 rewardPoolId_,
+    uint256 depositReceiptTokenAmount_,
+    address receiver_,
+    uint256 minAssetsReceived_
+  ) external payable returns (uint256 assetsReceived_) {
+    _assertAddressNotZero(receiver_);
+    // Caller must first approve the CozyRouter to spend the deposit receipt tokens.
+    assetsReceived_ =
+      rewardsManager_.redeemUndrippedRewards(rewardPoolId_, depositReceiptTokenAmount_, receiver_, msg.sender);
+    if (assetsReceived_ < minAssetsReceived_) revert SlippageExceeded();
+  }
 
-  // TODO
-  // /// @notice Unstakes exactly `stakeTokenAmount` from a `safetyModule_` reserve pool. Burns `stkTokenAmount_` from
-  // /// owner and sends exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`, and
-  // /// reverts if less than `minAssetsReceived_` of the reserve pool asset would be received. If the safety module is
-  // /// PAUSED, unstake can be completed immediately, otherwise this queues a redemption which can be completed once
-  // /// sufficient delay has elapsed. This also claims any outstanding rewards that the user is entitled to.
-  // function unstake(
-  //   ISafetyModule safetyModule_,
-  //   uint16 reservePoolId_,
-  //   uint256 stkTokenAmount_,
-  //   address receiver_,
-  //   uint256 minAssetsReceived_
-  // ) external payable returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
-  //   _assertAddressNotZero(receiver_);
-  //   // Caller must first approve the CozyRouter to spend the stake tokens.
-  //   (redemptionId_, reserveAssetAmount_) = safetyModule_.unstake(reservePoolId_, stkTokenAmount_, receiver_,
-  // msg.sender);
-  //   if (reserveAssetAmount_ < minAssetsReceived_) revert SlippageExceeded();
-  // }
+  /// @notice Unstakes exactly `stakeReceiptTokenAmount` from a `rewardsManager_` stake pool. Burns
+  /// `stakeReceiptTokenAmount` from caller and sends exactly `stakeAssetAmount_` of the stake pool's underlying
+  /// tokens to the `receiver_`, and reverts if less than `minAssetsReceived_` of the stake pool asset would be
+  /// received. This also claims any outstanding rewards that the user is entitled to for the stake pool.
+  function unstake(
+    IRewardsManager rewardsManager_,
+    uint16 stakePoolId_,
+    uint256 stakeReceiptTokenAmount,
+    address receiver_,
+    uint256 minAssetsReceived_
+  ) public payable returns (uint256 stakeAssetAmount_) {
+    _assertAddressNotZero(receiver_);
+    // Caller must first approve the CozyRouter to spend the stake tokens.
+    stakeAssetAmount_ = rewardsManager_.unstake(stakePoolId_, stakeReceiptTokenAmount, receiver_, msg.sender);
+    if (stakeAssetAmount_ < minAssetsReceived_) revert SlippageExceeded();
+  }
 
-  // TODO
-  // /// @notice Unstakes exactly `reserveAssetAmount_` from a `safetyModule_` reserve pool. Burns `stkTokenAmount_`
-  // /// from owner and sends exactly `reserveAssetAmount_` of the reserve pool's underlying tokens to the `receiver_`,
-  // /// and reverts if more than `maxReceiptTokensBurned_` are burned. If the safety module is PAUSED, unstake can be
-  // /// completed immediately, otherwise this queues a redemption which can be completed once sufficient delay has
-  // /// elapsed. This also claims any outstanding rewards that the user is entitled to.
-  // function unstakeAssetAmount(
-  //   ISafetyModule safetyModule_,
-  //   uint16 reservePoolId_,
-  //   uint256 reserveAssetAmount_,
-  //   address receiver_,
-  //   uint256 maxReceiptTokensBurned_
-  // ) external payable returns (uint64 redemptionId_, uint256 stkTokenAmount_) {
-  //   _assertAddressNotZero(receiver_);
-  //   stkTokenAmount_ = safetyModule_.convertToStakeTokenAmount(reservePoolId_, reserveAssetAmount_);
-  //   if (stkTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
-  //   // Caller must first approve the CozyRouter to spend the deposit tokens.
-  //   (redemptionId_,) = safetyModule_.unstake(reservePoolId_, stkTokenAmount_, receiver_, msg.sender);
-  // }
+  /// @notice Unstakes exactly `stakeAssetAmount_` from a `rewardsManager_` stake pool. Burns `stkReceiptTokenAmount_`
+  /// from owner and sends exactly `stakeAssetAmount_` of the stake pool's underlying tokens to the `receiver_`,
+  /// and reverts if more than `maxReceiptTokensBurned_` are burned. This also claims any outstanding rewards that the
+  /// user is entitled to for the stake pool.
+  function unstakeAssetAmount(
+    IRewardsManager rewardsManager_,
+    uint16 stakePoolId_,
+    uint256 stakeAssetAmount_,
+    address receiver_,
+    uint256 maxReceiptTokensBurned_
+  ) public payable returns (uint256 stkReceiptTokenAmount_) {
+    _assertAddressNotZero(receiver_);
+    stkReceiptTokenAmount_ = rewardsManager_.convertRewardAssetToReceiptTokenAmount(stakePoolId_, stakeAssetAmount_);
+    if (stkReceiptTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
+    // Caller must first approve the CozyRouter to spend the stake receipt tokens.
+    rewardsManager_.unstake(stakePoolId_, stkReceiptTokenAmount_, receiver_, msg.sender);
+  }
+
+  /// @notice Burns `rewardsManager_` stake tokens for `stakePoolId_` stake pool from caller and sends exactly
+  /// `reserveAssetAmount_` of `safetyModule_` `reservePoolId_` reserve pool's underlying tokens to the `receiver_`,
+  /// and reverts if less than `minAssetsReceived_` of the reserve pool asset would be received.
+  /// If the safety module is PAUSED, unstake can be completed immediately, otherwise this
+  /// queues a redemption which can be completed once sufficient delay has elapsed. This also claims any outstanding
+  /// rewards that the user is entitled to.
+  function unstakeReserveAssetsAndWithdraw(
+    ISafetyModule safetyModule_,
+    IRewardsManager rewardsManager_,
+    uint16 reservePoolId_,
+    uint16 stakePoolId_,
+    uint256 reserveAssetAmount_,
+    address receiver_,
+    uint256 maxReceiptTokensBurned_
+  ) external payable returns (uint64 redemptionId_, uint256 depositReceiptTokenAmount_) {
+    _assertAddressNotZero(receiver_);
+    depositReceiptTokenAmount_ = safetyModule_.convertToReceiptTokenAmount(reservePoolId_, reserveAssetAmount_);
+    if (depositReceiptTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
+
+    // Caller must first approve the CozyRouter to spend the rewards manager stake tokens.
+    // Exchange rate between rewards manager stake tokens and safety module deposit receipt tokens is 1:1.
+    unstake(rewardsManager_, stakePoolId_, depositReceiptTokenAmount_, address(this), 0);
+
+    (redemptionId_, reserveAssetAmount_) =
+      safetyModule_.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, address(this));
+  }
+
+  /// @notice Unstakes exactly `depositReceiptTokenAmount_` of `safetyModule_` deposit receipt tokens from a
+  /// `rewardsManager_` stake pool. Burns `rewardsManager` stake tokens for `stakePoolId_`, `safetyModule_`
+  /// `depositReceiptTokenAmount_` deposit receipt tokens for `reservePoolId_`, and redeems exactly
+  /// `reserveAssetAmount_` of the `safetyModule_` reserve pool's underlying tokens to the `receiver_`.
+  /// Reverts if less than `minAssetsReceived_` are received. If the safety module is PAUSED,
+  /// withdrawal/redemption can be completed immediately, otherwise this queues a redemption which can be
+  /// completed once sufficient delay has elapsed. This also claims any outstanding rewards that the user is entitled
+  /// to for the stake pool.
+  function unstakeDepositReceiptTokensAndWithdraw(
+    ISafetyModule safetyModule_,
+    IRewardsManager rewardsManager_,
+    uint16 reservePoolId_,
+    uint16 stakePoolId_,
+    uint256 depositReceiptTokenAmount_,
+    address receiver_,
+    uint256 minAssetsReceived_
+  ) external payable returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
+    _assertAddressNotZero(receiver_);
+
+    // Caller must first approve the CozyRouter to spend the rewards manager stake tokens.
+    // Exchange rate between rewards manager stake tokens and safety module deposit receipt tokens is 1:1.
+    unstakeAssetAmount(rewardsManager_, stakePoolId_, depositReceiptTokenAmount_, address(this), 0);
+
+    (redemptionId_, reserveAssetAmount_) =
+      safetyModule_.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, address(this));
+    if (reserveAssetAmount_ < minAssetsReceived_) revert SlippageExceeded();
+  }
 
   /// @notice Completes the redemption corresponding to `id_` in `safetyModule_`.
   function completeWithdraw(ISafetyModule safetyModule_, uint64 id_) external payable {
@@ -515,12 +543,6 @@ contract CozyRouter {
   function completeRedemption(ISafetyModule safetyModule_, uint64 id_) external payable {
     safetyModule_.completeRedemption(id_);
   }
-
-  // TODO
-  // /// @notice Completes the unstake corresponding to redemption id `id_` in `safetyModule_`.
-  // function completeUnstake(ISafetyModule safetyModule_, uint64 id_) external payable {
-  //   safetyModule_.completeRedemption(id_);
-  // }
 
   /// @notice Calls the connector to unwrap the wrapped assets and transfer base assets back to `receiver_`.
   /// @dev This assumes that all assets that need to be withdrawn are sitting in the connector. It expects the
@@ -639,7 +661,7 @@ contract CozyRouter {
     uint256 proposalDisputeWindow_,
     TriggerMetadata memory metadata_
   ) external payable returns (ITrigger trigger_) {
-    // UMATriggerFactory.deployTrigger uses safeTransferFrom to transfer rewardToken_ from msg.sender.
+    // UMATriggerFactory.deployTrigger uses safeTransferFrom to transfer rewardToken_ from caller.
     // In the context of deployTrigger below, msg.sender is this CozyRouter, so the funds must first be transferred
     // here.
     rewardToken_.safeTransferFrom(msg.sender, address(this), rewardAmount_);
@@ -663,12 +685,12 @@ contract CozyRouter {
   // -------- Internal helpers --------
   // ----------------------------------
 
-  function _wrapBaseAssetViaConnector(IConnector connector_, ISafetyModule safetyModule_, uint256 baseAssetAmount_)
+  function _wrapBaseAssetViaConnector(IConnector connector_, address receiver_, uint256 baseAssetAmount_)
     internal
     returns (uint256 depositAssetAmount_)
   {
     connector_.baseAsset().safeTransferFrom(msg.sender, address(connector_), baseAssetAmount_);
-    depositAssetAmount_ = connector_.wrapBaseAsset(address(safetyModule_), baseAssetAmount_);
+    depositAssetAmount_ = connector_.wrapBaseAsset(receiver_, baseAssetAmount_);
   }
 
   function _assertIsValidSafetyModule(address safetyModule_) internal view {
