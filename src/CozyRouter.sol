@@ -514,7 +514,7 @@ contract CozyRouter {
   /// withdrawal/redemption can be completed immediately, otherwise this queues a redemption which can be
   /// completed once sufficient delay has elapsed. This also claims any outstanding rewards that the user is entitled
   /// to for the stake pool.
-  function unstakeDepositReceiptTokensAndWithdraw(
+  function unstakeDepositReceiptTokensAndRedeem(
     ISafetyModule safetyModule_,
     IRewardsManager rewardsManager_,
     uint16 reservePoolId_,
