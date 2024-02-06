@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
 import {SafeERC20} from "cozy-safety-module-shared/lib/SafeERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
@@ -71,7 +72,7 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
     returns (uint256)
   {
     // Round up, in favor of depositors.
-    return slashAmount_.divWadUp(totalReservePoolAmount_);
+    return slashAmount_.mulDivUp(MathConstants.ZOC, totalReservePoolAmount_);
   }
 
   function _updateAlreadySlashed(uint256 alreadySlashed_, uint16 poolId_) internal pure returns (uint256) {

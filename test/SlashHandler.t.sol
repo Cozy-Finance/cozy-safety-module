@@ -62,7 +62,7 @@ contract SlashHandlerTest is TestBase {
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
@@ -139,7 +139,7 @@ contract SlashHandlerTest is TestBase {
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
@@ -151,7 +151,7 @@ contract SlashHandlerTest is TestBase {
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
@@ -163,7 +163,7 @@ contract SlashHandlerTest is TestBase {
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
@@ -256,7 +256,7 @@ contract SlashHandlerTest is TestBase {
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
@@ -267,7 +267,7 @@ contract SlashHandlerTest is TestBase {
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
-        maxSlashPercentage: 0.49e18,
+        maxSlashPercentage: 0.49e4,
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
@@ -279,7 +279,7 @@ contract SlashHandlerTest is TestBase {
     slashes_[0] = Slash({reservePoolId: 0, amount: slashAmountA_});
     slashes_[1] = Slash({reservePoolId: 1, amount: slashAmountB_});
 
-    uint256 slashPercentage_ = uint256(slashAmountB_).divWadUp(depositAmount_);
+    uint256 slashPercentage_ = uint256(slashAmountB_).mulDivUp(MathConstants.ZOC, depositAmount_);
     vm.expectRevert(abi.encodeWithSelector(ISlashHandlerErrors.ExceedsMaxSlashPercentage.selector, 1, slashPercentage_));
     vm.prank(mockPayoutHandler);
     component.slash(slashes_, receiver_);
@@ -298,7 +298,7 @@ contract SlashHandlerTest is TestBase {
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
@@ -309,7 +309,7 @@ contract SlashHandlerTest is TestBase {
         depositAmount: depositAmount_,
         pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
         feeAmount: _randomUint256(),
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         lastFeesDripTime: uint128(block.timestamp)
       })
     );

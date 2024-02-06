@@ -39,7 +39,7 @@ contract DepositorUnitTest is TestBase {
       depositAmount: 50e18,
       pendingWithdrawalsAmount: 0,
       feeAmount: 0,
-      maxSlashPercentage: MathConstants.WAD,
+      maxSlashPercentage: MathConstants.ZOC,
       lastFeesDripTime: uint128(block.timestamp)
     });
     AssetPool memory initialAssetPool_ = AssetPool({amount: initialSafetyModuleBal});

@@ -54,7 +54,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numPools);
     for (uint256 i = 0; i < numPools; i++) {
       reservePoolConfigs_[i] = ReservePoolConfig({
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         asset: IERC20(address(new MockERC20("Mock Reserve Asset", "cozyRes", 18)))
       });
     }
@@ -110,7 +110,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
       IERC20 asset_ = i < numReserveAssets
         ? getReservePool(ISafetyModule(address(safetyModule)), i).asset
         : IERC20(address(new MockERC20("Mock Reserve Asset", "cozyRes", 18)));
-      reservePoolConfigs_[i] = ReservePoolConfig({maxSlashPercentage: MathConstants.WAD / 2, asset: asset_});
+      reservePoolConfigs_[i] = ReservePoolConfig({maxSlashPercentage: MathConstants.ZOC / 2, asset: asset_});
     }
 
     TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](0);

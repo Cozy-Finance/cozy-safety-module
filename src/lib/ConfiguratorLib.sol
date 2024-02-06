@@ -138,7 +138,7 @@ library ConfiguratorLib {
 
     // Validate max slash percentages.
     for (uint16 i = 0; i < reservePoolConfigs_.length; i++) {
-      if (reservePoolConfigs_[i].maxSlashPercentage > MathConstants.WAD) return false;
+      if (reservePoolConfigs_[i].maxSlashPercentage > MathConstants.ZOC) return false;
     }
 
     return true;

@@ -170,7 +170,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
         depositAmount: 0,
         feeAmount: 0,
         pendingWithdrawalsAmount: 0,
-        maxSlashPercentage: MathConstants.WAD,
+        maxSlashPercentage: MathConstants.ZOC,
         lastFeesDripTime: uint128(block.timestamp)
       })
     );

@@ -93,7 +93,7 @@ abstract contract InvariantTestWithSingleReservePool is InvariantBaseDeploy {
     assets.push(asset_);
 
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
-    reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0.5e18, asset: asset_});
+    reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0.5e4, asset: asset_});
 
     triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
 
@@ -129,7 +129,7 @@ abstract contract InvariantTestWithMultipleReservePools is InvariantBaseDeploy {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numReservePools_);
     for (uint256 i_; i_ < numReservePools_; i_++) {
       reservePoolConfigs_[i_] = ReservePoolConfig({
-        maxSlashPercentage: _randomUint256InRange(1, MathConstants.WAD),
+        maxSlashPercentage: _randomUint256InRange(1, MathConstants.ZOC),
         asset: assets[_randomUint256InRange(0, uniqueNumAssets_ - 1)]
       });
     }
