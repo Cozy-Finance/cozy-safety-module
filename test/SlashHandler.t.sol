@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
+import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
+import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
+import {SafeCastLib} from "cozy-safety-module-shared/lib/SafeCastLib.sol";
+import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
+import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {Ownable} from "../src/lib/Ownable.sol";
-import {ReceiptToken} from "../src/ReceiptToken.sol";
-import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
-import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
-import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
-import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ISlashHandlerErrors} from "../src/interfaces/ISlashHandlerErrors.sol";
 import {ISlashHandlerEvents} from "../src/interfaces/ISlashHandlerEvents.sol";
+import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {SlashHandler} from "../src/lib/SlashHandler.sol";
 import {Redeemer} from "../src/lib/Redeemer.sol";
-import {SafeCastLib} from "../src/lib/SafeCastLib.sol";
-import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
-import {MathConstants} from "../src/lib/MathConstants.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {Slash} from "../src/lib/structs/Slash.sol";
 import {Trigger} from "../src/lib/structs/Trigger.sol";
@@ -83,7 +83,6 @@ contract SlashHandlerTest is TestBase {
 
     ReservePool memory reservePool_ = component.getReservePool(0);
     if (slashAmount_ >= depositAmount_) {
-      uint256 remainingSlashAmount_ = slashAmount_ - depositAmount_;
       assertEq(reservePool_.depositAmount, 0, "depositAmount");
       assertEq(reservePool_.pendingWithdrawalsAmount, 0, "pendingWithdrawalsAmount");
     } else {

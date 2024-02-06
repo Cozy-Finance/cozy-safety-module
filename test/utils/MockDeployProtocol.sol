@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
+import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
+import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
 import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "../../src/interfaces/ISafetyModuleFactory.sol";
 import {IManager} from "../../src/interfaces/IManager.sol";
-import {IReceiptToken} from "../../src/interfaces/IReceiptToken.sol";
-import {IReceiptTokenFactory} from "../../src/interfaces/IReceiptTokenFactory.sol";
 import {IDripModel} from "../../src/interfaces/IDripModel.sol";
 import {IWeth} from "../../src/interfaces/IWeth.sol";
 import {Manager} from "../../src/Manager.sol";
 import {SafetyModule} from "../../src/SafetyModule.sol";
 import {SafetyModuleFactory} from "../../src/SafetyModuleFactory.sol";
-import {ReceiptToken} from "../../src/ReceiptToken.sol";
-import {ReceiptTokenFactory} from "../../src/ReceiptTokenFactory.sol";
 import {ReservePoolConfig, UpdateConfigsCalldataParams} from "../../src/lib/structs/Configs.sol";
 import {Delays} from "../../src/lib/structs/Delays.sol";
 import {TriggerConfig} from "../../src/lib/structs/Trigger.sol";
@@ -73,8 +73,8 @@ contract MockDeployer is TestBase {
 
     depositReceiptTokenLogic = new ReceiptToken();
     stkReceiptTokenLogic = new ReceiptToken();
-    depositReceiptTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
-    stkReceiptTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    depositReceiptTokenLogic.initialize(address(0), "", "", 0);
+    stkReceiptTokenLogic.initialize(address(0), "", "", 0);
     receiptTokenFactory = new ReceiptTokenFactory(depositReceiptTokenLogic_, stkReceiptTokenLogic_);
   }
 }

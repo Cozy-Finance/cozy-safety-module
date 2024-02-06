@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
+import {Governable} from "cozy-safety-module-shared/lib/Governable.sol";
+import {SafetyModuleState, TriggerState} from "./SafetyModuleStates.sol";
 import {IStateChangerEvents} from "../interfaces/IStateChangerEvents.sol";
 import {IStateChangerErrors} from "../interfaces/IStateChangerErrors.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
 import {Trigger} from "./structs/Trigger.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
-import {Governable} from "./Governable.sol";
-import {SafetyModuleState, TriggerState} from "./SafetyModuleStates.sol";
 import {CallerRole, StateTransitionsLib} from "./StateTransitionsLib.sol";
 
 abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerEvents, IStateChangerErrors {

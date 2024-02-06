@@ -2,10 +2,10 @@
 pragma solidity 0.8.22;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../../src/lib/structs/Pools.sol";
-import {IERC20} from "../../src/interfaces/IERC20.sol";
 import {
   InvariantTestBase,
   InvariantTestWithSingleReservePool,

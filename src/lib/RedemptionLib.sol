@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
+import {SafeCastLib} from "cozy-safety-module-shared/lib/SafeCastLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {CozyMath} from "./CozyMath.sol";
-import {MathConstants} from "./MathConstants.sol";
-import {SafeCastLib} from "./SafeCastLib.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {ReservePool} from "./structs/Pools.sol";
 

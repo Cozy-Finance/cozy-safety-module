@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {ReservePool} from "../../src/lib/structs/Pools.sol";
 import {SafetyModuleState, TriggerState} from "../../src/lib/SafetyModuleStates.sol";
+import {ReservePool} from "../../src/lib/structs/Pools.sol";
 import {Test} from "forge-std/Test.sol";
 
 abstract contract TestAssertions is Test {

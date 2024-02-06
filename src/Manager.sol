@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-import {IERC20} from "./interfaces/IERC20.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {Governable} from "cozy-safety-module-shared/lib/Governable.sol";
 import {IDripModel} from "./interfaces/IDripModel.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
@@ -9,7 +10,6 @@ import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
 import {UpdateConfigsCalldataParams, ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
 import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
-import {Governable} from "./lib/Governable.sol";
 
 contract Manager is Governable, IManager {
   struct DripModelLookup {

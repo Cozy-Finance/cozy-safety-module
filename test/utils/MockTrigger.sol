@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {ITrigger} from "../../src/interfaces/ITrigger.sol";
 import {TriggerState} from "../../src/lib/SafetyModuleStates.sol";
+import {ITrigger} from "../../src/interfaces/ITrigger.sol";
 
 contract MockTrigger is ITrigger {
   TriggerState public state;

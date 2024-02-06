@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
+import {SafeERC20} from "cozy-safety-module-shared/lib/SafeERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {Ownable} from "./Ownable.sol";
-import {SafeERC20} from "./SafeERC20.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
 import {ISlashHandlerErrors} from "../interfaces/ISlashHandlerErrors.sol";
 import {ISlashHandlerEvents} from "../interfaces/ISlashHandlerEvents.sol";
 import {IStateChangerEvents} from "../interfaces/IStateChangerEvents.sol";

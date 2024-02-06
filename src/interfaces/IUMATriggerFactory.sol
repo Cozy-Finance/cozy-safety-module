@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import {IERC20} from "./IERC20.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {ITrigger} from "./ITrigger.sol";
 import {TriggerMetadata} from "../lib/structs/Trigger.sol";
 

@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {ReceiptToken} from "../src/ReceiptToken.sol";
-import {ReceiptTokenFactory} from "../src/ReceiptTokenFactory.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
+import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
+import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
+import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {SafetyModuleFactory} from "../src/SafetyModuleFactory.sol";
-import {MathConstants} from "../src/lib/MathConstants.sol";
 import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePoolConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
-import {IERC20} from "../src/interfaces/IERC20.sol";
 import {IManager} from "../src/interfaces/IManager.sol";
-import {IReceiptToken} from "../src/interfaces/IReceiptToken.sol";
-import {IReceiptTokenFactory} from "../src/interfaces/IReceiptTokenFactory.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
@@ -39,8 +39,8 @@ contract SafetyModuleFactoryTest is TestBase {
     depositReceiptTokenLogic = new ReceiptToken();
     stkReceiptTokenLogic = new ReceiptToken();
 
-    depositReceiptTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
-    stkReceiptTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
+    depositReceiptTokenLogic.initialize(address(0), "", "", 0);
+    stkReceiptTokenLogic.initialize(address(0), "", "", 0);
 
     receiptTokenFactory = new ReceiptTokenFactory(
       IReceiptToken(address(depositReceiptTokenLogic)), IReceiptToken(address(stkReceiptTokenLogic))

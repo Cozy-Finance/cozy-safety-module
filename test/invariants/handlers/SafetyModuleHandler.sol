@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import {console2} from "forge-std/console2.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Manager} from "../../../src/Manager.sol";
 import {SafetyModule} from "../../../src/SafetyModule.sol";
@@ -10,7 +11,6 @@ import {ReservePool} from "../../../src/lib/structs/Pools.sol";
 import {RedemptionPreview} from "../../../src/lib/structs/Redemptions.sol";
 import {Slash} from "../../../src/lib/structs/Slash.sol";
 import {Trigger} from "../../../src/lib/structs/Trigger.sol";
-import {IERC20} from "../../../src/interfaces/IERC20.sol";
 import {ISafetyModule} from "../../../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../../../src/interfaces/ITrigger.sol";
 import {AddressSet, AddressSetLib} from "../utils/AddressSet.sol";
