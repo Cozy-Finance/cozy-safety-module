@@ -493,20 +493,19 @@ contract CozyRouter {
     uint256 reserveAssetAmount_,
     address receiver_,
     uint256 maxReceiptTokensBurned_
-  ) external payable returns (uint64 redemptionId_, uint256 depositReceiptTokenAmount_) {
+  ) external payable returns (uint64 redemptionId_, uint256 stakeReceiptTokenAmount_) {
     _assertAddressNotZero(receiver_);
-    depositReceiptTokenAmount_ = safetyModule_.convertToReceiptTokenAmount(reservePoolId_, reserveAssetAmount_);
-    if (depositReceiptTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
+    // Exchange rate between rewards manager stake tokens and safety module deposit receipt tokens is 1:1.
+    stakeReceiptTokenAmount_ = safetyModule_.convertToReceiptTokenAmount(reservePoolId_, reserveAssetAmount_);
+    if (stakeReceiptTokenAmount_ > maxReceiptTokensBurned_) revert SlippageExceeded();
 
     // Caller must first approve the CozyRouter to spend the rewards manager stake tokens.
-    // Exchange rate between rewards manager stake tokens and safety module deposit receipt tokens is 1:1.
-    unstake(rewardsManager_, stakePoolId_, depositReceiptTokenAmount_, address(this), 0);
+    unstake(rewardsManager_, stakePoolId_, stakeReceiptTokenAmount_, address(this), 0);
 
-    (redemptionId_,) =
-      safetyModule_.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, address(this));
+    (redemptionId_,) = safetyModule_.redeem(reservePoolId_, stakeReceiptTokenAmount_, receiver_, address(this));
   }
 
-  /// @notice Unstakes exactly `depositReceiptTokenAmount_` of `safetyModule_` deposit receipt tokens from a
+  /// @notice Unstakes exactly `stakeReceiptTokenAmount_` of stake receipt tokens from a
   /// `rewardsManager_` stake pool. Burns `rewardsManager` stake tokens for `stakePoolId_`, `safetyModule_`
   /// `depositReceiptTokenAmount_` deposit receipt tokens for `reservePoolId_`, and redeems exactly
   /// `reserveAssetAmount_` of the `safetyModule_` reserve pool's underlying tokens to the `receiver_`.
@@ -519,7 +518,7 @@ contract CozyRouter {
     IRewardsManager rewardsManager_,
     uint16 reservePoolId_,
     uint16 stakePoolId_,
-    uint256 depositReceiptTokenAmount_,
+    uint256 stakeReceiptTokenAmount_,
     address receiver_,
     uint256 minAssetsReceived_
   ) external payable returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
@@ -527,10 +526,10 @@ contract CozyRouter {
 
     // Caller must first approve the CozyRouter to spend the rewards manager stake tokens.
     // Exchange rate between rewards manager stake tokens and safety module deposit receipt tokens is 1:1.
-    unstakeAssetAmount(rewardsManager_, stakePoolId_, depositReceiptTokenAmount_, address(this), 0);
+    unstake(rewardsManager_, stakePoolId_, stakeReceiptTokenAmount_, address(this), stakeReceiptTokenAmount_);
 
     (redemptionId_, reserveAssetAmount_) =
-      safetyModule_.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, address(this));
+      safetyModule_.redeem(reservePoolId_, stakeReceiptTokenAmount_, receiver_, address(this));
     if (reserveAssetAmount_ < minAssetsReceived_) revert SlippageExceeded();
   }
 
