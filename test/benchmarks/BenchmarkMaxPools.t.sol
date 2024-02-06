@@ -3,8 +3,8 @@ pragma solidity 0.8.22;
 
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
-import {TriggerState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
 import {DripModelExponential} from "cozy-safety-module-models/DripModelExponential.sol";
+import {TriggerState} from "../../src/lib/SafetyModuleStates.sol";
 import {UpdateConfigsCalldataParams, ReservePoolConfig} from "../../src/lib/structs/Configs.sol";
 import {Delays} from "../../src/lib/structs/Delays.sol";
 import {ReservePool} from "../../src/lib/structs/Pools.sol";

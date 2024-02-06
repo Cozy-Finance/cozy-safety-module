@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import {SafetyModuleState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
+import {SafetyModuleState} from "../lib/SafetyModuleStates.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
 
 interface IStateChangerEvents {

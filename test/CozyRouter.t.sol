@@ -5,7 +5,6 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/Ag
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
-import {TriggerState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
 import {ChainlinkTriggerFactory} from "cozy-safety-module-triggers/src/ChainlinkTriggerFactory.sol";
 import {OwnableTriggerFactory} from "cozy-safety-module-triggers/src/OwnableTriggerFactory.sol";
 import {OptimisticOracleV2Interface} from "cozy-safety-module-triggers/src/interfaces/OptimisticOracleV2Interface.sol";
@@ -13,6 +12,7 @@ import {UMATriggerFactory} from "cozy-safety-module-triggers/src/UMATriggerFacto
 import {MockChainlinkOracle} from "cozy-safety-module-triggers/test/utils/MockChainlinkOracle.sol";
 import {CozyRouter} from "../src/CozyRouter.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
+import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";

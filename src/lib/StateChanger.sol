@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {Governable} from "cozy-safety-module-shared/lib/Governable.sol";
-import {SafetyModuleState, TriggerState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
+import {SafetyModuleState, TriggerState} from "./SafetyModuleStates.sol";
 import {IStateChangerEvents} from "../interfaces/IStateChangerEvents.sol";
 import {IStateChangerErrors} from "../interfaces/IStateChangerErrors.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";

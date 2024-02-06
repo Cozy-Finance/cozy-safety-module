@@ -2,8 +2,8 @@
 pragma solidity 0.8.22;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {SafetyModuleState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
 import {
   InvariantTestBase,
   InvariantTestWithSingleReservePool,

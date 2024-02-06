@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
-import {SafetyModuleState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
+import {SafetyModuleState} from "../lib/SafetyModuleStates.sol";
 import {AssetPool} from "../lib/structs/Pools.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
 import {ReservePool} from "../lib/structs/Pools.sol";

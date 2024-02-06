@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {SafetyModuleState} from "cozy-safety-module-shared/lib/SafetyModuleStates.sol";
+import {SafetyModuleState} from "./SafetyModuleStates.sol";
 
 /// @dev Enum representing what the caller of a function is.
 /// NONE indicates that the caller has no authorization privileges.
