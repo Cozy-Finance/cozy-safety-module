@@ -12,7 +12,7 @@ import {RedemptionPreview} from "../lib/structs/Redemptions.sol";
 import {Slash} from "../lib/structs/Slash.sol";
 import {Trigger} from "../lib/structs/Trigger.sol";
 import {IDripModel} from "./IDripModel.sol";
-import {IManager} from "./IManager.sol";
+import {ICozySafetyModuleManager} from "./ICozySafetyModuleManager.sol";
 import {ITrigger} from "./ITrigger.sol";
 
 interface ISafetyModule {
@@ -33,8 +33,8 @@ interface ISafetyModule {
     view
     returns (uint256 reserveAssetAmount_);
 
-  /// @notice Address of the Cozy protocol manager.
-  function cozyManager() external view returns (IManager);
+  /// @notice Address of the Cozy safety module protocol manager.
+  function cozySafetyModuleManager() external view returns (ICozySafetyModuleManager);
 
   function delays()
     external

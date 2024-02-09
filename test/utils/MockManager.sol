@@ -3,7 +3,7 @@ pragma solidity 0.8.22;
 
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {Governable} from "cozy-safety-module-shared/lib/Governable.sol";
-import {IManager} from "../../src/interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "../../src/interfaces/ICozySafetyModuleManager.sol";
 import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
 import {IDripModel} from "../../src/interfaces/IDripModel.sol";
 

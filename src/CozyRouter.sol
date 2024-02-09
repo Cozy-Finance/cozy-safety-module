@@ -11,7 +11,7 @@ import {UpdateConfigsCalldataParams} from "./lib/structs/Configs.sol";
 import {TriggerMetadata} from "./lib/structs/Trigger.sol";
 import {IChainlinkTriggerFactory} from "src/interfaces/IChainlinkTriggerFactory.sol";
 import {IConnector} from "./interfaces/IConnector.sol";
-import {IManager} from "./interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "./interfaces/ICozySafetyModuleManager.sol";
 import {IOwnableTriggerFactory} from "./interfaces/IOwnableTriggerFactory.sol";
 import {IRewardsManager} from "./interfaces/IRewardsManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
@@ -37,7 +37,7 @@ contract CozyRouter {
   IWstETH public immutable wstEth;
 
   /// @notice The Cozy Safety Module Manager address.
-  IManager public immutable manager;
+  ICozySafetyModuleManager public immutable manager;
 
   IChainlinkTriggerFactory public immutable chainlinkTriggerFactory;
 
@@ -58,7 +58,7 @@ contract CozyRouter {
   error TransferFailed();
 
   constructor(
-    IManager manager_,
+    ICozySafetyModuleManager manager_,
     IWeth weth_,
     IStETH stEth_,
     IWstETH wstEth_,

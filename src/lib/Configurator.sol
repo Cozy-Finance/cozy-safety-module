@@ -22,7 +22,9 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
   /// existing triggers or new triggers.
   /// - delaysConfig: The new delays config.
   function updateConfigs(UpdateConfigsCalldataParams calldata configUpdates_) external onlyOwner {
-    ConfiguratorLib.updateConfigs(lastConfigUpdate, reservePools, triggerData, delays, configUpdates_, cozyManager);
+    ConfiguratorLib.updateConfigs(
+      lastConfigUpdate, reservePools, triggerData, delays, configUpdates_, cozySafetyModuleManager
+    );
   }
 
   /// @notice Execute queued updates to the safety module configs.

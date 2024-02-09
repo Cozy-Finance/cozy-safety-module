@@ -10,14 +10,14 @@ import {console2} from "forge-std/console2.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {ScriptUtils} from "./utils/ScriptUtils.sol";
 import {CozyRouter} from "../src/CozyRouter.sol";
-import {Manager} from "../src/Manager.sol";
+import {CozySafetyModuleManager} from "../src/CozySafetyModuleManager.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {SafetyModuleFactory} from "../src/SafetyModuleFactory.sol";
 import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
-import {IManager} from "../src/interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "../src/interfaces/ISafetyModuleFactory.sol";
@@ -85,7 +85,7 @@ contract DeployProtocol is ScriptUtils {
   IDripModel feeDripModel;
 
   // Core contracts to deploy.
-  Manager manager;
+  CozySafetyModuleManager manager;
   SafetyModule safetyModuleLogic;
   SafetyModuleFactory safetyModuleFactory;
   ReceiptToken depositTokenLogic;
@@ -137,7 +137,8 @@ contract DeployProtocol is ScriptUtils {
     // -------------------------------------
 
     uint256 nonce_ = vm.getNonce(msg.sender);
-    IManager computedAddrManager_ = IManager(vm.computeCreateAddress(msg.sender, nonce_));
+    ICozySafetyModuleManager computedAddrManager_ =
+      ICozySafetyModuleManager(vm.computeCreateAddress(msg.sender, nonce_));
     ISafetyModule computedAddrSafetyModuleLogic_ = ISafetyModule(vm.computeCreateAddress(msg.sender, nonce_ + 1));
     // nonce + 2 is initialization of the SafetyModule logic.
     ISafetyModuleFactory computedAddrSafetyModuleFactory_ =
@@ -153,11 +154,12 @@ contract DeployProtocol is ScriptUtils {
     // -------- Core Protocol Deployment --------
     // ------------------------------------------
 
-    // -------- Deploy: Manager --------
+    // -------- Deploy: CozySafetyModuleManager --------
     vm.broadcast();
-    manager = new Manager(owner, pauser, computedAddrSafetyModuleFactory_, feeDripModel, allowedReservePools);
-    console2.log("Manager deployed:", address(manager));
-    require(address(manager) == address(computedAddrManager_), "Manager address mismatch");
+    manager =
+      new CozySafetyModuleManager(owner, pauser, computedAddrSafetyModuleFactory_, feeDripModel, allowedReservePools);
+    console2.log("CozySafetyModuleManager deployed:", address(manager));
+    require(address(manager) == address(computedAddrManager_), "CozySafetyModuleManager address mismatch");
 
     // -------- Deploy: SafetyModule Logic --------
     vm.broadcast();

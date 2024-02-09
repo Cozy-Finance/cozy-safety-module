@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import {console2} from "forge-std/console2.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {Manager} from "../../../src/Manager.sol";
+import {CozySafetyModuleManager} from "../../../src/CozySafetyModuleManager.sol";
 import {SafetyModule} from "../../../src/SafetyModule.sol";
 import {SafetyModuleState, TriggerState} from "../../../src/lib/SafetyModuleStates.sol";
 import {ReservePool} from "../../../src/lib/structs/Pools.sol";
@@ -26,7 +26,7 @@ contract SafetyModuleHandler is TestBase {
   address pauser;
   address owner;
 
-  Manager public manager;
+  CozySafetyModuleManager public manager;
   ISafetyModule public safetyModule;
 
   uint256 numReservePools;
@@ -83,7 +83,7 @@ contract SafetyModuleHandler is TestBase {
   // -------- Constructor --------
 
   constructor(
-    Manager manager_,
+    CozySafetyModuleManager manager_,
     ISafetyModule safetyModule_,
     uint256 numReservePools_,
     ITrigger[] memory triggers_,

@@ -21,7 +21,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
 
   function dripFees() public override {
     if (safetyModuleState != SafetyModuleState.ACTIVE) return;
-    IDripModel dripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
+    IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
 
     uint256 numReserveAssets_ = reservePools.length;
     for (uint16 i = 0; i < numReserveAssets_; i++) {
@@ -31,7 +31,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
 
   function dripFeesFromReservePool(uint16 reservePoolId_) external {
     if (safetyModuleState != SafetyModuleState.ACTIVE) return;
-    IDripModel dripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
+    IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
 
     _dripFeesFromReservePool(reservePools[reservePoolId_], dripModel_);
   }
@@ -41,8 +41,8 @@ abstract contract FeesHandler is SafetyModuleCommon {
   function claimFees(address owner_) external {
     // Cozy fee claims will often be batched, so we require it to be initiated from the manager to save gas by
     // removing calls and SLOADs to check the owner addresses each time.
-    if (msg.sender != address(cozyManager)) revert Ownable.Unauthorized();
-    IDripModel dripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
+    if (msg.sender != address(cozySafetyModuleManager)) revert Ownable.Unauthorized();
+    IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
 
     uint256 numReservePools_ = reservePools.length;
     for (uint16 i = 0; i < numReservePools_; i++) {

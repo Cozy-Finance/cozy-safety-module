@@ -15,7 +15,7 @@ import {Delays} from "../src/lib/structs/Delays.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
-import {IManager} from "../src/interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
@@ -30,7 +30,7 @@ contract SafetyModuleFactoryTest is TestBase {
   ReceiptToken stkReceiptTokenLogic;
   IReceiptTokenFactory receiptTokenFactory;
 
-  IManager mockManager = IManager(_randomAddress());
+  ICozySafetyModuleManager mockManager = ICozySafetyModuleManager(_randomAddress());
 
   /// @dev Emitted when a new Safety Module is deployed.
   event SafetyModuleDeployed(ISafetyModule safetyModule);
@@ -61,7 +61,7 @@ contract SafetyModuleFactoryTest is TestBase {
   }
 
   function test_deploySafetyModuleFactory() public {
-    assertEq(address(safetyModuleFactory.cozyManager()), address(mockManager));
+    assertEq(address(safetyModuleFactory.cozySafetyModuleManager()), address(mockManager));
     assertEq(address(safetyModuleFactory.safetyModuleLogic()), address(safetyModuleLogic));
   }
 
@@ -70,10 +70,10 @@ contract SafetyModuleFactoryTest is TestBase {
     new SafetyModuleFactory(mockManager, ISafetyModule(address(0)));
 
     vm.expectRevert(SafetyModuleFactory.InvalidAddress.selector);
-    new SafetyModuleFactory(IManager(address(0)), ISafetyModule(address(safetyModuleLogic)));
+    new SafetyModuleFactory(ICozySafetyModuleManager(address(0)), ISafetyModule(address(safetyModuleLogic)));
 
     vm.expectRevert(SafetyModuleFactory.InvalidAddress.selector);
-    new SafetyModuleFactory(IManager(address(0)), ISafetyModule(address(0)));
+    new SafetyModuleFactory(ICozySafetyModuleManager(address(0)), ISafetyModule(address(0)));
   }
 
   function test_deploySafetyModule() public {
@@ -109,7 +109,7 @@ contract SafetyModuleFactoryTest is TestBase {
     vm.prank(address(mockManager));
     ISafetyModule safetyModule_ = safetyModuleFactory.deploySafetyModule(owner_, pauser_, configs_, baseSalt_);
     assertEq(address(safetyModule_), computedSafetyModuleAddress_);
-    assertEq(address(safetyModule_.cozyManager()), address(mockManager));
+    assertEq(address(safetyModule_.cozySafetyModuleManager()), address(mockManager));
     assertEq(address(safetyModule_.receiptTokenFactory()), address(receiptTokenFactory));
     assertEq(address(safetyModule_.owner()), owner_);
     assertEq(address(safetyModule_.pauser()), pauser_);

@@ -9,7 +9,7 @@ import {SafeCastLib} from "cozy-safety-module-shared/lib/SafeCastLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
-import {IManager} from "../src/interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
 import {FeesHandler} from "../src/lib/FeesHandler.sol";
@@ -28,7 +28,7 @@ contract FeesHandlerUnitTest is TestBase {
 
   MockDripModel mockFeesDripModel;
   MockManager public mockManager = new MockManager();
-  TestableFeesHandler component = new TestableFeesHandler(IManager(address(mockManager)));
+  TestableFeesHandler component = new TestableFeesHandler(ICozySafetyModuleManager(address(mockManager)));
 
   uint256 constant DEFAULT_FEES_DRIP_RATE = 0.05e18;
   uint256 constant DEFAULT_NUM_RESERVE_POOLS = 2;
@@ -439,8 +439,8 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
 }
 
 contract TestableFeesHandler is Depositor, FeesHandler {
-  constructor(IManager manager_) {
-    cozyManager = manager_;
+  constructor(ICozySafetyModuleManager manager_) {
+    cozySafetyModuleManager = manager_;
   }
 
   // -------- Mock setters --------

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import {IManager} from "./IManager.sol";
+import {ICozySafetyModuleManager} from "./ICozySafetyModuleManager.sol";
 import {ITrigger} from "./ITrigger.sol";
 import {TriggerMetadata} from "../lib/structs/Trigger.sol";
 

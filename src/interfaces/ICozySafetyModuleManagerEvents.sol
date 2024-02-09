@@ -7,7 +7,7 @@ import {ISafetyModule} from "./ISafetyModule.sol";
 /**
  * @dev Data types and events for the Manager.
  */
-interface IManagerEvents {
+interface ICozySafetyModuleManagerEvents {
   /// @dev Emitted when accrued Cozy fees are swept from a safety module to the Cozy owner.
   event ClaimedSafetyModuleFees(ISafetyModule indexed safetyModule_);
 
