@@ -369,7 +369,7 @@ contract SlashHandlerTest is TestBase {
   }
 
   function test_reservePoolDepositAmountPerSlash() public {
-    uint256 depositAmountA_ = 900e18;
+    uint256 depositAmountA_ = 900_000_000_000e18;
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
@@ -386,21 +386,22 @@ contract SlashHandlerTest is TestBase {
     assertEq(component.getReservePoolDepositAmountPerSlash(0), 0);
 
     component.mockSetNumPendingSlashes(1);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 900e18);
+    assertEq(component.getReservePoolDepositAmountPerSlash(0), 900_000_000_000e18);
 
     component.mockSetNumPendingSlashes(2);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 450e18);
+    assertEq(component.getReservePoolDepositAmountPerSlash(0), 450_000_000_000e18);
 
     component.mockSetNumPendingSlashes(30);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 30e18);
+    assertEq(component.getReservePoolDepositAmountPerSlash(0), 30_000_000_000e18);
 
     component.mockSetNumPendingSlashes(100);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 9e18);
+    assertEq(component.getReservePoolDepositAmountPerSlash(0), 9_000_000_000e18);
 
     component.mockSetNumPendingSlashes(type(uint16).max);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 13733119707026779); // 900e18 / 65535 = 13733119707026779.6
+    assertEq(component.getReservePoolDepositAmountPerSlash(0), 13_733_119_707_026_779_583_428_702); // 900_000_000_000e18
+      // / 65535 = 13733119707026779583428702.2
 
-    uint256 depositAmountB_ = 100;
+    uint256 depositAmountB_ = 1000;
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
@@ -417,18 +418,18 @@ contract SlashHandlerTest is TestBase {
     assertEq(component.getReservePoolDepositAmountPerSlash(1), 0);
 
     component.mockSetNumPendingSlashes(1);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 100);
+    assertEq(component.getReservePoolDepositAmountPerSlash(1), 1000);
 
     component.mockSetNumPendingSlashes(2);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 50);
+    assertEq(component.getReservePoolDepositAmountPerSlash(1), 500);
 
     component.mockSetNumPendingSlashes(30);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 3);
+    assertEq(component.getReservePoolDepositAmountPerSlash(1), 33);
 
     component.mockSetNumPendingSlashes(100);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 1);
+    assertEq(component.getReservePoolDepositAmountPerSlash(1), 10);
 
-    component.mockSetNumPendingSlashes(101);
+    component.mockSetNumPendingSlashes(1001);
     assertEq(component.getReservePoolDepositAmountPerSlash(1), 0);
 
     component.mockSetNumPendingSlashes(type(uint16).max);
