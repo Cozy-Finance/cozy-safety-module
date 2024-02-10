@@ -24,5 +24,5 @@ interface ICozySafetyModuleManager is ICozySafetyModuleManagerEvents {
   function getFeeDripModel(ISafetyModule safetyModule_) external view returns (IDripModel);
 
   /// @notice Number of reserve pools allowed per safety module.
-  function allowedReservePools() external view returns (uint256);
+  function allowedReservePools() external view returns (uint8);
 }

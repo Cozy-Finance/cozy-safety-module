@@ -128,7 +128,7 @@ library ConfiguratorLib {
   function isValidConfiguration(
     ReservePoolConfig[] calldata reservePoolConfigs_,
     Delays calldata delaysConfig_,
-    uint256 maxReservePools_
+    uint8 maxReservePools_
   ) internal pure returns (bool) {
     // Validate number of reserve pools.
     if (reservePoolConfigs_.length > maxReservePools_) return false;

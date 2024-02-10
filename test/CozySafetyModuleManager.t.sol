@@ -99,8 +99,9 @@ contract CozySafetyModuleManagerTestCreateSafetyModule is MockDeployProtocol, Co
   function test_createSafetyModule_revertTooManyReservePools() public {
     UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
 
-    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](ALLOWED_RESERVE_POOLS + 1);
-    for (uint256 i = 0; i < ALLOWED_RESERVE_POOLS + 1; i++) {
+    // Number of reserve pools is a uint8 <= 255.
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](256);
+    for (uint256 i = 0; i < 256; i++) {
       reservePoolConfigs_[i] = ReservePoolConfig({
         maxSlashPercentage: MathConstants.ZOC,
         asset: IERC20(address(new MockERC20("MockAsset", "MOCK", 18)))

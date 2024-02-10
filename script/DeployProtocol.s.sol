@@ -72,7 +72,7 @@ contract DeployProtocol is ScriptUtils {
   address pauser;
 
   // Global restrictions on the number of reserve and reward pools.
-  uint256 allowedReservePools;
+  uint8 allowedReservePools;
 
   // Contracts to define per-network.
   IERC20 asset;
@@ -130,7 +130,7 @@ contract DeployProtocol is ScriptUtils {
     feeDripModel = IDripModel(json_.readAddress(".feeDripModel"));
 
     // -------- Reserve Pool Limits --------
-    allowedReservePools = json_.readUint(".allowedReservePools");
+    allowedReservePools = uint8(json_.readUint(".allowedReservePools"));
 
     // -------------------------------------
     // -------- Address Computation --------
