@@ -97,6 +97,7 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
   }
 
   function _updateAlreadySlashed(uint256 alreadySlashed_, uint16 poolId_) internal pure returns (uint256) {
+    // Using the left shift here is valid because `poolId_ < Manager.allowedReservePools` <= 256. 
     if ((alreadySlashed_ & (1 << poolId_)) != 0) revert AlreadySlashed(poolId_);
     return alreadySlashed_ | (1 << poolId_);
   }
