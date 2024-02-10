@@ -417,7 +417,7 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
   }
 
   function _updateWithdrawalsAfterTrigger(
-    uint16, /* reservePoolId_ */
+    uint8, /* reservePoolId_ */
     ReservePool storage, /* reservePool_ */
     uint256, /* oldStakeAmount_ */
     uint256 /* slashAmount_ */

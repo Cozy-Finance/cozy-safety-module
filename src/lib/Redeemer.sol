@@ -35,7 +35,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   ///      This can even happen after a single trigger if 100% of pool is consumed because 1/0 = INF.
   ///      If this happens, a new entry (1.0) is appended to the end of this array and the next trigger
   ///      will accumulate on that value.
-  mapping(uint16 reservePoolId_ => uint256[] reservePoolPendingRedemptionAccISFs) internal pendingRedemptionAccISFs;
+  mapping(uint8 reservePoolId_ => uint256[] reservePoolPendingRedemptionAccISFs) internal pendingRedemptionAccISFs;
 
   /// @notice ID of next redemption.
   uint64 internal redemptionIdCounter;
@@ -67,7 +67,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   /// sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeem(uint16 reservePoolId_, uint256 depositReceiptTokenAmount_, address receiver_, address owner_)
+  function redeem(uint8 reservePoolId_, uint256 depositReceiptTokenAmount_, address receiver_, address owner_)
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
@@ -86,7 +86,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their redemption (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
-  function previewRedemption(uint16 reservePoolId_, uint256 receiptTokenAmount_)
+  function previewRedemption(uint8 reservePoolId_, uint256 receiptTokenAmount_)
     external
     view
     returns (uint256 reserveAssetAmount_)
@@ -145,7 +145,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   /// `receiver_`. `receiptToken` can be the token received from either staking or depositing into the Safety Module.
   /// @dev Assumes that user has approved the SafetyModule to spend its receipt tokens.
   function _redeem(
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     ReservePool storage reservePool_,
     uint256 receiptTokenAmount_,
     address receiver_,
@@ -177,7 +177,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     IReceiptToken receiptToken_,
     uint256 receiptTokenAmount_,
     uint256 reserveAssetAmount_,
-    uint16 reservePoolId_
+    uint8 reservePoolId_
   ) internal returns (uint64 redemptionId_) {
     SafetyModuleState safetyModuleState_ = safetyModuleState;
     if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert InvalidState();
@@ -256,7 +256,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
   /// @inheritdoc SafetyModuleCommon
   function _updateWithdrawalsAfterTrigger(
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     ReservePool storage reservePool_,
     uint256 oldDepositAmount_,
     uint256 slashAmount_
@@ -275,7 +275,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   /// @dev Returns the amount of tokens to be redeemed, which may be less than the amount saved when the redemption
   /// was queued if the tokens are used in a payout for a trigger since then.
   function _computeFinalReserveAssetsRedeemed(
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     uint128 queuedReserveAssetAmount_,
     uint256 queuedAccISF_,
     uint32 queuedAccISFLength_

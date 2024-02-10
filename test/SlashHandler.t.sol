@@ -440,7 +440,7 @@ contract SlashHandlerTest is TestBase {
 contract TestableSlashHandler is SlashHandler, Redeemer {
   // -------- Getters --------
 
-  function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
+  function getReservePool(uint8 reservePoolId_) external view returns (ReservePool memory) {
     return reservePools[reservePoolId_];
   }
 

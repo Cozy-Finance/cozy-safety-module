@@ -28,7 +28,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
 
   /// @dev Prepares pending withdrawals to have their exchange rates adjusted after a trigger. Defined in `Redeemer`.
   function _updateWithdrawalsAfterTrigger(
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     ReservePool storage reservePool_,
     uint256 depositAmount_,
     uint256 slashAmount_

@@ -195,7 +195,7 @@ library ConfiguratorLib {
     IReceiptTokenFactory receiptTokenFactory_,
     ReservePoolConfig calldata reservePoolConfig_
   ) internal {
-    uint16 reservePoolId_ = uint16(reservePools_.length);
+    uint8 reservePoolId_ = uint8(reservePools_.length);
 
     IReceiptToken reserveDepositReceiptToken_ = receiptTokenFactory_.deployReceiptToken(
       reservePoolId_, IReceiptTokenFactory.PoolType.RESERVE, reservePoolConfig_.asset.decimals()

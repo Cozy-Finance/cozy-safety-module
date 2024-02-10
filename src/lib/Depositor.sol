@@ -24,7 +24,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
 
   /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
   /// `reservePools[reservePoolId_].asset` so it can `transferFrom`
-  function depositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
+  function depositReserveAssets(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
     external
     returns (uint256 depositReceiptTokenAmount_)
   {
@@ -43,7 +43,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
   }
 
   /// @dev Expects depositer to transfer assets to the SafetyModule beforehand.
-  function depositReserveAssetsWithoutTransfer(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
+  function depositReserveAssetsWithoutTransfer(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
     external
     returns (uint256 depositReceiptTokenAmount_)
   {

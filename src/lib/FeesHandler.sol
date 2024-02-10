@@ -29,7 +29,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
     }
   }
 
-  function dripFeesFromReservePool(uint16 reservePoolId_) external {
+  function dripFeesFromReservePool(uint8 reservePoolId_) external {
     if (safetyModuleState != SafetyModuleState.ACTIVE) return;
     IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
 

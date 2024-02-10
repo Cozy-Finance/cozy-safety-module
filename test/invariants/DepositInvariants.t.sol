@@ -21,14 +21,14 @@ abstract contract DepositInvariants is InvariantTestBase {
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) return;
 
     uint256[] memory totalSupplyBeforeDepositReserves_ = new uint256[](numReservePools);
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       totalSupplyBeforeDepositReserves_[reservePoolId_] =
         getReservePool(safetyModule, reservePoolId_).depositReceiptToken.totalSupply();
     }
 
     safetyModuleHandler.depositReserveAssetsWithExistingActorWithoutCountingCall(_randomUint256());
 
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       uint256 currentTotalSupply_ = getReservePool(safetyModule, reservePoolId_).depositReceiptToken.totalSupply();
 
       // safetyModuleHandler.currentReservePoolId is set to the reserve pool that was just deposited into during

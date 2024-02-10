@@ -50,7 +50,7 @@ contract DepositorUnitTest is TestBase {
 
   function _deposit(
     bool withoutTransfer_,
-    uint16 poolId_,
+    uint8 poolId_,
     uint256 amountToDeposit_,
     address receiver_,
     address depositor_
@@ -369,7 +369,7 @@ contract TestableDepositor is Depositor {
   }
 
   // -------- Mock getters --------
-  function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
+  function getReservePool(uint8 reservePoolId_) external view returns (ReservePool memory) {
     return reservePools[reservePoolId_];
   }
 
@@ -393,7 +393,7 @@ contract TestableDepositor is Depositor {
   }
 
   function _updateWithdrawalsAfterTrigger(
-    uint16, /* reservePoolId_ */
+    uint8, /* reservePoolId_ */
     ReservePool storage, /* reservePool_ */
     uint256, /* oldAmount_ */
     uint256 /* slashAmount_ */

@@ -64,7 +64,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
 
   event Transfer(address indexed from, address indexed to, uint256 amount);
 
-  function _setupDefaultSingleUserFixture(uint16 reservePoolId_)
+  function _setupDefaultSingleUserFixture(uint8 reservePoolId_)
     internal
     returns (
       address owner_,
@@ -83,7 +83,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
   }
 
   function _deposit(
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     address owner_,
     uint256 reserveAssetAmount_,
     uint256 depositReceiptTokenAmount_
@@ -91,11 +91,11 @@ abstract contract ReedemerUnitTestBase is TestBase {
     component.mockDeposit(reservePoolId_, owner_, reserveAssetAmount_, depositReceiptTokenAmount_);
   }
 
-  function _depositAssets(uint16 reservePoolId_, uint256 amount_) internal {
+  function _depositAssets(uint8 reservePoolId_, uint256 amount_) internal {
     component.mockDepositAssets(reservePoolId_, amount_);
   }
 
-  function _redeem(uint16 reservePoolId_, uint256 receiptTokenAmount_, address receiver_, address owner_)
+  function _redeem(uint8 reservePoolId_, uint256 receiptTokenAmount_, address receiver_, address owner_)
     internal
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
@@ -106,13 +106,13 @@ abstract contract ReedemerUnitTestBase is TestBase {
     return component.completeRedemption(redemptionId_);
   }
 
-  function _updateRedemptionsAfterTrigger(uint16 reservePoolId_, uint256 oldReservePoolAmount_, uint256 slashAmount_)
+  function _updateRedemptionsAfterTrigger(uint8 reservePoolId_, uint256 oldReservePoolAmount_, uint256 slashAmount_)
     internal
   {
     component.updateWithdrawalsAfterTrigger(reservePoolId_, oldReservePoolAmount_, slashAmount_);
   }
 
-  function _getPendingAccISFs(uint16 reservePoolId_) internal view returns (uint256[] memory) {
+  function _getPendingAccISFs(uint8 reservePoolId_) internal view returns (uint256[] memory) {
     return component.getPendingWithdrawalsAccISFs(reservePoolId_);
   }
 
@@ -125,11 +125,11 @@ abstract contract ReedemerUnitTestBase is TestBase {
     return withdrawDelay_;
   }
 
-  function _mintReceiptToken(uint16 reservePoolId_, address receiver_, uint256 amount_) internal {
+  function _mintReceiptToken(uint8 reservePoolId_, address receiver_, uint256 amount_) internal {
     component.mockMintDepositReceiptTokens(reservePoolId_, receiver_, amount_);
   }
 
-  function _getReceiptToken(uint16 reservePoolId_) internal view returns (IERC20) {
+  function _getReceiptToken(uint8 reservePoolId_) internal view returns (IERC20) {
     ReservePool memory reservePool_ = component.getReservePool(reservePoolId_);
     return reservePool_.depositReceiptToken;
   }
@@ -139,7 +139,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
   }
 
   function _assertReservePoolAccounting(
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     uint256 poolAssetAmount_,
     uint256 assetsPendingRedemption_
   ) internal {
@@ -930,7 +930,7 @@ contract TestableRedeemer is Redeemer {
   }
 
   function mockDeposit(
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     address depositor_,
     uint256 reserveAssetAmountDeposited_,
     uint256 depositReceiptTokenAmount_
@@ -939,7 +939,7 @@ contract TestableRedeemer is Redeemer {
     mockMintDepositReceiptTokens(reservePoolId_, depositor_, depositReceiptTokenAmount_);
   }
 
-  function mockDepositAssets(uint16 reservePoolId_, uint256 reserveAssetAmountDeposited_) public {
+  function mockDepositAssets(uint8 reservePoolId_, uint256 reserveAssetAmountDeposited_) public {
     if (reserveAssetAmountDeposited_ > 0) {
       ReservePool storage reservePool_ = reservePools[reservePoolId_];
       MockERC20(address(reservePool_.asset)).mint(address(this), reserveAssetAmountDeposited_);
@@ -948,7 +948,7 @@ contract TestableRedeemer is Redeemer {
     }
   }
 
-  function mockMintDepositReceiptTokens(uint16 reservePoolId_, address depositor_, uint256 depositReceiptTokenAmount_)
+  function mockMintDepositReceiptTokens(uint8 reservePoolId_, address depositor_, uint256 depositReceiptTokenAmount_)
     public
   {
     if (depositReceiptTokenAmount_ > 0) {
@@ -977,14 +977,14 @@ contract TestableRedeemer is Redeemer {
     delays.withdrawDelay = withdrawDelay_;
   }
 
-  function mockSetLastWithdrawalsAccISF(uint16 reservePoolId_, uint256 acc_) external {
+  function mockSetLastWithdrawalsAccISF(uint8 reservePoolId_, uint256 acc_) external {
     uint256[] storage pendingWithdrawalsAccISFs_ = pendingRedemptionAccISFs[reservePoolId_];
     if (pendingWithdrawalsAccISFs_.length == 0) pendingWithdrawalsAccISFs_.push(acc_);
     else pendingWithdrawalsAccISFs_[pendingWithdrawalsAccISFs_.length - 1] = acc_;
   }
 
   // -------- Mock getters --------
-  function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
+  function getReservePool(uint8 reservePoolId_) external view returns (ReservePool memory) {
     return reservePools[reservePoolId_];
   }
 
@@ -996,13 +996,13 @@ contract TestableRedeemer is Redeemer {
     return redemptionIdCounter;
   }
 
-  function getPendingWithdrawalsAccISFs(uint16 reservePoolId_) external view returns (uint256[] memory) {
+  function getPendingWithdrawalsAccISFs(uint8 reservePoolId_) external view returns (uint256[] memory) {
     return pendingRedemptionAccISFs[reservePoolId_];
   }
 
   // -------- Exposed internals --------
 
-  function updateWithdrawalsAfterTrigger(uint16 reservePoolId_, uint256 oldAmount_, uint256 slashAmount_) external {
+  function updateWithdrawalsAfterTrigger(uint8 reservePoolId_, uint256 oldAmount_, uint256 slashAmount_) external {
     _updateWithdrawalsAfterTrigger(reservePoolId_, reservePools[reservePoolId_], oldAmount_, slashAmount_);
   }
 

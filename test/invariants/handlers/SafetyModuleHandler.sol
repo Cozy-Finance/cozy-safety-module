@@ -43,7 +43,7 @@ contract SafetyModuleHandler is TestBase {
 
   AddressSet internal actorsWithReserveDeposits;
 
-  uint16 public currentReservePoolId;
+  uint8 public currentReservePoolId;
 
   address public currentPayoutHandler;
 
@@ -57,9 +57,9 @@ contract SafetyModuleHandler is TestBase {
 
   // -------- Ghost Variables --------
 
-  mapping(uint16 reservePoolId_ => GhostReservePool reservePool_) public ghost_reservePoolCumulative;
+  mapping(uint8 reservePoolId_ => GhostReservePool reservePool_) public ghost_reservePoolCumulative;
 
-  mapping(address actor_ => mapping(uint16 reservePoolId_ => uint256 actorReserveDepositCount_)) public
+  mapping(address actor_ => mapping(uint8 reservePoolId_ => uint256 actorReserveDepositCount_)) public
     ghost_actorReserveDepositCount;
 
   GhostRedemption[] public ghost_redemptions;
@@ -274,14 +274,14 @@ contract SafetyModuleHandler is TestBase {
     }
 
     Slash[] memory slashes_ = new Slash[](numReservePools);
-    for (uint16 i = 0; i < numReservePools; i++) {
-      ReservePool memory reservePool_ = getReservePool(safetyModule, uint16(i));
+    for (uint8 i = 0; i < numReservePools; i++) {
+      ReservePool memory reservePool_ = getReservePool(safetyModule, i);
 
       uint256 depositAmountToSlash_ = reservePool_.depositAmount > 0
         ? bound(seed_, 0, reservePool_.depositAmount.mulWadUp(reservePool_.maxSlashPercentage))
         : 0;
 
-      slashes_[i] = Slash({reservePoolId: uint16(i), amount: depositAmountToSlash_});
+      slashes_[i] = Slash({reservePoolId: i, amount: depositAmountToSlash_});
     }
 
     vm.prank(currentPayoutHandler);
@@ -449,7 +449,7 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useValidReservePoolId(uint256 seed_) {
-    currentReservePoolId = uint16(bound(seed_, 0, numReservePools - 1));
+    currentReservePoolId = uint8(bound(seed_, 0, numReservePools - 1));
     _;
   }
 
@@ -492,11 +492,11 @@ contract SafetyModuleHandler is TestBase {
   modifier useActorWithReseveDeposits(uint256 seed_) {
     currentActor = actorsWithReserveDeposits.rand(seed_);
 
-    uint16 initIndex_ = uint16(bound(seed_, 0, numReservePools));
-    uint16 indicesVisited_ = 0;
+    uint8 initIndex_ = uint8(bound(seed_, 0, numReservePools));
+    uint8 indicesVisited_ = 0;
 
     // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
-    for (uint16 i = initIndex_; indicesVisited_ < numReservePools; i = uint16((i + 1) % numReservePools)) {
+    for (uint8 i = initIndex_; indicesVisited_ < numReservePools; i = uint8((i + 1) % numReservePools)) {
       if (ghost_actorReserveDepositCount[currentActor][i] > 0) {
         currentReservePoolId = i;
         break;

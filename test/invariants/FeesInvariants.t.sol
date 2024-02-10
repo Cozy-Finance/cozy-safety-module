@@ -20,13 +20,13 @@ abstract contract FeesInvariants is InvariantTestBase {
     if (safetyModule.safetyModuleState() != SafetyModuleState.ACTIVE) return;
 
     ReservePool[] memory beforeReservePools_ = new ReservePool[](numReservePools);
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       beforeReservePools_[reservePoolId_] = getReservePool(safetyModule, reservePoolId_);
     }
 
     safetyModuleHandler.dripFees(_randomAddress(), _randomUint256());
 
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory afterReservePool_ = getReservePool(safetyModule, reservePoolId_);
       ReservePool memory beforeReservePool_ = beforeReservePools_[reservePoolId_];
       _require_accountingUpdateOnDripFees(reservePoolId_, afterReservePool_, beforeReservePool_);
@@ -38,13 +38,13 @@ abstract contract FeesInvariants is InvariantTestBase {
     if (safetyModule.safetyModuleState() != SafetyModuleState.ACTIVE) return;
 
     ReservePool[] memory beforeReservePools_ = new ReservePool[](numReservePools);
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       beforeReservePools_[reservePoolId_] = getReservePool(safetyModule, reservePoolId_);
     }
 
     safetyModuleHandler.dripFeesFromReservePool(_randomAddress(), _randomUint256());
 
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory afterReservePool_ = getReservePool(safetyModule, reservePoolId_);
       ReservePool memory beforeReservePool_ = beforeReservePools_[reservePoolId_];
 
@@ -60,7 +60,7 @@ abstract contract FeesInvariants is InvariantTestBase {
 
   function invariant_claimFeesAccounting() public syncCurrentTimestamp(safetyModuleHandler) {
     ReservePool[] memory beforeReservePools_ = new ReservePool[](numReservePools);
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory beforeReservePool_ = getReservePool(safetyModule, reservePoolId_);
       beforeReservePools_[reservePoolId_] = beforeReservePool_;
     }
@@ -78,7 +78,7 @@ abstract contract FeesInvariants is InvariantTestBase {
 
     safetyModuleHandler.claimFees(owner_, _randomUint256());
 
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory afterReservePool_ = getReservePool(safetyModule, reservePoolId_);
       ReservePool memory beforeReservePool_ = beforeReservePools_[reservePoolId_];
       // The claimed fees include the old dripped fees and newly dripped fees.
@@ -158,7 +158,7 @@ abstract contract FeesInvariants is InvariantTestBase {
   }
 
   function _require_accountingUpdateOnDripFees(
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     ReservePool memory afterReservePool_,
     ReservePool memory beforeReservePool_
   ) internal view {
@@ -218,7 +218,7 @@ abstract contract FeesInvariants is InvariantTestBase {
   }
 
   function _require_noAccountingUpdateOnDripFees(
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     ReservePool memory afterReservePool_,
     ReservePool memory beforeReservePool_
   ) internal view {
