@@ -7,10 +7,10 @@ import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
 import {UpdateConfigsCalldataParams, ReservePoolConfig} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
-import {Manager} from "../src/Manager.sol";
+import {CozySafetyModuleManager} from "../src/CozySafetyModuleManager.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
-import {IManagerEvents} from "../src/interfaces/IManagerEvents.sol";
+import {ICozySafetyModuleManagerEvents} from "../src/interfaces/ICozySafetyModuleManagerEvents.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {MockDeployProtocol} from "./utils/MockDeployProtocol.sol";
@@ -19,7 +19,7 @@ import {MockTrigger} from "./utils/MockTrigger.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";
 import {TestBase} from "./utils/TestBase.sol";
 
-abstract contract ManagerTestSetup is TestBase {
+abstract contract CozySafetyModuleManagerTestSetup is TestBase {
   function _defaultSetUp() internal returns (UpdateConfigsCalldataParams memory updateConfigsCalldataParams_) {
     IERC20 asset_ = IERC20(address(new MockERC20("MockAsset", "MOCK", 18)));
 
@@ -41,7 +41,7 @@ abstract contract ManagerTestSetup is TestBase {
   }
 }
 
-contract ManagerTestSetupWithSafetyModules is MockDeployProtocol, ManagerTestSetup {
+contract CozySafetyModuleManagerTestSetupWithSafetyModules is MockDeployProtocol, CozySafetyModuleManagerTestSetup {
   ISafetyModule[] safetyModules;
 
   ISafetyModule safetyModuleA;
@@ -65,7 +65,7 @@ contract ManagerTestSetupWithSafetyModules is MockDeployProtocol, ManagerTestSet
   }
 }
 
-contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
+contract CozySafetyModuleManagerTestCreateSafetyModule is MockDeployProtocol, CozySafetyModuleManagerTestSetup {
   function test_createSafetyModule() public {
     UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
     ISafetyModule safetyModule_ =
@@ -92,7 +92,7 @@ contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
     updateConfigsCalldataParams_.delaysConfig =
       Delays({withdrawDelay: 2 days, configUpdateDelay: 1 days, configUpdateGracePeriod: 1 days});
 
-    vm.expectRevert(Manager.InvalidConfiguration.selector);
+    vm.expectRevert(CozySafetyModuleManager.InvalidConfiguration.selector);
     manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
   }
 
@@ -108,7 +108,7 @@ contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
     }
     updateConfigsCalldataParams_.reservePoolConfigs = reservePoolConfigs_;
 
-    vm.expectRevert(Manager.InvalidConfiguration.selector);
+    vm.expectRevert(CozySafetyModuleManager.InvalidConfiguration.selector);
     manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
   }
 
@@ -119,12 +119,12 @@ contract ManagerTestCreateSafetyModule is MockDeployProtocol, ManagerTestSetup {
       ReservePoolConfig({maxSlashPercentage: 1e18 + 1, asset: updateConfigsCalldataParams_.reservePoolConfigs[0].asset});
     updateConfigsCalldataParams_.reservePoolConfigs = reservePoolConfigs_;
 
-    vm.expectRevert(Manager.InvalidConfiguration.selector);
+    vm.expectRevert(CozySafetyModuleManager.InvalidConfiguration.selector);
     manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
   }
 }
 
-contract ManagerTestDeploy is MockDeployProtocol {
+contract CozySafetyModuleManagerTestDeploy is MockDeployProtocol {
   function test_governableOwnable() public {
     assertEq(manager.owner(), owner);
     assertEq(manager.pauser(), pauser);
@@ -143,7 +143,7 @@ contract ManagerTestDeploy is MockDeployProtocol {
   }
 }
 
-contract ManagerUpdateFeeModels is MockDeployProtocol {
+contract CozySafetyModuleManagerUpdateFeeModels is MockDeployProtocol {
   function test_updateFeeDripModel_revertNonOwnerAddress() public {
     IDripModel feeDripModel_ = IDripModel(_randomAddress());
 
@@ -173,7 +173,7 @@ contract ManagerUpdateFeeModels is MockDeployProtocol {
     IDripModel feeDripModel_ = IDripModel(feeDripModelAddress_);
 
     _expectEmit();
-    emit IManagerEvents.FeeDripModelUpdated(feeDripModel_);
+    emit ICozySafetyModuleManagerEvents.FeeDripModelUpdated(feeDripModel_);
     vm.prank(owner);
     manager.updateFeeDripModel(feeDripModel_);
     assertEq(address(manager.feeDripModel()), address(feeDripModel_));
@@ -187,7 +187,7 @@ contract ManagerUpdateFeeModels is MockDeployProtocol {
     assertEq(address(manager.getFeeDripModel(safetyModule_)), address(manager.feeDripModel()));
 
     _expectEmit();
-    emit IManagerEvents.OverrideFeeDripModelUpdated(safetyModule_, feeDripModel_);
+    emit ICozySafetyModuleManagerEvents.OverrideFeeDripModelUpdated(safetyModule_, feeDripModel_);
     vm.prank(owner);
     manager.updateOverrideFeeDripModel(safetyModule_, feeDripModel_);
 
@@ -207,7 +207,7 @@ contract ManagerUpdateFeeModels is MockDeployProtocol {
     assertEq(address(manager.getFeeDripModel(safetyModule_)), address(feeDripModel_));
 
     _expectEmit();
-    emit IManagerEvents.OverrideFeeDripModelUpdated(safetyModule_, manager.feeDripModel());
+    emit ICozySafetyModuleManagerEvents.OverrideFeeDripModelUpdated(safetyModule_, manager.feeDripModel());
     vm.prank(owner);
     manager.resetOverrideFeeDripModel(safetyModule_);
     assertEq(address(manager.getFeeDripModel(safetyModule_)), address(manager.feeDripModel()));
@@ -237,7 +237,7 @@ contract ManagerUpdateFeeModels is MockDeployProtocol {
   }
 }
 
-contract ManagerClaimFeesTest is ManagerTestSetupWithSafetyModules {
+contract CozySafetyModuleManagerClaimFeesTest is CozySafetyModuleManagerTestSetupWithSafetyModules {
   event ClaimedFees(IERC20 indexed reserveAsset_, uint256 feeAmount_, address indexed owner_);
 
   function test_managerClaimFees() public {
@@ -254,18 +254,18 @@ contract ManagerClaimFeesTest is ManagerTestSetupWithSafetyModules {
     _expectEmit();
     emit ClaimedFees(asset, depositAmountA_ / 2, owner); // Drip model drips 50% each time.
     _expectEmit();
-    emit IManagerEvents.ClaimedSafetyModuleFees(safetyModuleA);
+    emit ICozySafetyModuleManagerEvents.ClaimedSafetyModuleFees(safetyModuleA);
     _expectEmit();
     emit ClaimedFees(asset, depositAmountB_ / 2, owner);
     _expectEmit();
-    emit IManagerEvents.ClaimedSafetyModuleFees(safetyModuleB);
+    emit ICozySafetyModuleManagerEvents.ClaimedSafetyModuleFees(safetyModuleB);
 
     vm.prank(_randomAddress()); // Anyone can call this function on behalf of the manager's owner.
     manager.claimFees(safetyModules);
   }
 }
 
-contract ManagerPauseTest is ManagerTestSetupWithSafetyModules {
+contract CozySafetyModuleManagerPauseTest is CozySafetyModuleManagerTestSetupWithSafetyModules {
   function test_pauseSafetyModuleArrayFromOwner() public {
     vm.prank(owner);
     manager.pause(safetyModules);
@@ -293,7 +293,7 @@ contract ManagerPauseTest is ManagerTestSetupWithSafetyModules {
   }
 }
 
-contract ManagerUnpauseSet is ManagerTestSetupWithSafetyModules {
+contract CozySafetyModuleManagerUnpauseSet is CozySafetyModuleManagerTestSetupWithSafetyModules {
   function setUp() public override {
     super.setUp();
     vm.prank(owner);

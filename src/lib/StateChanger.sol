@@ -79,7 +79,7 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
     else if (who_ == pauser) role_ = CallerRole.PAUSER;
     // If the caller is the Manager itself, authorization for the call is done
     // in the Manager.
-    else if (who_ == address(cozyManager)) role_ = CallerRole.MANAGER;
+    else if (who_ == address(cozySafetyModuleManager)) role_ = CallerRole.MANAGER;
     return role_;
   }
 

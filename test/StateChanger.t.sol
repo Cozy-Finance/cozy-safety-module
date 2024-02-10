@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
-import {IManager} from "../src/interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {IStateChangerEvents} from "../src/interfaces/IStateChangerEvents.sol";
 import {IStateChangerErrors} from "../src/interfaces/IStateChangerErrors.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
@@ -41,7 +41,7 @@ contract StateChangerUnitTest is TestBase, StateChangerTestMockEvents, IStateCha
     returns (TestableStateChanger)
   {
     TestableStateChanger component_ =
-      new TestableStateChanger(testParams_.owner, testParams_.pauser, IManager(address(manager_)));
+      new TestableStateChanger(testParams_.owner, testParams_.pauser, ICozySafetyModuleManager(address(manager_)));
     component_.mockSetSafetyModuleState(testParams_.initialState);
     component_.mockSetNumPendingSlashes(testParams_.numPendingSlashes);
     return component_;
@@ -374,9 +374,9 @@ contract StateChangerTriggerTest is StateChangerUnitTest {
 }
 
 contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
-  constructor(address owner_, address pauser_, IManager manager_) {
+  constructor(address owner_, address pauser_, ICozySafetyModuleManager manager_) {
     __initGovernable(owner_, pauser_);
-    cozyManager = manager_;
+    cozySafetyModuleManager = manager_;
   }
 
   // -------- Mock setters --------
@@ -393,8 +393,8 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
   }
 
   // -------- Mock getters --------
-  function manager() public view returns (IManager) {
-    return cozyManager;
+  function manager() public view returns (ICozySafetyModuleManager) {
+    return cozySafetyModuleManager;
   }
 
   function getTriggerData(ITrigger trigger_) external view returns (Trigger memory) {

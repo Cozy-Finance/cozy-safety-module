@@ -6,7 +6,7 @@ import {Clones} from "openzeppelin-contracts/contracts/proxy/Clones.sol";
 import {ReservePoolConfig} from "./lib/structs/Configs.sol";
 import {Delays} from "./lib/structs/Delays.sol";
 import {UpdateConfigsCalldataParams} from "./lib/structs/Configs.sol";
-import {IManager} from "./interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "./interfaces/ICozySafetyModuleManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
 
@@ -16,8 +16,8 @@ import {ISafetyModuleFactory} from "./interfaces/ISafetyModuleFactory.sol";
 contract SafetyModuleFactory is ISafetyModuleFactory {
   using Clones for address;
 
-  /// @notice Address of the Cozy protocol manager.
-  IManager public immutable cozyManager;
+  /// @notice Address of the Cozy safety module protocol manager.
+  ICozySafetyModuleManager public immutable cozySafetyModuleManager;
 
   /// @notice Address of the Safety Module logic contract used to deploy new Safety Modules.
   ISafetyModule public immutable safetyModuleLogic;
@@ -28,12 +28,12 @@ contract SafetyModuleFactory is ISafetyModuleFactory {
   /// @dev Thrown if an address parameter is invalid.
   error InvalidAddress();
 
-  /// @param manager_ Cozy protocol Manager.
+  /// @param cozySafetyModuleManager_ Cozy protocol Manager.
   /// @param safetyModuleLogic_ Logic contract for deploying new Safety Modules.
-  constructor(IManager manager_, ISafetyModule safetyModuleLogic_) {
-    _assertAddressNotZero(address(manager_));
+  constructor(ICozySafetyModuleManager cozySafetyModuleManager_, ISafetyModule safetyModuleLogic_) {
+    _assertAddressNotZero(address(cozySafetyModuleManager_));
     _assertAddressNotZero(address(safetyModuleLogic_));
-    cozyManager = manager_;
+    cozySafetyModuleManager = cozySafetyModuleManager_;
     safetyModuleLogic = safetyModuleLogic_;
   }
 
@@ -50,7 +50,7 @@ contract SafetyModuleFactory is ISafetyModuleFactory {
   ) public returns (ISafetyModule safetyModule_) {
     // It'd be harmless to let anyone deploy safety modules, but to make it more clear where the proper entry
     // point for safety module creation is, we restrict this to being called by the manager.
-    if (msg.sender != address(cozyManager)) revert Unauthorized();
+    if (msg.sender != address(cozySafetyModuleManager)) revert Unauthorized();
 
     safetyModule_ = ISafetyModule(address(safetyModuleLogic).cloneDeterministic(salt(baseSalt_)));
     safetyModule_.initialize(owner_, pauser_, configs_);

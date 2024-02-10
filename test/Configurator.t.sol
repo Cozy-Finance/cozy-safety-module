@@ -12,7 +12,7 @@ import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IConfiguratorErrors} from "../src/interfaces/IConfiguratorErrors.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IConfiguratorEvents} from "../src/interfaces/IConfiguratorEvents.sol";
-import {IManager} from "../src/interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
 import {ConfiguratorLib} from "../src/lib/ConfiguratorLib.sol";
@@ -49,7 +49,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     ReceiptTokenFactory receiptTokenFactory =
       new ReceiptTokenFactory(IReceiptToken(address(receiptTokenLogic_)), IReceiptToken(address(receiptTokenLogic_)));
 
-    component = new TestableConfigurator(address(this), IManager(address(mockManager)), receiptTokenFactory);
+    component =
+      new TestableConfigurator(address(this), ICozySafetyModuleManager(address(mockManager)), receiptTokenFactory);
 
     component.mockSetDelays(
       Delays({
@@ -651,9 +652,9 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 }
 
 contract TestableConfigurator is Configurator {
-  constructor(address owner_, IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
+  constructor(address owner_, ICozySafetyModuleManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
     __initGovernable(owner_, owner_);
-    cozyManager = manager_;
+    cozySafetyModuleManager = manager_;
     receiptTokenFactory = receiptTokenFactory_;
   }
 
@@ -709,11 +710,13 @@ contract TestableConfigurator is Configurator {
     view
     returns (bool)
   {
-    return ConfiguratorLib.isValidConfiguration(reservePoolConfigs_, delaysConfig_, cozyManager.allowedReservePools());
+    return ConfiguratorLib.isValidConfiguration(
+      reservePoolConfigs_, delaysConfig_, cozySafetyModuleManager.allowedReservePools()
+    );
   }
 
   function isValidUpdate(UpdateConfigsCalldataParams calldata configUpdates_) external view returns (bool) {
-    return ConfiguratorLib.isValidUpdate(reservePools, triggerData, configUpdates_, cozyManager);
+    return ConfiguratorLib.isValidUpdate(reservePools, triggerData, configUpdates_, cozySafetyModuleManager);
   }
 
   function initializeReservePool(ReservePoolConfig calldata reservePoolConfig_) external {

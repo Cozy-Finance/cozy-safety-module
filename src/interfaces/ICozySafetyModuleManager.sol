@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import {IManagerEvents} from "./IManagerEvents.sol";
+import {ICozySafetyModuleManagerEvents} from "./ICozySafetyModuleManagerEvents.sol";
 import {ISafetyModule} from "./ISafetyModule.sol";
 import {IDripModel} from "./IDripModel.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
 
-interface IManager is IManagerEvents {
+interface ICozySafetyModuleManager is ICozySafetyModuleManagerEvents {
   /// @notice Deploys a new Safety Module with the provided parameters.
   /// @param owner_ The owner of the safety module.
   /// @param pauser_ The pauser of the safety module.

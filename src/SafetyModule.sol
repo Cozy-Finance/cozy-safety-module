@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
-import {IManager} from "./interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "./interfaces/ICozySafetyModuleManager.sol";
 import {UpdateConfigsCalldataParams} from "./lib/structs/Configs.sol";
 import {Configurator} from "./lib/Configurator.sol";
 import {ConfiguratorLib} from "./lib/ConfiguratorLib.sol";
@@ -29,10 +29,10 @@ contract SafetyModule is
   /// @dev Thrown if the contract is already initialized.
   error Initialized();
 
-  constructor(IManager manager_, IReceiptTokenFactory receiptTokenFactory_) {
-    _assertAddressNotZero(address(manager_));
+  constructor(ICozySafetyModuleManager cozySafetyModuleManager_, IReceiptTokenFactory receiptTokenFactory_) {
+    _assertAddressNotZero(address(cozySafetyModuleManager_));
     _assertAddressNotZero(address(receiptTokenFactory_));
-    cozyManager = manager_;
+    cozySafetyModuleManager = cozySafetyModuleManager_;
     receiptTokenFactory = receiptTokenFactory_;
   }
 

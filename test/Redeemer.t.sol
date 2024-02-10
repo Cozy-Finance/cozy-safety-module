@@ -9,7 +9,7 @@ import {SafeCastLib} from "cozy-safety-module-shared/lib/SafeCastLib.sol";
 import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {IManager} from "../src/interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IRedemptionErrors} from "../src/interfaces/IRedemptionErrors.sol";
@@ -33,7 +33,7 @@ abstract contract ReedemerUnitTestBase is TestBase {
   IReceiptToken stkReceiptToken;
   IReceiptToken depositReceiptToken;
   MockManager public mockManager = new MockManager();
-  TestableRedeemer component = new TestableRedeemer(IManager(address(mockManager)));
+  TestableRedeemer component = new TestableRedeemer(ICozySafetyModuleManager(address(mockManager)));
   MockERC20 mockAsset = new MockERC20("Mock Asset", "MOCK", 6);
 
   uint64 internal constant WITHDRAW_DELAY = 20 days;
@@ -925,8 +925,8 @@ contract TestableRedeemer is Redeemer {
 
   uint256 internal mockNextDepositDripAmount;
 
-  constructor(IManager manager_) {
-    cozyManager = manager_;
+  constructor(ICozySafetyModuleManager manager_) {
+    cozySafetyModuleManager = manager_;
   }
 
   function mockDeposit(

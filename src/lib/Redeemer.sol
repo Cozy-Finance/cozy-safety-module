@@ -72,7 +72,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
-    _dripFeesFromReservePool(reservePool_, cozyManager.getFeeDripModel(ISafetyModule(address(this))));
+    _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
     (redemptionId_, reserveAssetAmount_) =
       _redeem(reservePoolId_, reservePool_, depositReceiptTokenAmount_, receiver_, owner_);
   }
@@ -92,7 +92,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     returns (uint256 reserveAssetAmount_)
   {
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
-    IDripModel feeDripModel_ = cozyManager.getFeeDripModel(ISafetyModule(address(this)));
+    IDripModel feeDripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
     uint256 lastDripTime_ = reservePool_.lastFeesDripTime;
 
     reserveAssetAmount_ = _previewRedemption(

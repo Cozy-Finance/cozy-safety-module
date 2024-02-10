@@ -5,7 +5,7 @@ import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
-import {IManager} from "../interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "../interfaces/ICozySafetyModuleManager.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
 import {ReservePool, AssetPool, IdLookup} from "./structs/Pools.sol";
 import {Trigger} from "./structs/Trigger.sol";
@@ -35,8 +35,8 @@ abstract contract SafetyModuleBaseStorage {
   /// handler occurs. When this value is non-zero, the safety module is triggered (or paused).
   uint16 public numPendingSlashes;
 
-  /// @dev Has config for deposit fee and where to send fees
-  IManager public immutable cozyManager;
+  /// @dev The Cozy safety module protocol manager.
+  ICozySafetyModuleManager public immutable cozySafetyModuleManager;
 
   /// @notice Address of the Cozy protocol ReceiptTokenFactory.
   IReceiptTokenFactory public immutable receiptTokenFactory;

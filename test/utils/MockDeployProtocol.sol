@@ -7,10 +7,10 @@ import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
 import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "../../src/interfaces/ISafetyModuleFactory.sol";
-import {IManager} from "../../src/interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "../../src/interfaces/ICozySafetyModuleManager.sol";
 import {IDripModel} from "../../src/interfaces/IDripModel.sol";
 import {IWeth} from "../../src/interfaces/IWeth.sol";
-import {Manager} from "../../src/Manager.sol";
+import {CozySafetyModuleManager} from "../../src/CozySafetyModuleManager.sol";
 import {SafetyModule} from "../../src/SafetyModule.sol";
 import {SafetyModuleFactory} from "../../src/SafetyModuleFactory.sol";
 import {ReservePoolConfig, UpdateConfigsCalldataParams} from "../../src/lib/structs/Configs.sol";
@@ -20,7 +20,7 @@ import {MockDripModel} from "./MockDripModel.sol";
 import {TestBase} from "../utils/TestBase.sol";
 
 contract MockDeployer is TestBase {
-  Manager manager;
+  CozySafetyModuleManager manager;
   SafetyModuleFactory safetyModuleFactory;
   ReceiptToken depositReceiptTokenLogic;
   ReceiptToken stkReceiptTokenLogic;
@@ -46,7 +46,8 @@ contract MockDeployer is TestBase {
 
     uint256 nonce_ = vm.getNonce(address(this));
     IDripModel computedAddrFeeDripModel_ = IDripModel(vm.computeCreateAddress(address(this), nonce_));
-    IManager computedAddrManager_ = IManager(vm.computeCreateAddress(address(this), nonce_ + 1));
+    ICozySafetyModuleManager computedAddrManager_ =
+      ICozySafetyModuleManager(vm.computeCreateAddress(address(this), nonce_ + 1));
     ISafetyModule computedAddrSafetyModuleLogic_ = ISafetyModule(vm.computeCreateAddress(address(this), nonce_ + 2));
     ISafetyModuleFactory computedAddrSafetyModuleFactory_ =
       ISafetyModuleFactory(vm.computeCreateAddress(address(this), nonce_ + 3));
@@ -56,8 +57,9 @@ contract MockDeployer is TestBase {
       IReceiptTokenFactory(vm.computeCreateAddress(address(this), nonce_ + 6));
 
     feeDripModel = new MockDripModel(DEFAULT_FEE_DRIP_MODEL_CONSTANT);
-    manager =
-      new Manager(owner, pauser, computedAddrSafetyModuleFactory_, computedAddrFeeDripModel_, ALLOWED_RESERVE_POOLS);
+    manager = new CozySafetyModuleManager(
+      owner, pauser, computedAddrSafetyModuleFactory_, computedAddrFeeDripModel_, ALLOWED_RESERVE_POOLS
+    );
 
     safetyModuleLogic = ISafetyModule(address(new SafetyModule(computedAddrManager_, computedAddrReceiptTokenFactory_)));
     safetyModuleLogic.initialize(

@@ -10,7 +10,7 @@ import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
 import {IConfiguratorErrors} from "../interfaces/IConfiguratorErrors.sol";
 import {IConfiguratorEvents} from "../interfaces/IConfiguratorEvents.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
-import {IManager} from "../interfaces/IManager.sol";
+import {ICozySafetyModuleManager} from "../interfaces/ICozySafetyModuleManager.sol";
 import {ReservePool, IdLookup} from "./structs/Pools.sol";
 import {Delays} from "./structs/Delays.sol";
 import {ConfigUpdateMetadata, ReservePoolConfig, UpdateConfigsCalldataParams} from "./structs/Configs.sol";
@@ -33,7 +33,7 @@ library ConfiguratorLib {
     mapping(ITrigger => Trigger) storage triggerData_,
     Delays storage delays_,
     UpdateConfigsCalldataParams calldata configUpdates_,
-    IManager manager_
+    ICozySafetyModuleManager manager_
   ) external {
     if (!isValidUpdate(reservePools_, triggerData_, configUpdates_, manager_)) {
       revert IConfiguratorErrors.InvalidConfiguration();
@@ -97,7 +97,7 @@ library ConfiguratorLib {
     ReservePool[] storage reservePools_,
     mapping(ITrigger => Trigger) storage triggerData_,
     UpdateConfigsCalldataParams calldata configUpdates_,
-    IManager manager_
+    ICozySafetyModuleManager manager_
   ) internal view returns (bool) {
     // Validate the configuration parameters.
     if (
