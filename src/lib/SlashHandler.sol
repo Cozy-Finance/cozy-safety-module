@@ -29,6 +29,7 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
 
     // Once all slashes are processed from each of the triggered trigger's assigned payout handlers, the safety module
     // is returned to the ACTIVE state.
+    uint16 oldNumPendingSlashes_ = numPendingSlashes;
     numPendingSlashes -= 1;
     payoutHandlerNumPendingSlashes[msg.sender] -= 1;
     if (numPendingSlashes == 0) {
@@ -49,7 +50,9 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
       // Slash reserve pool assets
       if (slash_.amount > 0) {
         uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
-        uint256 slashPercentage_ = _computeSlashPercentage(slash_.amount, reservePoolDepositAmount_);
+        uint256 slashPercentage_ = _computeSlashPercentage(
+          slash_.amount, _getReservePoolDepositAmountPerSlash(reservePoolDepositAmount_, oldNumPendingSlashes_)
+        );
         if (slashPercentage_ > reservePool_.maxSlashPercentage) {
           revert ExceedsMaxSlashPercentage(slash_.reservePoolId, slashPercentage_);
         }
@@ -64,6 +67,24 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
       reserveAsset_.safeTransfer(receiver_, slash_.amount);
       emit Slashed(msg.sender, receiver_, slash_.reservePoolId, slash_.amount);
     }
+  }
+
+  function getReservePoolDepositAmountPerSlash(uint16 reservePoolId_)
+    external
+    view
+    returns (uint256 reservePoolDepositAmountPerSlash_)
+  {
+    reservePoolDepositAmountPerSlash_ =
+      _getReservePoolDepositAmountPerSlash(reservePools[reservePoolId_].depositAmount, numPendingSlashes);
+  }
+
+  function _getReservePoolDepositAmountPerSlash(uint256 depositAmount_, uint16 numPendingSlashes_)
+    internal
+    pure
+    returns (uint256 reservePoolDepositAmountPerSlash_)
+  {
+    if (numPendingSlashes_ == 0) return 0;
+    reservePoolDepositAmountPerSlash_ = depositAmount_ / numPendingSlashes_;
   }
 
   function _computeSlashPercentage(uint256 slashAmount_, uint256 totalReservePoolAmount_)
