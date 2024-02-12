@@ -282,50 +282,6 @@ contract SlashHandlerTest is TestBase {
     component.slash(slashes_, receiver_);
   }
 
-  function test_slash_revert_insufficientReserveAssetsDueToPendingSlashes() public {
-    uint128 depositAmount_ = 300e6;
-    uint128 pendingWithdrawalsAmount_ = 150e6;
-    uint128 slashAmountA_ = 10e6; // This slash will be valied because 300e6 / 10 > 10e6.
-    uint128 slashAmountB_ = 31e6; // This slash will be invalid because 300e6 / 10 < 31e6.
-    component.mockSetNumPendingSlashes(10);
-
-    address receiver_ = _randomAddress();
-    component.mockAddReservePool(
-      ReservePool({
-        asset: IERC20(address(mockAsset)),
-        depositReceiptToken: IReceiptToken(address(0)),
-        depositAmount: depositAmount_,
-        pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
-        feeAmount: _randomUint256(),
-        maxSlashPercentage: MathConstants.ZOC,
-        lastFeesDripTime: uint128(block.timestamp)
-      })
-    );
-    component.mockAddReservePool(
-      ReservePool({
-        asset: IERC20(address(mockAsset)),
-        depositReceiptToken: IReceiptToken(address(0)),
-        depositAmount: depositAmount_,
-        pendingWithdrawalsAmount: pendingWithdrawalsAmount_,
-        feeAmount: _randomUint256(),
-        maxSlashPercentage: MathConstants.ZOC,
-        lastFeesDripTime: uint128(block.timestamp)
-      })
-    );
-    component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: (depositAmount_) * 2}));
-    // Mint safety module reserve assets.
-    mockAsset.mint(address(component), (depositAmount_) * 2);
-
-    Slash[] memory slashes_ = new Slash[](2);
-    slashes_[0] = Slash({reservePoolId: 0, amount: slashAmountA_});
-    slashes_[1] = Slash({reservePoolId: 1, amount: slashAmountB_});
-
-    uint256 slashPercentage_ = uint256(slashAmountB_).mulDivUp(MathConstants.ZOC, depositAmount_ / 10);
-    vm.expectRevert(abi.encodeWithSelector(ISlashHandlerErrors.ExceedsMaxSlashPercentage.selector, 1, slashPercentage_));
-    vm.prank(mockPayoutHandler);
-    component.slash(slashes_, receiver_);
-  }
-
   function test_slash_revert_alreadySlashed() public {
     uint128 depositAmount_ = 300e6;
     uint128 pendingWithdrawalsAmount_ = 150e6;
@@ -368,8 +324,8 @@ contract SlashHandlerTest is TestBase {
     component.slash(slashes_, receiver_);
   }
 
-  function test_reservePoolDepositAmountPerSlash() public {
-    uint256 depositAmountA_ = 900_000_000_000e18;
+  function test_getSlashableReservePoolAmount() public {
+    uint256 depositAmountA_ = 1000;
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
@@ -381,27 +337,9 @@ contract SlashHandlerTest is TestBase {
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
+    assertEq(component.getSlashableReservePoolAmount(0), 1000);
 
-    component.mockSetNumPendingSlashes(0);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 0);
-
-    component.mockSetNumPendingSlashes(1);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 900_000_000_000e18);
-
-    component.mockSetNumPendingSlashes(2);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 450_000_000_000e18);
-
-    component.mockSetNumPendingSlashes(30);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 30_000_000_000e18);
-
-    component.mockSetNumPendingSlashes(100);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 9_000_000_000e18);
-
-    component.mockSetNumPendingSlashes(type(uint16).max);
-    assertEq(component.getReservePoolDepositAmountPerSlash(0), 13_733_119_707_026_779_583_428_702); // 900_000_000_000e18
-      // / 65535 = 13733119707026779583428702.2
-
-    uint256 depositAmountB_ = 1000;
+    uint256 depositAmountB_ = 900_000;
     component.mockAddReservePool(
       ReservePool({
         asset: IERC20(address(mockAsset)),
@@ -409,31 +347,11 @@ contract SlashHandlerTest is TestBase {
         depositAmount: depositAmountB_,
         pendingWithdrawalsAmount: _randomUint256(),
         feeAmount: _randomUint256(),
-        maxSlashPercentage: MathConstants.ZOC,
+        maxSlashPercentage: MathConstants.ZOC / 4,
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
-
-    component.mockSetNumPendingSlashes(0);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 0);
-
-    component.mockSetNumPendingSlashes(1);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 1000);
-
-    component.mockSetNumPendingSlashes(2);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 500);
-
-    component.mockSetNumPendingSlashes(30);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 33);
-
-    component.mockSetNumPendingSlashes(100);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 10);
-
-    component.mockSetNumPendingSlashes(1001);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 0);
-
-    component.mockSetNumPendingSlashes(type(uint16).max);
-    assertEq(component.getReservePoolDepositAmountPerSlash(1), 0);
+    assertEq(component.getSlashableReservePoolAmount(1), 225_000);
   }
 }
 
