@@ -14,7 +14,6 @@ import {Slash} from "../../../src/lib/structs/Slash.sol";
 import {Trigger} from "../../../src/lib/structs/Trigger.sol";
 import {ISafetyModule} from "../../../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../../../src/interfaces/ITrigger.sol";
-import {AddressSet, AddressSetLib} from "../utils/AddressSet.sol";
 import {MockTrigger} from "../../utils/MockTrigger.sol";
 import {TestBase} from "../../utils/TestBase.sol";
 
