@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {AssetPool, ReservePool} from "../../src/lib/structs/Pools.sol";
 import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
@@ -51,7 +52,7 @@ abstract contract DepositInvariants is InvariantTestBase {
       // safetyModuleHandler.currentReservePoolId is set to the reserve pool that was just deposited into during
       // this invariant test.
       uint8 depositedReservePoolId_ = safetyModuleHandler.currentReservePoolId();
-      ReservePool memory depositReservePool_ = safetyModule.reservePools(depositedReservePoolId_);
+      IERC20 depositReservePoolAsset_ = safetyModule.reservePools(depositedReservePoolId_).asset;
       if (reservePoolId_ == depositedReservePoolId_) {
         require(
           currentReservePool_.depositReceiptToken.totalSupply() > totalSupplyBeforeDepositReserves_[reservePoolId_],
@@ -127,7 +128,7 @@ abstract contract DepositInvariants is InvariantTestBase {
             Strings.toString(internalBalancesBeforeDepositReserves_[reservePoolId_].reservePoolAmount)
           )
         );
-        if (currentReservePool_.asset != depositReservePool_.asset) {
+        if (currentReservePool_.asset != depositReservePoolAsset_) {
           require(
             assetPool_.amount == internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount,
             string.concat(
