@@ -52,7 +52,7 @@ abstract contract DepositInvariants is InvariantTestBase {
       // safetyModuleHandler.currentReservePoolId is set to the reserve pool that was just deposited into during
       // this invariant test.
       uint8 depositedReservePoolId_ = safetyModuleHandler.currentReservePoolId();
-      IERC20 depositReservePoolAsset_ = currentReservePool_.asset;
+      IERC20 depositReservePoolAsset_ = getReservePool(safetyModule, depositedReservePoolId_).asset;
 
       if (reservePoolId_ == depositedReservePoolId_) {
         require(
