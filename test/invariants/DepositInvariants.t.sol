@@ -47,12 +47,12 @@ abstract contract DepositInvariants is InvariantTestBase {
 
     for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory currentReservePool_ = getReservePool(safetyModule, reservePoolId_);
-      AssetPool memory currentAssetPool_ = safetyModule.assetPools(safetyModule.reservePools(reservePoolId_).asset);
+      AssetPool memory currentAssetPool_ = safetyModule.assetPools(currentReservePool_.asset);
 
       // safetyModuleHandler.currentReservePoolId is set to the reserve pool that was just deposited into during
       // this invariant test.
       uint8 depositedReservePoolId_ = safetyModuleHandler.currentReservePoolId();
-      IERC20 depositReservePoolAsset_ = safetyModule.reservePools(depositedReservePoolId_).asset;
+      IERC20 depositReservePoolAsset_ = currentReservePool_.asset;
 
       if (reservePoolId_ == depositedReservePoolId_) {
         require(
@@ -95,7 +95,7 @@ abstract contract DepositInvariants is InvariantTestBase {
           currentReservePool_.asset.balanceOf(address(safetyModule))
             > internalBalancesBeforeDepositReserves_[reservePoolId_].assetAmount,
           string.concat(
-            "Invariant Violated: A reserve pool's asset balance must increase when a deposit occurs.",
+            "Invariant Violated: The safety module's balance of the reserve pool asset must increase when a deposit occurs.",
             " reservePoolId_: ",
             Strings.toString(reservePoolId_),
             ", currentReservePool_.asset.balanceOf(address(safetyModule)): ",
