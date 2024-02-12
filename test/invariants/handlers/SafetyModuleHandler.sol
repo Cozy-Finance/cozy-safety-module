@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import {console2} from "forge-std/console2.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {CozySafetyModuleManager} from "../../../src/CozySafetyModuleManager.sol";
@@ -13,15 +14,16 @@ import {Slash} from "../../../src/lib/structs/Slash.sol";
 import {Trigger} from "../../../src/lib/structs/Trigger.sol";
 import {ISafetyModule} from "../../../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../../../src/interfaces/ITrigger.sol";
-import {AddressSet, AddressSetLib} from "../utils/AddressSet.sol";
 import {MockTrigger} from "../../utils/MockTrigger.sol";
 import {TestBase} from "../../utils/TestBase.sol";
 
 contract SafetyModuleHandler is TestBase {
   using FixedPointMathLib for uint256;
-  using AddressSetLib for AddressSet;
+  using EnumerableSet for EnumerableSet.AddressSet;
 
   uint64 constant SECONDS_IN_A_YEAR = 365 * 24 * 60 * 60;
+
+  address public constant DEFAULT_ADDRESS = address(0xc0ffee);
 
   address pauser;
   address owner;
@@ -39,9 +41,9 @@ contract SafetyModuleHandler is TestBase {
 
   address internal currentActor;
 
-  AddressSet internal actors;
+  EnumerableSet.AddressSet internal actors;
 
-  AddressSet internal actorsWithReserveDeposits;
+  EnumerableSet.AddressSet internal actorsWithReserveDeposits;
 
   uint8 public currentReservePoolId;
 
@@ -305,6 +307,26 @@ contract SafetyModuleHandler is TestBase {
     return actor_;
   }
 
+  function depositReserveAssetsWithExistingActorWithoutCountingCall(
+    uint8 reservePoolId_,
+    uint256 assets_,
+    address actor_
+  ) external returns (address) {
+    uint256 invalidCallsBefore_ = invalidCalls["depositReserveAssetsWithExistingActor"];
+
+    currentReservePoolId = reservePoolId_;
+    currentActor = actor_;
+
+    _depositReserveAssets(assets_, "depositReserveAssetsWithExistingActor");
+
+    // _depositReserveAssets increments invalidCalls by 1 if the safety module is paused.
+    if (invalidCallsBefore_ < invalidCalls["depositReserveAssetsWithExistingActor"]) {
+      invalidCalls["depositReserveAssetsWithExistingActor"] -= 1;
+    }
+
+    return currentActor;
+  }
+
   function callSummary() public view virtual {
     console2.log("Call summary:");
     console2.log("----------------------------------------------------------------------------");
@@ -348,12 +370,25 @@ contract SafetyModuleHandler is TestBase {
     console2.log("slash", invalidCalls["slash"]);
   }
 
+  function boundDepositAssetAmount(uint256 assetAmount_) public pure returns (uint256) {
+    return bound(assetAmount_, 0.0001e6, type(uint72).max);
+  }
+
+  function pickValidReservePoolId(uint256 seed_) public view returns (uint8) {
+    return uint8(bound(seed_, 0, numReservePools - 1));
+  }
+
+  function pickActor(uint256 seed_) public view returns (address) {
+    uint256 numActors_ = actors.length();
+    return numActors_ == 0 ? DEFAULT_ADDRESS : actors.at(seed_ % numActors_);
+  }
+
   function _depositReserveAssets(uint256 assetAmount_, string memory callName_) internal {
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       invalidCalls[callName_] += 1;
       return;
     }
-    assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
+    assetAmount_ = boundDepositAssetAmount(assetAmount_);
     IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
     deal(address(asset_), currentActor, asset_.balanceOf(currentActor) + assetAmount_, true);
 
@@ -374,7 +409,7 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
-    assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
+    assetAmount_ = boundDepositAssetAmount(assetAmount_);
     IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
     _simulateTransferToSafetyModule(asset_, assetAmount_);
 
@@ -449,7 +484,7 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useValidReservePoolId(uint256 seed_) {
-    currentReservePoolId = uint8(bound(seed_, 0, numReservePools - 1));
+    currentReservePoolId = pickValidReservePoolId(seed_);
     _;
   }
 
@@ -485,25 +520,31 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useActor(uint256 actorIndexSeed_) {
-    currentActor = actors.rand(actorIndexSeed_);
+    currentActor = pickActor(actorIndexSeed_);
     _;
   }
 
   modifier useActorWithReseveDeposits(uint256 seed_) {
-    currentActor = actorsWithReserveDeposits.rand(seed_);
+    uint256 numActorsWithReserveDeposits_ = actorsWithReserveDeposits.length();
+    currentActor = numActorsWithReserveDeposits_ == 0
+      ? DEFAULT_ADDRESS
+      : actorsWithReserveDeposits.at(seed_ % numActorsWithReserveDeposits_);
+    currentReservePoolId = getReservePoolIdForActorWithReserveDeposit(seed_, currentActor);
+    _;
+  }
 
-    uint8 initIndex_ = uint8(bound(seed_, 0, numReservePools));
+  function getReservePoolIdForActorWithReserveDeposit(uint256 seed_, address actor_) public view returns (uint8) {
+    uint8 initIndex_ = uint8(_randomUint256FromSeed(seed_) % numReservePools);
     uint8 indicesVisited_ = 0;
 
     // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
     for (uint8 i = initIndex_; indicesVisited_ < numReservePools; i = uint8((i + 1) % numReservePools)) {
-      if (ghost_actorReserveDepositCount[currentActor][i] > 0) {
-        currentReservePoolId = i;
-        break;
-      }
+      if (ghost_actorReserveDepositCount[actor_][i] > 0) return i;
       indicesVisited_++;
     }
-    _;
+
+    // If no reserve pool with a reward deposit count was found, return the random initial index.
+    return initIndex_;
   }
 
   modifier warpToCurrentTimestamp() {
