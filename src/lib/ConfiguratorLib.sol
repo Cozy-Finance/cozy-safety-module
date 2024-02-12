@@ -128,7 +128,7 @@ library ConfiguratorLib {
   function isValidConfiguration(
     ReservePoolConfig[] calldata reservePoolConfigs_,
     Delays calldata delaysConfig_,
-    uint256 maxReservePools_
+    uint8 maxReservePools_
   ) internal pure returns (bool) {
     // Validate number of reserve pools.
     if (reservePoolConfigs_.length > maxReservePools_) return false;
@@ -195,7 +195,7 @@ library ConfiguratorLib {
     IReceiptTokenFactory receiptTokenFactory_,
     ReservePoolConfig calldata reservePoolConfig_
   ) internal {
-    uint16 reservePoolId_ = uint16(reservePools_.length);
+    uint8 reservePoolId_ = uint8(reservePools_.length);
 
     IReceiptToken reserveDepositReceiptToken_ = receiptTokenFactory_.deployReceiptToken(
       reservePoolId_, IReceiptTokenFactory.PoolType.RESERVE, reservePoolConfig_.asset.decimals()

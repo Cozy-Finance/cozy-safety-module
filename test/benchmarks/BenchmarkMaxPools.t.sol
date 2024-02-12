@@ -26,7 +26,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
 
   SafetyModule safetyModule;
   MockTrigger trigger;
-  uint16 numReserveAssets;
+  uint8 numReserveAssets;
   address self = address(this);
   address payoutHandler = _randomAddress();
 
@@ -69,27 +69,27 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
   }
 
   function _initializeReservePools() internal {
-    for (uint16 i = 0; i < numReserveAssets; i++) {
+    for (uint8 i = 0; i < numReserveAssets; i++) {
       (, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture();
       _depositReserveAssets(i, reserveAssetAmount_, receiver_);
     }
   }
 
-  function _randomSingleActionFixture() internal view returns (uint16, uint256, address) {
-    return (_randomUint16() % numReserveAssets, _randomUint256() % 999_999_999_999_999, _randomAddress());
+  function _randomSingleActionFixture() internal view returns (uint8, uint256, address) {
+    return (_randomUint8() % numReserveAssets, _randomUint256() % 999_999_999_999_999, _randomAddress());
   }
 
-  function _setUpDepositReserveAssets(uint16 reservePoolId_) internal {
+  function _setUpDepositReserveAssets(uint8 reservePoolId_) internal {
     ReservePool memory reservePool_ = getReservePool(ISafetyModule(address(safetyModule)), reservePoolId_);
     deal(address(reservePool_.asset), address(safetyModule), type(uint256).max);
   }
 
-  function _depositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) internal {
+  function _depositReserveAssets(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) internal {
     _setUpDepositReserveAssets(reservePoolId_);
     safetyModule.depositReserveAssetsWithoutTransfer(reservePoolId_, reserveAssetAmount_, receiver_);
   }
 
-  function _setUpRedeem(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
+  function _setUpRedeem(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
     internal
     returns (uint256 depositReceiptTokenAmount_)
   {
@@ -136,7 +136,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
   }
 
   function test_depositReserveAssets() public {
-    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture();
+    (uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture();
     _setUpDepositReserveAssets(reservePoolId_);
 
     uint256 gasInitial_ = gasleft();
@@ -145,7 +145,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
   }
 
   function test_redeem() public {
-    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture();
+    (uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture();
     uint256 depositReceiptTokenAmount_ = _setUpRedeem(reservePoolId_, reserveAssetAmount_, receiver_);
 
     vm.startPrank(receiver_);
@@ -156,7 +156,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
   }
 
   function test_completeRedemption() public {
-    (uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture();
+    (uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_) = _randomSingleActionFixture();
     uint256 depositReceiptTokenAmount_ = _setUpRedeem(reservePoolId_, reserveAssetAmount_, receiver_);
 
     vm.startPrank(receiver_);
@@ -201,8 +201,8 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
     trigger.mockState(TriggerState.TRIGGERED);
     safetyModule.trigger(ITrigger(address(trigger)));
     Slash[] memory slashes_ = new Slash[](numReserveAssets);
-    for (uint256 i = 0; i < numReserveAssets; i++) {
-      slashes_[i] = Slash({reservePoolId: uint16(i), amount: 0});
+    for (uint8 i = 0; i < numReserveAssets; i++) {
+      slashes_[i] = Slash({reservePoolId: i, amount: 0});
     }
 
     vm.startPrank(payoutHandler);

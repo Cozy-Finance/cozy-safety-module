@@ -66,6 +66,16 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
     }
   }
 
+  function getSlashableReservePoolAmount(uint8 reservePoolId_)
+    external
+    view
+    returns (uint256 slashableReservePoolAmount_)
+  {
+    return reservePools[reservePoolId_].depositAmount.mulDivDown(
+      reservePools[reservePoolId_].maxSlashPercentage, MathConstants.ZOC
+    );
+  }
+
   function _computeSlashPercentage(uint256 slashAmount_, uint256 totalReservePoolAmount_)
     internal
     pure
@@ -75,7 +85,8 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
     return slashAmount_.mulDivUp(MathConstants.ZOC, totalReservePoolAmount_);
   }
 
-  function _updateAlreadySlashed(uint256 alreadySlashed_, uint16 poolId_) internal pure returns (uint256) {
+  function _updateAlreadySlashed(uint256 alreadySlashed_, uint8 poolId_) internal pure returns (uint256) {
+    // Using the left shift here is valid because `poolId_ < Manager.allowedReservePools` <= 255.
     if ((alreadySlashed_ & (1 << poolId_)) != 0) revert AlreadySlashed(poolId_);
     return alreadySlashed_ | (1 << poolId_);
   }

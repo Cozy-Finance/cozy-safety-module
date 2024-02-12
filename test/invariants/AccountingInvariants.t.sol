@@ -15,7 +15,7 @@ abstract contract AccountingInvariants is InvariantTestBase {
   using FixedPointMathLib for uint256;
 
   function invariant_reserveDepositAmountGtePendingRedemptionAmounts() public syncCurrentTimestamp(safetyModuleHandler) {
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
 
       require(
@@ -61,7 +61,7 @@ abstract contract AccountingInvariants is InvariantTestBase {
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
-    for (uint16 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory reservePool_ = getReservePool(safetyModule, reservePoolId_);
       invariant_internalAssetPoolAmountEqualsSumOfInternalAmounts_accountingSums[reservePool_.asset] +=
         (reservePool_.depositAmount + reservePool_.feeAmount);

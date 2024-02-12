@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
 
 struct Redemption {
-  uint16 reservePoolId; // ID of the reserve pool.
+  uint8 reservePoolId; // ID of the reserve pool.
   uint216 receiptTokenAmount; // Deposit receipt token amount burned to queue the redemption.
   IReceiptToken receiptToken; // The receipt token being redeemed.
   uint128 assetAmount; // Asset amount that will be paid out upon completion of the redemption.

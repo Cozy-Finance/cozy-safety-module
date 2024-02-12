@@ -233,7 +233,7 @@ contract FeesHandlerDripUnitTest is FeesHandlerUnitTest {
     mockManager.setFeeDripModel(IDripModel(address(model_)));
 
     ReservePool[] memory expectedReservePools_ = component.getReservePools();
-    uint16 feeDripPool_ = uint16(_randomUint256() % expectedReservePools_.length);
+    uint8 feeDripPool_ = uint8(_randomUint256() % expectedReservePools_.length);
 
     ReservePool memory expectedReservePool_ = expectedReservePools_[feeDripPool_];
     uint256 drippedFromDepositAmount_ = _calculateExpectedDripQuantity(
@@ -461,7 +461,7 @@ contract TestableFeesHandler is Depositor, FeesHandler {
     return reservePools;
   }
 
-  function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
+  function getReservePool(uint8 reservePoolId_) external view returns (ReservePool memory) {
     return reservePools[reservePoolId_];
   }
 
@@ -472,7 +472,7 @@ contract TestableFeesHandler is Depositor, FeesHandler {
   // -------- Overridden abstract function placeholders --------
 
   function _updateWithdrawalsAfterTrigger(
-    uint16, /* reservePoolId_ */
+    uint8, /* reservePoolId_ */
     ReservePool storage, /* reservePool_ */
     uint256, /* oldDepositAmount_ */
     uint256 /* slashAmount_ */

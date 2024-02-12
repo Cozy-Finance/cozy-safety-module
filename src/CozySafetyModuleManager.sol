@@ -18,7 +18,7 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
   }
 
   /// @notice The max number of reserve pools allowed per safety module.
-  uint256 public immutable allowedReservePools;
+  uint8 public immutable allowedReservePools;
 
   /// @notice Cozy protocol SafetyModuleFactory.
   ISafetyModuleFactory public immutable safetyModuleFactory;
@@ -45,7 +45,7 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
     address pauser_,
     ISafetyModuleFactory safetyModuleFactory_,
     IDripModel feeDripModel_,
-    uint256 allowedReservePools_
+    uint8 allowedReservePools_
   ) {
     _assertAddressNotZero(owner_);
     _assertAddressNotZero(address(safetyModuleFactory_));

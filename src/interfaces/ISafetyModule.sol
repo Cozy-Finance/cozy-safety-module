@@ -50,18 +50,18 @@ interface ISafetyModule {
 
   /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
   /// `reservePools[reservePoolId_].asset` so it can `transferFrom`
-  function depositReserveAssets(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
+  function depositReserveAssets(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
     external
     returns (uint256 depositReceiptTokenAmount_);
 
   /// @dev Expects depositer to transfer assets to the SafetyModule beforehand.
-  function depositReserveAssetsWithoutTransfer(uint16 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
+  function depositReserveAssetsWithoutTransfer(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
     external
     returns (uint256 depositReceiptTokenAmount_);
 
   function dripFees() external;
 
-  function dripFeesFromReservePool(uint16 reservePoolId_) external;
+  function dripFeesFromReservePool(uint8 reservePoolId_) external;
 
   /// @notice The number of slashes that must occur before the safety module can be active.
   /// @dev This value is incremented when a trigger occurs, and decremented when a slash from a trigger assigned payout
@@ -96,7 +96,7 @@ interface ISafetyModule {
   /// sending
   /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
-  function redeem(uint16 reservePoolId_, uint256 depositReceiptTokenAmount_, address receiver_, address owner_)
+  function redeem(uint8 reservePoolId_, uint256 depositReceiptTokenAmount_, address receiver_, address owner_)
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_);
 

@@ -33,8 +33,7 @@ contract MockDeployer is TestBase {
   address pauser = address(0xBEEF);
 
   uint256 constant DEFAULT_FEE_DRIP_MODEL_CONSTANT = 0.5e18;
-  uint256 constant ALLOWED_RESERVE_POOLS = 1000;
-  uint256 constant ALLOWED_REWARD_POOLS = 1000;
+  uint8 constant ALLOWED_RESERVE_POOLS = 255;
 
   function deployMockProtocol() public virtual {
     // WETH bytecode obtained using `cast code 0x42000.006 -c optimism`.

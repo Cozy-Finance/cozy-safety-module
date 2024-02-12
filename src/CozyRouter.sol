@@ -214,7 +214,7 @@ contract CozyRouter {
   /// specified amount of assets are transferred from the caller to the Safety Module.
   function depositReserveAssets(
     ISafetyModule safetyModule_,
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     uint256 reserveAssetAmount_,
     address receiver_
   ) public payable returns (uint256 depositReceiptTokenAmount_) {
@@ -252,7 +252,7 @@ contract CozyRouter {
   /// method is here to facilitate MultiCall transactions.
   function depositReserveAssetsWithoutTransfer(
     ISafetyModule safetyModule_,
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     uint256 reserveAssetAmount_,
     address receiver_
   ) public payable returns (uint256 depositReceiptTokenAmount_) {
@@ -318,7 +318,7 @@ contract CozyRouter {
   function wrapBaseAssetViaConnectorAndDepositReserveAssets(
     IConnector connector_,
     ISafetyModule safetyModule_,
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     uint256 baseAssetAmount_,
     address receiver_
   ) external payable returns (uint256 depositReceiptTokenAmount_) {
@@ -333,7 +333,7 @@ contract CozyRouter {
   function wrapBaseAssetViaConnectorAndDepositRewardAssets(
     IConnector connector_,
     IRewardsManager rewardsManager_,
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     uint256 baseAssetAmount_,
     address receiver_
   ) external payable returns (uint256 depositReceiptTokenAmount_) {
@@ -352,7 +352,7 @@ contract CozyRouter {
   /// completed once sufficient delay has elapsed.
   function withdrawReservePoolAssets(
     ISafetyModule safetyModule_,
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     uint256 reserveAssetAmount_,
     address receiver_
   ) external payable returns (uint64 redemptionId_, uint256 depositReceiptTokenAmount_) {
@@ -368,7 +368,7 @@ contract CozyRouter {
   /// completed once sufficient delay has elapsed.
   function redeemReservePoolDepositReceiptTokens(
     ISafetyModule safetyModule_,
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     uint256 depositReceiptTokenAmount_,
     address receiver_
   ) external payable returns (uint64 redemptionId_, uint256 assetsReceived_) {
@@ -383,7 +383,7 @@ contract CozyRouter {
   /// undripped assets from reward pools can be completed instantly.
   function withdrawRewardPoolAssets(
     IRewardsManager rewardsManager_,
-    uint16 rewardPoolId_,
+    uint8 rewardPoolId_,
     uint256 rewardAssetAmount_,
     address receiver_
   ) external payable returns (uint256 depositReceiptTokenAmount_) {
@@ -434,7 +434,7 @@ contract CozyRouter {
   function unstakeReserveAssetsAndWithdraw(
     ISafetyModule safetyModule_,
     IRewardsManager rewardsManager_,
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     uint16 stakePoolId_,
     uint256 reserveAssetAmount_,
     address receiver_
@@ -458,7 +458,7 @@ contract CozyRouter {
   function unstakeStakeReceiptTokensAndRedeem(
     ISafetyModule safetyModule_,
     IRewardsManager rewardsManager_,
-    uint16 reservePoolId_,
+    uint8 reservePoolId_,
     uint16 stakePoolId_,
     uint256 stakeReceiptTokenAmount_,
     address receiver_

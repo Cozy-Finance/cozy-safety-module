@@ -63,8 +63,8 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
   // 9116094774
   uint256 constant DECAY_RATE_PER_SECOND = 9_116_094_774; // Per-second decay rate of 25% annually.
 
-  uint16 wethReservePoolId;
-  uint16 wethRewardPoolId;
+  uint8 wethReservePoolId;
+  uint8 wethRewardPoolId;
 
   /// @dev Emitted by ERC20s when `amount` tokens are moved from `from` to `to`.
   event Transfer(address indexed from, address indexed to, uint256 amount);
@@ -469,7 +469,7 @@ contract CozyRouterDepositTest is CozyRouterTestSetup {
   function _depositAssets(
     bool isReserveDeposit_,
     ISafetyModule safetyModule_,
-    uint16 poolId_,
+    uint8 poolId_,
     address user_,
     uint256 assets_
   ) internal {
@@ -501,7 +501,7 @@ contract CozyRouterDepositTest is CozyRouterTestSetup {
   function _depositReserveAssetsRevertsIfRecipientIsZeroAddress(
     bool isReserveDeposit_,
     ISafetyModule safetyModule_,
-    uint16 poolId_
+    uint8 poolId_
   ) internal {
     vm.startPrank(address(0xBEEF));
 
@@ -598,7 +598,7 @@ contract CozyRouterWrapBaseAssetViaConnectorAndDepositTest is CozyRouterConnecto
     bool isReserveDeposit_,
     MockConnector connector_,
     ISafetyModule safetyModule_,
-    uint16 poolId_,
+    uint8 poolId_,
     uint256 wrappedAssetDepositAmount_,
     uint256 baseAssetsNeeded_,
     address owner_
@@ -754,7 +754,7 @@ contract CozyRouterWithdrawTest is CozyRouterTestSetup {
   function _testWithdrawRequiresAllowance(
     bool isReserveWithdraw_,
     ISafetyModule safetyModule_,
-    uint16 poolId_,
+    uint8 poolId_,
     address user_,
     uint256 assets_
   ) internal {
@@ -832,7 +832,7 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
   function _setUpWethBalances(
     bool isReserveDeposit_,
     ISafetyModule safetyModule_,
-    uint16 poolId_,
+    uint8 poolId_,
     uint256 initialAmount_
   ) internal {
     vm.startPrank(testRedeemer);
@@ -882,7 +882,7 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
 //   address testStaker = address(this);
 //   uint256 shares;
 
-//   function _setUpWethBalances(ISafetyModule safetyModule_, uint16 reservePoolId_, uint256 initialAmount_) internal {
+//   function _setUpWethBalances(ISafetyModule safetyModule_, uint8 reservePoolId_, uint256 initialAmount_) internal {
 //     vm.startPrank(testStaker);
 //     // Mint some WETH and approve the router to move it.
 //     vm.deal(testStaker, initialAmount_);
@@ -1027,7 +1027,7 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
     vm.prank(alice);
     weth.transfer(address(safetyModule), 3 ether);
 
-    uint16 poolId_ = isReserveDeposit_ ? wethReservePoolId : wethRewardPoolId;
+    uint8 poolId_ = isReserveDeposit_ ? wethReservePoolId : wethRewardPoolId;
     IERC20 depositReceiptToken_ = getReservePool(safetyModule, poolId_).depositReceiptToken;
     // : getRewardPool(safetyModule, poolId_).depositToken;
 

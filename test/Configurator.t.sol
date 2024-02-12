@@ -696,7 +696,7 @@ contract TestableConfigurator is Configurator {
     return reservePools;
   }
 
-  function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
+  function getReservePool(uint8 reservePoolId_) external view returns (ReservePool memory) {
     return reservePools[reservePoolId_];
   }
 
@@ -739,7 +739,7 @@ contract TestableConfigurator is Configurator {
   }
 
   function _updateWithdrawalsAfterTrigger(
-    uint16, /* reservePoolId_ */
+    uint8, /* reservePoolId_ */
     ReservePool storage, /* reservePool_ */
     uint256, /* oldDepositAmount_ */
     uint256 /* slashAmount_ */

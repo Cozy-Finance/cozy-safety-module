@@ -121,13 +121,10 @@ contract SlashHandlerTest is TestBase {
     component.mockSetNumPendingSlashes(6);
     component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
 
-    uint128 depositAmount_ = 300e6;
+    uint128 depositAmount_ = 3000e6;
     uint128 pendingWithdrawalsAmount_ = 150e6;
-    // Slash all deposited assets and some staked assets from pool 0.
     uint128 slashAmountA_ = 250e6;
-    // Slash some deposited assets and no staked assets from pool 1.
     uint128 slashAmountB_ = 50e6;
-    // Slash no assets from pool 2.
     uint128 slashAmountC_ = 0;
 
     address receiver_ = _randomAddress();
@@ -176,7 +173,7 @@ contract SlashHandlerTest is TestBase {
     slashes_[1] = Slash({reservePoolId: 1, amount: slashAmountB_});
     slashes_[2] = Slash({reservePoolId: 2, amount: slashAmountC_});
 
-    // Reserve pool 0 slash events. The staked assets are slashed after the deposited assets.
+    // Reserve pool 0 slash events.
     _expectEmit();
     emit IERC20.Transfer(address(component), receiver_, slashAmountA_);
 
@@ -242,7 +239,7 @@ contract SlashHandlerTest is TestBase {
     component.slash(slashes_, _randomAddress());
   }
 
-  function test_slash_revert_insufficientReserveAssets() public {
+  function test_slash_revert_insufficientReserveAssetsDueToMaxSlashPercentageParameter() public {
     uint128 depositAmount_ = 300e6;
     uint128 pendingWithdrawalsAmount_ = 150e6;
     uint128 slashAmountA_ = 250e6;
@@ -326,12 +323,42 @@ contract SlashHandlerTest is TestBase {
     vm.prank(mockPayoutHandler);
     component.slash(slashes_, receiver_);
   }
+
+  function test_getSlashableReservePoolAmount() public {
+    uint256 depositAmountA_ = 1000;
+    component.mockAddReservePool(
+      ReservePool({
+        asset: IERC20(address(mockAsset)),
+        depositReceiptToken: IReceiptToken(address(0)),
+        depositAmount: depositAmountA_,
+        pendingWithdrawalsAmount: _randomUint256(),
+        feeAmount: _randomUint256(),
+        maxSlashPercentage: MathConstants.ZOC,
+        lastFeesDripTime: uint128(block.timestamp)
+      })
+    );
+    assertEq(component.getSlashableReservePoolAmount(0), 1000);
+
+    uint256 depositAmountB_ = 900_000;
+    component.mockAddReservePool(
+      ReservePool({
+        asset: IERC20(address(mockAsset)),
+        depositReceiptToken: IReceiptToken(address(0)),
+        depositAmount: depositAmountB_,
+        pendingWithdrawalsAmount: _randomUint256(),
+        feeAmount: _randomUint256(),
+        maxSlashPercentage: MathConstants.ZOC / 4,
+        lastFeesDripTime: uint128(block.timestamp)
+      })
+    );
+    assertEq(component.getSlashableReservePoolAmount(1), 225_000);
+  }
 }
 
 contract TestableSlashHandler is SlashHandler, Redeemer {
   // -------- Getters --------
 
-  function getReservePool(uint16 reservePoolId_) external view returns (ReservePool memory) {
+  function getReservePool(uint8 reservePoolId_) external view returns (ReservePool memory) {
     return reservePools[reservePoolId_];
   }
 
