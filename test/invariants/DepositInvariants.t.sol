@@ -47,7 +47,7 @@ abstract contract DepositInvariants is InvariantTestBase {
 
     for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory currentReservePool_ = getReservePool(safetyModule, reservePoolId_);
-      AssetPool memory assetPool_ = safetyModule.assetPools(safetyModule.reservePools(reservePoolId_).asset);
+      AssetPool memory currentAssetPool_ = safetyModule.assetPools(safetyModule.reservePools(reservePoolId_).asset);
 
       // safetyModuleHandler.currentReservePoolId is set to the reserve pool that was just deposited into during
       // this invariant test.
@@ -67,13 +67,13 @@ abstract contract DepositInvariants is InvariantTestBase {
           )
         );
         require(
-          assetPool_.amount > internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount,
+          currentAssetPool_.amount > internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount,
           string.concat(
-            "Invariant Violated: A reserve pool's internal balance must increase when a deposit occurs.",
+            "Invariant Violated: An asset pool's internal balance must increase when a deposit occurs into a reserve pool using the asset.",
             " reservePoolId_: ",
             Strings.toString(reservePoolId_),
-            ", assetPool_.amount: ",
-            Strings.toString(assetPool_.amount),
+            ", currentAssetPool_.amount: ",
+            Strings.toString(currentAssetPool_.amount),
             ", internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount: ",
             Strings.toString(internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount)
           )
@@ -130,13 +130,13 @@ abstract contract DepositInvariants is InvariantTestBase {
         );
         if (currentReservePool_.asset != depositReservePoolAsset_) {
           require(
-            assetPool_.amount == internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount,
+            currentAssetPool_.amount == internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount,
             string.concat(
               "Invariant Violated: An asset pool's internal balance must not change when a deposit occurs in a reserve pool with a different underlying asset.",
               " reservePoolId_: ",
               Strings.toString(reservePoolId_),
-              ", assetPool_.amount: ",
-              Strings.toString(assetPool_.amount),
+              ", currentAssetPool_.amount: ",
+              Strings.toString(currentAssetPool_.amount),
               ", internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount: ",
               Strings.toString(internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount)
             )
