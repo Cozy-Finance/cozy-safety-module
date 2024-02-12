@@ -305,6 +305,26 @@ contract SafetyModuleHandler is TestBase {
     return actor_;
   }
 
+  function depositReserveAssetsWithExistingActorWithoutCountingCall(
+    uint8 reservePoolId_,
+    uint256 assets_,
+    address actor_
+  ) external returns (address) {
+    uint256 invalidCallsBefore_ = invalidCalls["depositReserveAssetsWithExistingActor"];
+
+    currentReservePoolId = reservePoolId_;
+    currentActor = actor_;
+
+    _depositReserveAssets(assets_, "depositReserveAssetsWithExistingActor");
+
+    // _depositReserveAssets increments invalidCalls by 1 if the safety module is paused.
+    if (invalidCallsBefore_ < invalidCalls["depositReserveAssetsWithExistingActor"]) {
+      invalidCalls["depositReserveAssetsWithExistingActor"] -= 1;
+    }
+
+    return currentActor;
+  }
+
   function callSummary() public view virtual {
     console2.log("Call summary:");
     console2.log("----------------------------------------------------------------------------");
@@ -348,12 +368,24 @@ contract SafetyModuleHandler is TestBase {
     console2.log("slash", invalidCalls["slash"]);
   }
 
+  function boundDepositAssetAmount(uint256 assetAmount_) public pure returns (uint256) {
+    return bound(assetAmount_, 0.0001e6, type(uint72).max);
+  }
+
+  function pickValidReservePoolId(uint256 seed_) public view returns (uint8) {
+    return uint8(bound(seed_, 0, numReservePools - 1));
+  }
+
+  function pickActor(uint256 seed_) public returns (address) {
+    return actors.rand(seed_);
+  }
+
   function _depositReserveAssets(uint256 assetAmount_, string memory callName_) internal {
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       invalidCalls[callName_] += 1;
       return;
     }
-    assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
+    assetAmount_ = boundDepositAssetAmount(assetAmount_);
     IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
     deal(address(asset_), currentActor, asset_.balanceOf(currentActor) + assetAmount_, true);
 
@@ -374,7 +406,7 @@ contract SafetyModuleHandler is TestBase {
       return;
     }
 
-    assetAmount_ = uint72(bound(assetAmount_, 0.0001e6, type(uint72).max));
+    assetAmount_ = boundDepositAssetAmount(assetAmount_);
     IERC20 asset_ = getReservePool(safetyModule, currentReservePoolId).asset;
     _simulateTransferToSafetyModule(asset_, assetAmount_);
 
@@ -449,7 +481,7 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useValidReservePoolId(uint256 seed_) {
-    currentReservePoolId = uint8(bound(seed_, 0, numReservePools - 1));
+    currentReservePoolId = pickValidReservePoolId(seed_);
     _;
   }
 
@@ -485,7 +517,7 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useActor(uint256 actorIndexSeed_) {
-    currentActor = actors.rand(actorIndexSeed_);
+    currentActor = pickActor(actorIndexSeed_);
     _;
   }
 
