@@ -84,6 +84,10 @@ contract TestBase is Test, TestAssertions {
     return bound(base_, min_, max_);
   }
 
+  function _randomUint256FromSeed(uint256 seed_) internal pure returns (uint256) {
+    return uint256(keccak256(abi.encodePacked(seed_)));
+  }
+
   function _expectPanic(uint256 code_) internal {
     vm.expectRevert(abi.encodeWithSelector(PANIC_SELECTOR, code_));
   }

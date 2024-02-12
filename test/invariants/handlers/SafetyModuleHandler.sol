@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import {console2} from "forge-std/console2.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {CozySafetyModuleManager} from "../../../src/CozySafetyModuleManager.sol";
@@ -19,9 +20,11 @@ import {TestBase} from "../../utils/TestBase.sol";
 
 contract SafetyModuleHandler is TestBase {
   using FixedPointMathLib for uint256;
-  using AddressSetLib for AddressSet;
+  using EnumerableSet for EnumerableSet.AddressSet;
 
   uint64 constant SECONDS_IN_A_YEAR = 365 * 24 * 60 * 60;
+
+  address public constant DEFAULT_ADDRESS = address(0xc0ffee);
 
   address pauser;
   address owner;
@@ -39,9 +42,9 @@ contract SafetyModuleHandler is TestBase {
 
   address internal currentActor;
 
-  AddressSet internal actors;
+  EnumerableSet.AddressSet internal actors;
 
-  AddressSet internal actorsWithReserveDeposits;
+  EnumerableSet.AddressSet internal actorsWithReserveDeposits;
 
   uint8 public currentReservePoolId;
 
@@ -376,8 +379,9 @@ contract SafetyModuleHandler is TestBase {
     return uint8(bound(seed_, 0, numReservePools - 1));
   }
 
-  function pickActor(uint256 seed_) public returns (address) {
-    return actors.rand(seed_);
+  function pickActor(uint256 seed_) public view returns (address) {
+    uint256 numActors_ = actors.length();
+    return numActors_ == 0 ? DEFAULT_ADDRESS : actors.at(seed_ % numActors_);
   }
 
   function _depositReserveAssets(uint256 assetAmount_, string memory callName_) internal {
@@ -522,20 +526,26 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useActorWithReseveDeposits(uint256 seed_) {
-    currentActor = actorsWithReserveDeposits.rand(seed_);
+    uint256 numActorsWithReserveDeposits_ = actorsWithReserveDeposits.length();
+    currentActor = numActorsWithReserveDeposits_ == 0
+      ? DEFAULT_ADDRESS
+      : actorsWithReserveDeposits.at(seed_ % numActorsWithReserveDeposits_);
+    currentReservePoolId = getReservePoolIdForActorWithReserveDeposit(seed_, currentActor);
+    _;
+  }
 
-    uint8 initIndex_ = uint8(bound(seed_, 0, numReservePools));
+  function getReservePoolIdForActorWithReserveDeposit(uint256 seed_, address actor_) public view returns (uint8) {
+    uint8 initIndex_ = uint8(_randomUint256FromSeed(seed_) % numReservePools);
     uint8 indicesVisited_ = 0;
 
     // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
     for (uint8 i = initIndex_; indicesVisited_ < numReservePools; i = uint8((i + 1) % numReservePools)) {
-      if (ghost_actorReserveDepositCount[currentActor][i] > 0) {
-        currentReservePoolId = i;
-        break;
-      }
+      if (ghost_actorReserveDepositCount[actor_][i] > 0) return i;
       indicesVisited_++;
     }
-    _;
+
+    // If no reserve pool with a reward deposit count was found, return the random initial index.
+    return initIndex_;
   }
 
   modifier warpToCurrentTimestamp() {
