@@ -53,6 +53,7 @@ abstract contract DepositInvariants is InvariantTestBase {
       // this invariant test.
       uint8 depositedReservePoolId_ = safetyModuleHandler.currentReservePoolId();
       IERC20 depositReservePoolAsset_ = safetyModule.reservePools(depositedReservePoolId_).asset;
+
       if (reservePoolId_ == depositedReservePoolId_) {
         require(
           currentReservePool_.depositReceiptToken.totalSupply() > totalSupplyBeforeDepositReserves_[reservePoolId_],
@@ -156,6 +157,31 @@ abstract contract DepositInvariants is InvariantTestBase {
           );
         }
       }
+    }
+  }
+
+  function invariant_exchangeRatesForZeroAssetsAndReceiptTokens() public syncCurrentTimestamp(safetyModuleHandler) {
+    for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
+      require(
+        safetyModule.convertToReceiptTokenAmount(reservePoolId_, 0) == 0,
+        string.concat(
+          "Invariant Violated: The exchange rate for 0 reserve assets must be 0.",
+          " reservePoolId_: ",
+          Strings.toString(reservePoolId_),
+          ", safetyModule.convertToReceiptTokenAmount(reservePoolId_, 0): ",
+          Strings.toString(safetyModule.convertToReceiptTokenAmount(reservePoolId_, 0))
+        )
+      );
+      require(
+        safetyModule.convertToReserveAssetAmount(reservePoolId_, 0) == 0,
+        string.concat(
+          "Invariant Violated: The exchange rate for 0 receipt tokens must be 0.",
+          " reservePoolId_: ",
+          Strings.toString(reservePoolId_),
+          ", safetyModule.convertToReserveAssetAmount(reservePoolId_, 0): ",
+          Strings.toString(safetyModule.convertToReserveAssetAmount(reservePoolId_, 0))
+        )
+      );
     }
   }
 
