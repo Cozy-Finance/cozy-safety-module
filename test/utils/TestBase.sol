@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
-import {IDripModel} from "../../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
 import {Delays} from "../../src/lib/structs/Delays.sol";
 import {ReservePool} from "../../src/lib/structs/Pools.sol";

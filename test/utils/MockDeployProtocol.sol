@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
 import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
@@ -8,7 +9,6 @@ import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory
 import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
 import {ISafetyModuleFactory} from "../../src/interfaces/ISafetyModuleFactory.sol";
 import {ICozySafetyModuleManager} from "../../src/interfaces/ICozySafetyModuleManager.sol";
-import {IDripModel} from "../../src/interfaces/IDripModel.sol";
 import {IWeth} from "../../src/interfaces/IWeth.sol";
 import {CozySafetyModuleManager} from "../../src/CozySafetyModuleManager.sol";
 import {SafetyModule} from "../../src/SafetyModule.sol";

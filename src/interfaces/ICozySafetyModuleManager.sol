@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
+import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {ICozySafetyModuleManagerEvents} from "./ICozySafetyModuleManagerEvents.sol";
 import {ISafetyModule} from "./ISafetyModule.sol";
-import {IDripModel} from "./IDripModel.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
 
 interface ICozySafetyModuleManager is ICozySafetyModuleManagerEvents {

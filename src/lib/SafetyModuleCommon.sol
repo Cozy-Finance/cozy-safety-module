@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
+import {ICommonErrors} from "cozy-safety-module-shared/interfaces/ICommonErrors.sol";
+import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {SafetyModuleBaseStorage} from "./SafetyModuleBaseStorage.sol";
-import {ICommonErrors} from "../interfaces/ICommonErrors.sol";
-import {IDripModel} from "../interfaces/IDripModel.sol";
 import {ReservePool} from "./structs/Pools.sol";
 
 abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {

@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
@@ -18,7 +19,6 @@ import {Delays} from "../src/lib/structs/Delays.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {TriggerMetadata} from "../src/lib/structs/Trigger.sol";
 import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
-import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {IStETH} from "../src/interfaces/IStETH.sol";
