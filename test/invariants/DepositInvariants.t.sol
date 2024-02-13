@@ -27,9 +27,6 @@ abstract contract DepositInvariants is InvariantTestBase {
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
-    // Can't deposit if the safety module is paused.
-    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) return;
-
     uint256[] memory totalSupplyBeforeDepositReserves_ = new uint256[](numReservePools);
     InternalBalances[] memory internalBalancesBeforeDepositReserves_ = new InternalBalances[](numReservePools);
     for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
@@ -186,9 +183,6 @@ abstract contract DepositInvariants is InvariantTestBase {
   }
 
   function invariant_depositPreviewMatches() public syncCurrentTimestamp(safetyModuleHandler) {
-    // Can't deposit if the safety module is paused.
-    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) return;
-
     uint256 assetAmount_ = safetyModuleHandler.boundDepositAssetAmount(_randomUint256());
     uint8 reservePoolId_ = safetyModuleHandler.pickValidReservePoolId(_randomUint256());
     address actor_ = safetyModuleHandler.pickActor(_randomUint256());
@@ -216,9 +210,6 @@ abstract contract DepositInvariants is InvariantTestBase {
   }
 
   function invariant_cannotDepositZeroAssets() public syncCurrentTimestamp(safetyModuleHandler) {
-    // Can't deposit if the safety module is paused.
-    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) return;
-
     uint8 reservePoolId_ = safetyModuleHandler.pickValidReservePoolId(_randomUint256());
     address actor_ = safetyModuleHandler.pickActor(_randomUint256());
 
@@ -228,9 +219,6 @@ abstract contract DepositInvariants is InvariantTestBase {
   }
 
   function invariant_cannotDepositWithInsufficientAssets() public syncCurrentTimestamp(safetyModuleHandler) {
-    // Can't deposit if the safety module is paused.
-    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) return;
-
     uint8 reservePoolId_ = safetyModuleHandler.pickValidReservePoolId(_randomUint256());
     address actor_ = safetyModuleHandler.pickActor(_randomUint256());
     uint256 assetAmount_ = safetyModuleHandler.boundDepositAssetAmount(_randomUint256());

@@ -378,6 +378,14 @@ contract SafetyModuleHandler is TestBase {
     return uint8(bound(seed_, 0, numReservePools - 1));
   }
 
+  function getTriggeredTriggers() public view returns (ITrigger[] memory) {
+    return triggeredTriggers;
+  }
+
+  function getTriggers() public view returns (ITrigger[] memory) {
+    return triggers;
+  }
+
   function pickActor(uint256 seed_) public view returns (address) {
     uint256 numActors_ = actors.length();
     return numActors_ == 0 ? DEFAULT_ADDRESS : actors.at(seed_ % numActors_);
@@ -529,11 +537,16 @@ contract SafetyModuleHandler is TestBase {
     currentActor = numActorsWithReserveDeposits_ == 0
       ? DEFAULT_ADDRESS
       : actorsWithReserveDeposits.at(seed_ % numActorsWithReserveDeposits_);
-    currentReservePoolId = getReservePoolIdForActorWithReserveDeposit(seed_, currentActor);
+    currentReservePoolId = _pickReservePoolIdForActorWithReserveDeposit(seed_, currentActor);
     _;
   }
 
-  function getReservePoolIdForActorWithReserveDeposit(uint256 seed_, address actor_) public view returns (uint8) {
+  modifier warpToCurrentTimestamp() {
+    vm.warp(currentTimestamp);
+    _;
+  }
+
+  function _pickReservePoolIdForActorWithReserveDeposit(uint256 seed_, address actor_) internal view returns (uint8) {
     uint8 initIndex_ = uint8(_randomUint256FromSeed(seed_) % numReservePools);
     uint8 indicesVisited_ = 0;
 
@@ -545,10 +558,5 @@ contract SafetyModuleHandler is TestBase {
 
     // If no reserve pool with a reward deposit count was found, return the random initial index.
     return initIndex_;
-  }
-
-  modifier warpToCurrentTimestamp() {
-    vm.warp(currentTimestamp);
-    _;
   }
 }
