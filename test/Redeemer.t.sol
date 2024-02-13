@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {ICommonErrors} from "cozy-safety-module-shared/interfaces/ICommonErrors.sol";
+import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
@@ -10,8 +12,6 @@ import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
-import {IDripModel} from "../src/interfaces/IDripModel.sol";
-import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IRedemptionErrors} from "../src/interfaces/IRedemptionErrors.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {CozyMath} from "../src/lib/CozyMath.sol";

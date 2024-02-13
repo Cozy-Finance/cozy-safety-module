@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import {DripModelExponential} from "cozy-safety-module-models/DripModelExponential.sol";
+import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {SafetyModule} from "../../../src/SafetyModule.sol";
@@ -9,7 +10,6 @@ import {TriggerState} from "../../../src/lib/SafetyModuleStates.sol";
 import {ReservePoolConfig, UpdateConfigsCalldataParams} from "../../../src/lib/structs/Configs.sol";
 import {Delays} from "../../../src/lib/structs/Delays.sol";
 import {TriggerConfig} from "../../../src/lib/structs/Trigger.sol";
-import {IDripModel} from "../../../src/interfaces/IDripModel.sol";
 import {ISafetyModule} from "../../../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../../../src/interfaces/ITrigger.sol";
 import {SafetyModuleHandler} from "../handlers/SafetyModuleHandler.sol";

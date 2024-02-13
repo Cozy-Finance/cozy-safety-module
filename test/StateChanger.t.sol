@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {ICommonErrors} from "cozy-safety-module-shared/interfaces/ICommonErrors.sol";
+import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
-import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
-import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {IStateChangerEvents} from "../src/interfaces/IStateChangerEvents.sol";
 import {IStateChangerErrors} from "../src/interfaces/IStateChangerErrors.sol";
