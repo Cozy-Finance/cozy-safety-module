@@ -3,6 +3,7 @@ pragma solidity 0.8.22;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {ICommonErrors} from "cozy-safety-module-shared/interfaces/ICommonErrors.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {ReservePool} from "../../src/lib/structs/Pools.sol";
 import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
@@ -10,7 +11,6 @@ import {Slash} from "../../src/lib/structs/Slash.sol";
 import {Trigger} from "../../src/lib/structs/Trigger.sol";
 import {TriggerState} from "../../src/lib/SafetyModuleStates.sol";
 import {ITrigger} from "../../src/interfaces/ITrigger.sol";
-import {ICommonErrors} from "../../src/interfaces/ICommonErrors.sol";
 import {IStateChangerErrors} from "../../src/interfaces/IStateChangerErrors.sol";
 import {MockTrigger} from "../utils/MockTrigger.sol";
 import {
