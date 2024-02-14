@@ -6,12 +6,12 @@ import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {ReservePool} from "../../src/lib/structs/Pools.sol";
 import {
-  InvariantTestBase,
+  InvariantTestBaseWithStateTransitions,
   InvariantTestWithSingleReservePool,
   InvariantTestWithMultipleReservePools
 } from "./utils/InvariantTestBase.sol";
 
-abstract contract AccountingInvariants is InvariantTestBase {
+abstract contract AccountingInvariantsWithStateTransitions is InvariantTestBaseWithStateTransitions {
   using FixedPointMathLib for uint256;
 
   function invariant_reserveDepositAmountGtePendingRedemptionAmounts() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -87,6 +87,12 @@ abstract contract AccountingInvariants is InvariantTestBase {
   }
 }
 
-contract AccountingInvariantsSingleReservePool is AccountingInvariants, InvariantTestWithSingleReservePool {}
+contract AccountingInvariantsWithStateTransitionsSingleReservePool is
+  AccountingInvariantsWithStateTransitions,
+  InvariantTestWithSingleReservePool
+{}
 
-contract AccountingInvariantsMultipleReservePools is AccountingInvariants, InvariantTestWithMultipleReservePools {}
+contract AccountingInvariantsWithStateTransitionsMultipleReservePools is
+  AccountingInvariantsWithStateTransitions,
+  InvariantTestWithMultipleReservePools
+{}

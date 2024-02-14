@@ -49,18 +49,16 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
   }
 
   function _fuzzedSelectors() internal pure virtual returns (bytes4[] memory) {
-    bytes4[] memory selectors = new bytes4[](11);
+    bytes4[] memory selectors = new bytes4[](9);
     selectors[0] = SafetyModuleHandler.depositReserveAssets.selector;
     selectors[1] = SafetyModuleHandler.depositReserveAssetsWithExistingActor.selector;
     selectors[2] = SafetyModuleHandler.depositReserveAssetsWithoutTransfer.selector;
     selectors[3] = SafetyModuleHandler.depositReserveAssetsWithoutTransferWithExistingActor.selector;
-    selectors[4] = SafetyModuleHandler.redeem.selector;
-    selectors[5] = SafetyModuleHandler.completeRedemption.selector;
-    selectors[6] = SafetyModuleHandler.dripFees.selector;
-    selectors[7] = SafetyModuleHandler.pause.selector;
-    selectors[8] = SafetyModuleHandler.unpause.selector;
-    selectors[9] = SafetyModuleHandler.trigger.selector;
-    selectors[10] = SafetyModuleHandler.slash.selector;
+    selectors[4] = SafetyModuleHandler.dripFees.selector;
+    selectors[5] = SafetyModuleHandler.dripFeesFromReservePool.selector;
+    selectors[6] = SafetyModuleHandler.claimFees.selector;
+    selectors[7] = SafetyModuleHandler.redeem.selector;
+    selectors[8] = SafetyModuleHandler.completeRedemption.selector;
     return selectors;
   }
 
@@ -84,6 +82,27 @@ abstract contract InvariantTestBase is InvariantBaseDeploy {
 
   function invariant_callSummary() public view {
     safetyModuleHandler.callSummary();
+  }
+}
+
+abstract contract InvariantTestBaseWithStateTransitions is InvariantTestBase {
+  function _fuzzedSelectors() internal pure override returns (bytes4[] memory) {
+    bytes4[] memory selectors = new bytes4[](13);
+    selectors[0] = SafetyModuleHandler.depositReserveAssets.selector;
+    selectors[1] = SafetyModuleHandler.depositReserveAssetsWithExistingActor.selector;
+    selectors[2] = SafetyModuleHandler.depositReserveAssetsWithoutTransfer.selector;
+    selectors[3] = SafetyModuleHandler.depositReserveAssetsWithoutTransferWithExistingActor.selector;
+    selectors[4] = SafetyModuleHandler.dripFees.selector;
+    selectors[5] = SafetyModuleHandler.dripFeesFromReservePool.selector;
+    selectors[6] = SafetyModuleHandler.claimFees.selector;
+    selectors[7] = SafetyModuleHandler.redeem.selector;
+    selectors[8] = SafetyModuleHandler.completeRedemption.selector;
+    // State transition selectors
+    selectors[9] = SafetyModuleHandler.pause.selector;
+    selectors[10] = SafetyModuleHandler.unpause.selector;
+    selectors[11] = SafetyModuleHandler.trigger.selector;
+    selectors[12] = SafetyModuleHandler.slash.selector;
+    return selectors;
   }
 }
 

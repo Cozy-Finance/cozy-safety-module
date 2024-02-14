@@ -151,8 +151,10 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     address receiver_,
     address owner_
   ) internal returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
-    IReceiptToken receiptToken_ = reservePool_.depositReceiptToken;
+    SafetyModuleState safetyModuleState_ = safetyModuleState;
+    if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert InvalidState();
 
+    IReceiptToken receiptToken_ = reservePool_.depositReceiptToken;
     {
       uint256 assetsAvailableForRedemption_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
       if (assetsAvailableForRedemption_ == 0) revert NoAssetsToRedeem();
@@ -165,7 +167,14 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     }
 
     redemptionId_ = _queueRedemption(
-      owner_, receiver_, reservePool_, receiptToken_, receiptTokenAmount_, reserveAssetAmount_, reservePoolId_
+      owner_,
+      receiver_,
+      reservePool_,
+      receiptToken_,
+      receiptTokenAmount_,
+      reserveAssetAmount_,
+      reservePoolId_,
+      safetyModuleState_
     );
   }
 
@@ -177,10 +186,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     IReceiptToken receiptToken_,
     uint256 receiptTokenAmount_,
     uint256 reserveAssetAmount_,
-    uint8 reservePoolId_
+    uint8 reservePoolId_,
+    SafetyModuleState safetyModuleState_
   ) internal returns (uint64 redemptionId_) {
-    SafetyModuleState safetyModuleState_ = safetyModuleState;
-    if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert InvalidState();
     receiptToken_.burn(msg.sender, owner_, receiptTokenAmount_);
 
     redemptionId_ = redemptionIdCounter;
