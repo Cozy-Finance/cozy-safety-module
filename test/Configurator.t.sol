@@ -3,14 +3,14 @@ pragma solidity 0.8.22;
 
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
+import {ICommonErrors} from "cozy-safety-module-shared/interfaces/ICommonErrors.sol";
+import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
 import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
 import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
-import {ICommonErrors} from "../src/interfaces/ICommonErrors.sol";
 import {IConfiguratorErrors} from "../src/interfaces/IConfiguratorErrors.sol";
-import {IDripModel} from "../src/interfaces/IDripModel.sol";
 import {IConfiguratorEvents} from "../src/interfaces/IConfiguratorEvents.sol";
 import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";

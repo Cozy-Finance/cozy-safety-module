@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {Governable} from "cozy-safety-module-shared/lib/Governable.sol";
 import {ICozySafetyModuleManager} from "../../src/interfaces/ICozySafetyModuleManager.sol";
 import {ISafetyModule} from "../../src/interfaces/ISafetyModule.sol";
-import {IDripModel} from "../../src/interfaces/IDripModel.sol";
 
 contract MockManager is Governable {
   IDripModel public feeDripModel;
