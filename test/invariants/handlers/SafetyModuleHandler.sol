@@ -391,6 +391,42 @@ contract SafetyModuleHandler is TestBase {
     return numActors_ == 0 ? DEFAULT_ADDRESS : actors.at(seed_ % numActors_);
   }
 
+  function pickValidTrigger(uint256 seed_) public view returns (ITrigger) {
+    uint256 initIndex_ = seed_ % triggers.length;
+    uint256 indicesVisited_ = 0;
+
+    // Iterate through triggers to find the first trigger that can has not yet triggered the safety module,
+    // if there is one.
+    for (uint256 i = initIndex_; indicesVisited_ < triggers.length; i = (i + 1) % triggers.length) {
+      if (!safetyModule.triggerData(triggers[i]).triggered) return triggers[i];
+      indicesVisited_++;
+    }
+
+    // If no valid trigger is found, return a default address.
+    return ITrigger(DEFAULT_ADDRESS);
+  }
+
+  function pickActorWithReserveDeposits(uint256 seed_) public view returns (address) {
+    uint256 numActorsWithReserveDeposits_ = actorsWithReserveDeposits.length();
+    return numActorsWithReserveDeposits_ == 0
+      ? DEFAULT_ADDRESS
+      : actorsWithReserveDeposits.at(seed_ % numActorsWithReserveDeposits_);
+  }
+
+  function pickReservePoolIdForActorWithReserveDeposits(uint256 seed_, address actor_) public view returns (uint8) {
+    uint8 initIndex_ = uint8(_randomUint256FromSeed(seed_) % numReservePools);
+    uint8 indicesVisited_ = 0;
+
+    // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
+    for (uint8 i = initIndex_; indicesVisited_ < numReservePools; i = uint8((i + 1) % numReservePools)) {
+      if (ghost_actorReserveDepositCount[actor_][i] > 0) return i;
+      indicesVisited_++;
+    }
+
+    // If no reserve pool with a reward deposit count was found, return the random initial index.
+    return initIndex_;
+  }
+
   function _depositReserveAssets(uint256 assetAmount_, string memory callName_) internal {
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       invalidCalls[callName_] += 1;
@@ -497,23 +533,13 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useValidTrigger(uint256 seed_) {
-    uint256 initIndex_ = bound(seed_, 0, triggers.length - 1);
-    uint256 indicesVisited_ = 0;
-
-    // Iterate through triggers to find the first trigger that can has not yet triggered the safety module,
-    // if there is one.
-    for (uint256 i = initIndex_; indicesVisited_ < triggers.length; i = (i + 1) % triggers.length) {
-      if (!safetyModule.triggerData(triggers[i]).triggered) {
-        currentTrigger = triggers[i];
-        break;
-      }
-      indicesVisited_++;
-    }
+    ITrigger trigger_ = pickValidTrigger(seed_);
+    currentTrigger = trigger_;
     _;
   }
 
   modifier useValidPayoutHandler(uint256 seed_) {
-    uint256 initIndex_ = bound(seed_, 0, triggeredTriggers.length - 1);
+    uint256 initIndex_ = seed_ % triggeredTriggers.length;
     uint256 indicesVisited_ = 0;
 
     for (uint256 i = initIndex_; indicesVisited_ < triggeredTriggers.length; i = (i + 1) % triggeredTriggers.length) {
@@ -533,30 +559,13 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useActorWithReseveDeposits(uint256 seed_) {
-    uint256 numActorsWithReserveDeposits_ = actorsWithReserveDeposits.length();
-    currentActor = numActorsWithReserveDeposits_ == 0
-      ? DEFAULT_ADDRESS
-      : actorsWithReserveDeposits.at(seed_ % numActorsWithReserveDeposits_);
-    currentReservePoolId = _pickReservePoolIdForActorWithReserveDeposit(seed_, currentActor);
+    currentActor = pickActorWithReserveDeposits(seed_);
+    currentReservePoolId = pickReservePoolIdForActorWithReserveDeposits(seed_, currentActor);
     _;
   }
 
   modifier warpToCurrentTimestamp() {
     vm.warp(currentTimestamp);
     _;
-  }
-
-  function _pickReservePoolIdForActorWithReserveDeposit(uint256 seed_, address actor_) internal view returns (uint8) {
-    uint8 initIndex_ = uint8(_randomUint256FromSeed(seed_) % numReservePools);
-    uint8 indicesVisited_ = 0;
-
-    // Iterate through reserve pools to find the first pool with a positive reserve deposit count for the current actor
-    for (uint8 i = initIndex_; indicesVisited_ < numReservePools; i = uint8((i + 1) % numReservePools)) {
-      if (ghost_actorReserveDepositCount[actor_][i] > 0) return i;
-      indicesVisited_++;
-    }
-
-    // If no reserve pool with a reward deposit count was found, return the random initial index.
-    return initIndex_;
   }
 }
