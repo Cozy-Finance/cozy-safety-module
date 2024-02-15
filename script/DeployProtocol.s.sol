@@ -5,8 +5,6 @@ import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
 import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
-import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
-import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
 import {console2} from "forge-std/console2.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {ScriptUtils} from "./utils/ScriptUtils.sol";
@@ -35,13 +33,8 @@ import {IWstETH} from "../src/interfaces/IWstETH.sol";
  *        2. (1)  Deploy: SafetyModule logic
  *        3. (2)  Transaction: SafetyModule logic initialization
  *        4. (3)  Deploy: SafetyModuleFactory
- *        5. (4)  Deploy: DepositToken logic
- *        6. (5)  Transaction: DepositToken logic initialization
- *        7. (6)  Deploy: StkToken logic
- *        8. (7)  Transaction: StkToken logic initialization
- *        9. (8)  Deploy: ReceiptTokenFactory
  *   3. Deploy all peripheral contracts:
- *        1. (9)  Deploy: CozyRouter
+ *        1. (4)  Deploy: CozyRouter
  *
  * To run this script:
  *
@@ -83,14 +76,12 @@ contract DeployProtocol is ScriptUtils {
   IOwnableTriggerFactory ownableTriggerFactory;
   IUMATriggerFactory umaTriggerFactory;
   IDripModel feeDripModel;
+  IReceiptTokenFactory receiptTokenFactory;
 
   // Core contracts to deploy.
   CozySafetyModuleManager manager;
   SafetyModule safetyModuleLogic;
   SafetyModuleFactory safetyModuleFactory;
-  ReceiptToken depositTokenLogic;
-  // StkToken stkTokenLogic; TODO: Deploy and initialize stkTokenLogic.
-  ReceiptTokenFactory receiptTokenFactory;
 
   // Peripheral contracts to deploy.
   CozyRouter router;
@@ -132,6 +123,9 @@ contract DeployProtocol is ScriptUtils {
     // -------- Reserve Pool Limits --------
     allowedReservePools = uint8(json_.readUint(".allowedReservePools"));
 
+    // -------- Receipt Token Factory --------
+    receiptTokenFactory = IReceiptTokenFactory(json_.readAddress(".receiptTokenFactory"));
+
     // -------------------------------------
     // -------- Address Computation --------
     // -------------------------------------
@@ -143,12 +137,6 @@ contract DeployProtocol is ScriptUtils {
     // nonce + 2 is initialization of the SafetyModule logic.
     ISafetyModuleFactory computedAddrSafetyModuleFactory_ =
       ISafetyModuleFactory(vm.computeCreateAddress(msg.sender, nonce_ + 3));
-    IReceiptToken computedAddrDepositTokenLogic_ = IReceiptToken(vm.computeCreateAddress(msg.sender, nonce_ + 4));
-    // nonce + 5 is initialization of the DepositToken logic.
-    // TODO Deploy an init stkTokenLogic.
-    // IReceiptToken computedAddrStkTokenLogic_ = IReceiptToken(vm.computeCreateAddress(msg.sender, nonce_ + 6));
-    IReceiptTokenFactory computedAddrReceiptTokenFactory_ =
-      IReceiptTokenFactory(vm.computeCreateAddress(msg.sender, nonce_ + 6));
 
     // ------------------------------------------
     // -------- Core Protocol Deployment --------
@@ -163,7 +151,7 @@ contract DeployProtocol is ScriptUtils {
 
     // -------- Deploy: SafetyModule Logic --------
     vm.broadcast();
-    safetyModuleLogic = new SafetyModule(computedAddrManager_, computedAddrReceiptTokenFactory_);
+    safetyModuleLogic = new SafetyModule(computedAddrManager_, receiptTokenFactory);
     console2.log("SafetyModule logic deployed:", address(safetyModuleLogic));
     require(
       address(safetyModuleLogic) == address(computedAddrSafetyModuleLogic_), "SafetyModule logic address mismatch"
@@ -186,36 +174,6 @@ contract DeployProtocol is ScriptUtils {
     console2.log("SafetyModuleFactory deployed:", address(safetyModuleFactory));
     require(
       address(safetyModuleFactory) == address(computedAddrSafetyModuleFactory_), "SafetyModuleFactory address mismatch"
-    );
-
-    // -------- Deploy: DepositToken Logic --------
-    vm.broadcast();
-    depositTokenLogic = new ReceiptToken();
-    console2.log("DepositToken logic deployed:", address(depositTokenLogic));
-    require(
-      address(depositTokenLogic) == address(computedAddrDepositTokenLogic_), "DepositToken logic address mismatch"
-    );
-
-    vm.broadcast();
-    depositTokenLogic.initialize(address(0), "", "", 0);
-
-    // TODO: Deploy StkToken logic and initialize
-    // -------- Deploy: StkToken Logic --------
-    // vm.broadcast();
-    // stkTokenLogic = new StkToken();
-    // console2.log("StkToken logic deployed:", address(stkTokenLogic));
-    // require(address(stkTokenLogic) == address(computedAddrStkTokenLogic_), "StkToken logic address mismatch");
-
-    // vm.broadcast();
-    // stkTokenLogic.initialize(ISafetyModule(address(0)), "", "", 0);
-
-    // -------- Deploy: ReceiptTokenFactory --------
-    vm.broadcast();
-    // TODO: Use computed stk token logic address.
-    receiptTokenFactory = new ReceiptTokenFactory(computedAddrDepositTokenLogic_, IReceiptToken(address(0)));
-    console2.log("ReceiptTokenFactory deployed:", address(receiptTokenFactory));
-    require(
-      address(receiptTokenFactory) == address(computedAddrReceiptTokenFactory_), "ReceiptTokenFactory address mismatch"
     );
 
     // ----------------------------------------
