@@ -397,6 +397,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
   function _createValidConfigUpdate() internal view returns (UpdateConfigsCalldataParams memory) {
     UpdateConfigsCalldataParams memory currentConfig_ = _copyCurrentConfig();
 
+    // Foundry invariant tests seem to revert at some random point into a run when you try to deploy new reserve deposit
+    // receipt tokens or new triggers, so these tests do not add new reserve pools or triggers. Those cases are checked
+    // in unit tests.
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](currentConfig_.reservePoolConfigs.length);
     for (uint8 i = 0; i < currentConfig_.reservePoolConfigs.length; i++) {
       // We cannot update the asset of the copied current config, since it will cause a revert.
