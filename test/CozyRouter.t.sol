@@ -19,6 +19,7 @@ import {Delays} from "../src/lib/structs/Delays.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {TriggerMetadata} from "../src/lib/structs/Trigger.sol";
 import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
+import {IMetadataRegistry} from "../src/interfaces/IMetadataRegistry.sol";
 import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {IStETH} from "../src/interfaces/IStETH.sol";
@@ -30,6 +31,7 @@ import {MockConnector} from "./utils/MockConnector.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockDeployProtocol} from "./utils/MockDeployProtocol.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";
+import {MockMetadataRegistry} from "./utils/MockMetadataRegistry.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
 import {MockUMAOracle} from "./utils/MockUMAOracle.sol";
 
@@ -1319,5 +1321,25 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
       deal(address(this), 1e18);
       router.aggregate(calls_);
     }
+  }
+
+  function test_updateSafetyModuleMetadata() public {
+    MockMetadataRegistry registry_ = new MockMetadataRegistry(address(router));
+
+    // Safety module owner must call the router function.
+    vm.prank(safetyModule.owner());
+    router.updateSafetyModuleMetadata(
+      IMetadataRegistry(address(registry_)),
+      address(safetyModule),
+      IMetadataRegistry.Metadata("Safety Module", "A safety module", "https://via.placeholder.com/150", "")
+    );
+
+    vm.prank(_randomAddress());
+    vm.expectRevert();
+    router.updateSafetyModuleMetadata(
+      IMetadataRegistry(address(registry_)),
+      address(safetyModule),
+      IMetadataRegistry.Metadata("Safety Module", "A safety module", "https://via.placeholder.com/150", "")
+    );
   }
 }

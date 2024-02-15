@@ -12,6 +12,7 @@ import {TriggerMetadata} from "./lib/structs/Trigger.sol";
 import {IChainlinkTriggerFactory} from "src/interfaces/IChainlinkTriggerFactory.sol";
 import {IConnector} from "./interfaces/IConnector.sol";
 import {ICozySafetyModuleManager} from "./interfaces/ICozySafetyModuleManager.sol";
+import {IMetadataRegistry} from "./interfaces/IMetadataRegistry.sol";
 import {IOwnableTriggerFactory} from "./interfaces/IOwnableTriggerFactory.sol";
 import {IRewardsManager} from "./interfaces/IRewardsManager.sol";
 import {ISafetyModule} from "./interfaces/ISafetyModule.sol";
@@ -618,6 +619,19 @@ contract CozyRouter {
     bytes32 salt_
   ) external payable returns (ISafetyModule safetyModule_) {
     safetyModule_ = manager.createSafetyModule(owner_, pauser_, configs_, salt_);
+  }
+
+  /// @notice Update metadata for a safety module.
+  /// @dev `msg.sender` must be the owner of the safety module.
+  /// @param metadataRegistry_ The address of the metadata registry.
+  /// @param safetyModule_ The address of the safety module.
+  /// @param metadata_ The new metadata for the safety module.
+  function updateSafetyModuleMetadata(
+    IMetadataRegistry metadataRegistry_,
+    address safetyModule_,
+    IMetadataRegistry.Metadata calldata metadata_
+  ) external payable {
+    metadataRegistry_.updateSafetyModuleMetadata(safetyModule_, metadata_, msg.sender);
   }
 
   // ----------------------------------
