@@ -423,6 +423,8 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     );
     _expectEmit();
     emit ConfigUpdatesFinalized(reservePoolConfigs_, triggerConfigUpdates_, delayConfig_);
+
+    vm.prank(_randomAddress());
     component.finalizeUpdateConfigs(
       UpdateConfigsCalldataParams({
         reservePoolConfigs: reservePoolConfigs_,
