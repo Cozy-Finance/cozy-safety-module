@@ -582,7 +582,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     _expectEmit();
     emit ReservePoolCreated(1, newReservePoolConfig_.asset, IReceiptToken(depositReceiptTokenAddress_));
-    component.initializeReservePool(newReservePoolConfig_);
+    component.initializeReservePool(newReservePoolConfig_, 1);
 
     // One reserve pool was added, so two total reserve pools.
     assertEq(component.getReservePools().length, 2);
@@ -719,8 +719,8 @@ contract TestableConfigurator is Configurator {
     return ConfiguratorLib.isValidUpdate(reservePools, triggerData, configUpdates_, cozySafetyModuleManager);
   }
 
-  function initializeReservePool(ReservePoolConfig calldata reservePoolConfig_) external {
-    ConfiguratorLib.initializeReservePool(reservePools, receiptTokenFactory, reservePoolConfig_);
+  function initializeReservePool(ReservePoolConfig calldata reservePoolConfig_, uint8 reservePoolId_) external {
+    ConfiguratorLib.initializeReservePool(reservePools, receiptTokenFactory, reservePoolConfig_, reservePoolId_);
   }
 
   // -------- Overridden abstract function placeholders --------

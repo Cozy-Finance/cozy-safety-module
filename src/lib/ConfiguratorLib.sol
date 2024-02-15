@@ -154,15 +154,15 @@ library ConfiguratorLib {
   ) public {
     // Update existing reserve pool maxSlashPercentages. No need to update the reserve pool asset since it cannot
     // change.
-    uint256 numExistingReservePools_ = reservePools_.length;
-    for (uint256 i = 0; i < numExistingReservePools_; i++) {
+    uint8 numExistingReservePools_ = uint8(reservePools_.length);
+    for (uint8 i = 0; i < numExistingReservePools_; i++) {
       ReservePool storage reservePool_ = reservePools_[i];
       reservePool_.maxSlashPercentage = configUpdates_.reservePoolConfigs[i].maxSlashPercentage;
     }
 
     // Initialize new reserve pools.
-    for (uint256 i = numExistingReservePools_; i < configUpdates_.reservePoolConfigs.length; i++) {
-      initializeReservePool(reservePools_, receiptTokenFactory_, configUpdates_.reservePoolConfigs[i]);
+    for (uint8 i = numExistingReservePools_; i < configUpdates_.reservePoolConfigs.length; i++) {
+      initializeReservePool(reservePools_, receiptTokenFactory_, configUpdates_.reservePoolConfigs[i], i);
     }
 
     // Update trigger configs.
@@ -193,10 +193,9 @@ library ConfiguratorLib {
   function initializeReservePool(
     ReservePool[] storage reservePools_,
     IReceiptTokenFactory receiptTokenFactory_,
-    ReservePoolConfig calldata reservePoolConfig_
+    ReservePoolConfig calldata reservePoolConfig_,
+    uint8 reservePoolId_
   ) internal {
-    uint8 reservePoolId_ = uint8(reservePools_.length);
-
     IReceiptToken reserveDepositReceiptToken_ = receiptTokenFactory_.deployReceiptToken(
       reservePoolId_, IReceiptTokenFactory.PoolType.RESERVE, reservePoolConfig_.asset.decimals()
     );

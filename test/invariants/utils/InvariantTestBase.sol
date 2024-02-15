@@ -154,9 +154,11 @@ abstract contract InvariantTestWithMultipleReservePools is InvariantBaseDeploy {
     }
 
     triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
+    triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
 
-    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](1);
+    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](2);
     triggerConfig_[0] = TriggerConfig({trigger: triggers[0], payoutHandler: _randomAddress(), exists: true});
+    triggerConfig_[1] = TriggerConfig({trigger: triggers[1], payoutHandler: _randomAddress(), exists: true});
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
