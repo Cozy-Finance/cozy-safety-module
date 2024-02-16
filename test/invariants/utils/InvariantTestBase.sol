@@ -134,9 +134,11 @@ abstract contract InvariantTestWithSingleReservePool is InvariantBaseDeploy {
 
 abstract contract InvariantTestWithMultipleReservePools is InvariantBaseDeploy {
   uint16 internal constant MAX_RESERVE_POOLS = 10;
+  uint16 internal constant MAX_TRIGGERS = 10;
 
   function _initSafetyModule() internal override {
     uint256 numReservePools_ = _randomUint256InRange(1, MAX_RESERVE_POOLS);
+    uint256 numTriggers_ = _randomUint256InRange(1, MAX_TRIGGERS);
 
     // Create some unique assets to use for the pools. We want to make sure the invariant tests cover the case where the
     // same asset is used for multiple reserve pools.
@@ -153,10 +155,13 @@ abstract contract InvariantTestWithMultipleReservePools is InvariantBaseDeploy {
       });
     }
 
-    triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
-
-    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](1);
-    triggerConfig_[0] = TriggerConfig({trigger: triggers[0], payoutHandler: _randomAddress(), exists: true});
+    for (uint256 i_; i_ < numTriggers_; i_++) {
+      triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
+    }
+    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](numTriggers_);
+    for (uint256 i_; i_ < numTriggers_; i_++) {
+      triggerConfig_[i_] = TriggerConfig({trigger: triggers[i_], payoutHandler: _randomAddress(), exists: true});
+    }
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,

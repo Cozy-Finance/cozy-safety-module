@@ -395,7 +395,7 @@ contract SafetyModuleHandler is TestBase {
     uint256 initIndex_ = seed_ % triggers.length;
     uint256 indicesVisited_ = 0;
 
-    // Iterate through triggers to find the first trigger that can has not yet triggered the safety module,
+    // Iterate through triggers to find the first trigger that has not yet triggered the safety module,
     // if there is one.
     for (uint256 i = initIndex_; indicesVisited_ < triggers.length; i = (i + 1) % triggers.length) {
       if (!safetyModule.triggerData(triggers[i]).triggered) return triggers[i];
