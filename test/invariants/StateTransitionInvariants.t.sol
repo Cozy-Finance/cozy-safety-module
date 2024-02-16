@@ -4,8 +4,6 @@ pragma solidity 0.8.22;
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {ICommonErrors} from "cozy-safety-module-shared/interfaces/ICommonErrors.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {ReservePool} from "../../src/lib/structs/Pools.sol";
 import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
 import {Slash} from "../../src/lib/structs/Slash.sol";
 import {Trigger} from "../../src/lib/structs/Trigger.sol";
@@ -20,8 +18,6 @@ import {
 } from "./utils/InvariantTestBase.sol";
 
 abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTestBaseWithStateTransitions {
-  using FixedPointMathLib for uint256;
-
   function invariant_nonZeroPendingSlashesImpliesTriggeredOrPaused() public syncCurrentTimestamp(safetyModuleHandler) {
     if (safetyModule.numPendingSlashes() > 0) {
       require(

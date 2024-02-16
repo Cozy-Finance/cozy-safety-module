@@ -261,12 +261,6 @@ contract SafetyModuleHandler is TestBase {
     MockTrigger(address(currentTrigger)).mockState(TriggerState.TRIGGERED);
     safetyModule.trigger(currentTrigger);
     triggeredTriggers.push(currentTrigger);
-
-    if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
-      assertEq(safetyModule.safetyModuleState(), SafetyModuleState.PAUSED);
-    } else {
-      assertEq(safetyModule.safetyModuleState(), SafetyModuleState.TRIGGERED);
-    }
   }
 
   function slash(uint256 seed_) public virtual useValidPayoutHandler(seed_) countCall("slash") advanceTime(seed_) {

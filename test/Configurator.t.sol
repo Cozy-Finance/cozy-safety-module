@@ -61,7 +61,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     );
 
     reservePool1 = ReservePool({
-      asset: IERC20(_randomAddress()),
+      asset: IERC20(address(new MockERC20("Mock Asset", "cozyMock", 6))),
       depositReceiptToken: IReceiptToken(_randomAddress()),
       depositAmount: _randomUint256(),
       pendingWithdrawalsAmount: _randomUint256(),
@@ -70,7 +70,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       lastFeesDripTime: uint128(block.timestamp)
     });
     reservePool2 = ReservePool({
-      asset: IERC20(_randomAddress()),
+      asset: IERC20(address(new MockERC20("Mock Asset", "cozyMock", 6))),
       depositReceiptToken: IReceiptToken(_randomAddress()),
       depositAmount: _randomUint256(),
       pendingWithdrawalsAmount: _randomUint256(),
@@ -385,10 +385,12 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     // Create valid config update.
     Delays memory delayConfig_ = _generateValidDelays();
-    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](3);
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](5);
     reservePoolConfigs_[0] = ReservePoolConfig({asset: reservePool1.asset, maxSlashPercentage: MathConstants.ZOC});
-    reservePoolConfigs_[1] = ReservePoolConfig({asset: reservePool2.asset, maxSlashPercentage: MathConstants.ZOC});
-    reservePoolConfigs_[2] = _generateValidReservePoolConfig(MathConstants.ZOC);
+    reservePoolConfigs_[1] = ReservePoolConfig({asset: reservePool2.asset, maxSlashPercentage: MathConstants.ZOC / 2});
+    reservePoolConfigs_[2] = ReservePoolConfig({asset: reservePool1.asset, maxSlashPercentage: MathConstants.ZOC / 4});
+    reservePoolConfigs_[3] = ReservePoolConfig({asset: reservePool1.asset, maxSlashPercentage: MathConstants.ZOC / 8});
+    reservePoolConfigs_[4] = _generateValidReservePoolConfig(MathConstants.ZOC / 16);
     TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](2);
     triggerConfigUpdates_[0] = _generateValidTriggerConfig();
     triggerConfigUpdates_[1] = _generateValidTriggerConfig();
@@ -400,8 +402,29 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     // Ensure config updates can be applied
     vm.warp(lastConfigUpdate_.configUpdateTime);
 
+    IReceiptTokenFactory receiptTokenFactory_ = component.receiptTokenFactory();
+    _expectEmit();
+    emit IConfiguratorEvents.ReservePoolCreated(
+      2,
+      reservePool1.asset,
+      IReceiptToken(receiptTokenFactory_.computeAddress(address(component), 2, IReceiptTokenFactory.PoolType.RESERVE))
+    );
+    _expectEmit();
+    emit IConfiguratorEvents.ReservePoolCreated(
+      3,
+      reservePool1.asset,
+      IReceiptToken(receiptTokenFactory_.computeAddress(address(component), 3, IReceiptTokenFactory.PoolType.RESERVE))
+    );
+    _expectEmit();
+    emit IConfiguratorEvents.ReservePoolCreated(
+      4,
+      reservePoolConfigs_[4].asset,
+      IReceiptToken(receiptTokenFactory_.computeAddress(address(component), 4, IReceiptTokenFactory.PoolType.RESERVE))
+    );
     _expectEmit();
     emit ConfigUpdatesFinalized(reservePoolConfigs_, triggerConfigUpdates_, delayConfig_);
+
+    vm.prank(_randomAddress());
     component.finalizeUpdateConfigs(
       UpdateConfigsCalldataParams({
         reservePoolConfigs: reservePoolConfigs_,
@@ -418,10 +441,12 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     // Reserve pool config updates applied.
     ReservePool[] memory reservePools_ = component.getReservePools();
-    assertEq(reservePools_.length, 3);
+    assertEq(reservePools_.length, 5);
     _assertReservePoolUpdatesApplied(reservePools_[0], reservePoolConfigs_[0]);
     _assertReservePoolUpdatesApplied(reservePools_[1], reservePoolConfigs_[1]);
     _assertReservePoolUpdatesApplied(reservePools_[2], reservePoolConfigs_[2]);
+    _assertReservePoolUpdatesApplied(reservePools_[3], reservePoolConfigs_[3]);
+    _assertReservePoolUpdatesApplied(reservePools_[4], reservePoolConfigs_[4]);
 
     // Trigger config updates applied.
     Trigger memory trigger_ = component.getTriggerData(triggerConfigUpdates_[0].trigger);
@@ -456,7 +481,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     // Current timestamp is before configUpdateTime.
     vm.warp(bound(_randomUint256(), 0, configUpdateTime_));
-    vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
+    vm.expectRevert(ConfiguratorLib.InvalidTimestamp.selector);
     component.finalizeUpdateConfigs(
       UpdateConfigsCalldataParams({
         reservePoolConfigs: reservePoolConfigs_,
@@ -485,7 +510,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     // Current timestamp is after configUpdateDeadline.
     vm.warp(bound(_randomUint256(), configUpdateDeadline_ + 1, type(uint64).max));
-    vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
+    vm.expectRevert(ConfiguratorLib.InvalidTimestamp.selector);
     component.finalizeUpdateConfigs(
       UpdateConfigsCalldataParams({
         reservePoolConfigs: reservePoolConfigs_,
@@ -582,7 +607,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     _expectEmit();
     emit ReservePoolCreated(1, newReservePoolConfig_.asset, IReceiptToken(depositReceiptTokenAddress_));
-    component.initializeReservePool(newReservePoolConfig_);
+    component.initializeReservePool(newReservePoolConfig_, 1);
 
     // One reserve pool was added, so two total reserve pools.
     assertEq(component.getReservePools().length, 2);
@@ -719,8 +744,8 @@ contract TestableConfigurator is Configurator {
     return ConfiguratorLib.isValidUpdate(reservePools, triggerData, configUpdates_, cozySafetyModuleManager);
   }
 
-  function initializeReservePool(ReservePoolConfig calldata reservePoolConfig_) external {
-    ConfiguratorLib.initializeReservePool(reservePools, receiptTokenFactory, reservePoolConfig_);
+  function initializeReservePool(ReservePoolConfig calldata reservePoolConfig_, uint8 reservePoolId_) external {
+    ConfiguratorLib.initializeReservePool(reservePools, receiptTokenFactory, reservePoolConfig_, reservePoolId_);
   }
 
   // -------- Overridden abstract function placeholders --------

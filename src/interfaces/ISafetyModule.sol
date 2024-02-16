@@ -7,11 +7,12 @@ import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.
 import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
 import {SafetyModuleState} from "../lib/SafetyModuleStates.sol";
 import {AssetPool} from "../lib/structs/Pools.sol";
-import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
+import {UpdateConfigsCalldataParams, ConfigUpdateMetadata} from "../lib/structs/Configs.sol";
 import {ReservePool} from "../lib/structs/Pools.sol";
 import {RedemptionPreview} from "../lib/structs/Redemptions.sol";
 import {Slash} from "../lib/structs/Slash.sol";
 import {Trigger} from "../lib/structs/Trigger.sol";
+import {Delays} from "../lib/structs/Delays.sol";
 import {ICozySafetyModuleManager} from "./ICozySafetyModuleManager.sol";
 import {ITrigger} from "./ITrigger.sol";
 
@@ -36,17 +37,7 @@ interface ISafetyModule {
   /// @notice Address of the Cozy safety module protocol manager.
   function cozySafetyModuleManager() external view returns (ICozySafetyModuleManager);
 
-  function delays()
-    external
-    view
-    returns (
-      // Duration between when safety module updates are queued and when they can be executed.
-      uint64 configUpdateDelay,
-      // Defines how long the owner has to execute a configuration change, once it can be executed.
-      uint64 configUpdateGracePeriod,
-      // Delay for two-step withdraw process (for deposited assets).
-      uint64 withdrawDelay
-    );
+  function delays() external view returns (Delays memory delays_);
 
   /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
   /// `reservePools[reservePoolId_].asset` so it can `transferFrom`
@@ -120,4 +111,10 @@ interface ISafetyModule {
 
   // @notice Claims the safety module's fees.
   function claimFees(address owner_) external;
+
+  function updateConfigs(UpdateConfigsCalldataParams calldata configUpdates_) external;
+
+  function finalizeUpdateConfigs(UpdateConfigsCalldataParams calldata configUpdates_) external;
+
+  function lastConfigUpdate() external view returns (ConfigUpdateMetadata memory);
 }
