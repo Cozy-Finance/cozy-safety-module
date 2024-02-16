@@ -191,6 +191,15 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     }
   }
 
+  function invariant_cannotSlashIfNoPendingSlashesForCaller() public syncCurrentTimestamp(safetyModuleHandler) {
+    address caller_ = _randomAddress();
+    if (safetyModule.payoutHandlerNumPendingSlashes(caller_) > 0) return;
+
+    vm.expectRevert(Ownable.Unauthorized.selector);
+    vm.prank(caller_);
+    safetyModule.slash(new Slash[](0), _randomAddress());
+  }
+
   function invariant_cannotSlashMoreThanMaxSlashPercentage() public syncCurrentTimestamp(safetyModuleHandler) {
     ITrigger selectedTrigger_ = safetyModuleHandler.pickValidTrigger(_randomUint256());
     // If there are no valid triggers, we skip this invariant.
