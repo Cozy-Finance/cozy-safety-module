@@ -79,7 +79,7 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     }
   }
 
-  function invariant_allTriggersExist() public syncCurrentTimestamp(safetyModuleHandler) {
+  function invariant_triggersExistence() public syncCurrentTimestamp(safetyModuleHandler) {
     ITrigger[] memory triggers_ = safetyModuleHandler.getTriggers();
 
     for (uint256 i = 0; i < triggers_.length; i++) {
@@ -87,7 +87,21 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
       require(
         triggerData_.exists,
         string.concat(
-          "Invariant Violated: A trigger must exist.", " trigger: ", Strings.toHexString(uint160(address(triggers_[i])))
+          "Invariant Violated: Triggers configured for the safety module to use must exist.",
+          " trigger: ",
+          Strings.toHexString(uint160(address(triggers_[i])))
+        )
+      );
+    }
+
+    for (uint256 i = 0; i < nonExistingTriggers.length; i++) {
+      Trigger memory triggerData_ = safetyModule.triggerData(nonExistingTriggers[i]);
+      require(
+        !triggerData_.exists,
+        string.concat(
+          "Invariant Violated: Triggers not configured for the safety module to use must not exist.",
+          " trigger: ",
+          Strings.toHexString(uint160(address(nonExistingTriggers[i])))
         )
       );
     }

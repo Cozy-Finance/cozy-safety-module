@@ -54,6 +54,11 @@ interface ISafetyModule {
 
   function dripFeesFromReservePool(uint8 reservePoolId_) external;
 
+  function getMaxSlashableReservePoolAmount(uint8 reservePoolId_)
+    external
+    view
+    returns (uint256 slashableReservePoolAmount_);
+
   /// @notice The number of slashes that must occur before the safety module can be active.
   /// @dev This value is incremented when a trigger occurs, and decremented when a slash from a trigger assigned payout
   /// handler occurs. When this value is non-zero, the safety module is triggered (or paused).
