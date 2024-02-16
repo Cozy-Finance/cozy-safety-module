@@ -32,6 +32,7 @@ abstract contract InvariantBaseDeploy is TestBase, MockDeployer {
 
   uint256 public numReservePools;
   ITrigger[] public triggers;
+  ITrigger[] public nonExistingTriggers;
   IERC20[] public assets;
 
   function _initSafetyModule() internal virtual;
@@ -158,10 +159,14 @@ abstract contract InvariantTestWithMultipleReservePools is InvariantBaseDeploy {
     for (uint256 i_; i_ < numTriggers_; i_++) {
       triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
     }
-    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](numTriggers_);
+    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](numTriggers_ + 1);
     for (uint256 i_; i_ < numTriggers_; i_++) {
       triggerConfig_[i_] = TriggerConfig({trigger: triggers[i_], payoutHandler: _randomAddress(), exists: true});
     }
+
+    nonExistingTriggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
+    triggerConfig_[numTriggers_] =
+      TriggerConfig({trigger: nonExistingTriggers[0], payoutHandler: _randomAddress(), exists: false});
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,
