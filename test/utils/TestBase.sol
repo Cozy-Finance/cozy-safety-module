@@ -93,12 +93,7 @@ contract TestBase is Test, TestAssertions {
   }
 
   function getDelays(ISafetyModule safetyModule_) internal view returns (Delays memory) {
-    (uint64 configUpdateDelay, uint64 configUpdateGracePeriod, uint64 withdrawDelay) = safetyModule_.delays();
-    return Delays({
-      configUpdateDelay: configUpdateDelay,
-      configUpdateGracePeriod: configUpdateGracePeriod,
-      withdrawDelay: withdrawDelay
-    });
+    return safetyModule_.delays();
   }
 
   function getReservePool(ISafetyModule safetyModule_, uint256 reservePoolId_)
