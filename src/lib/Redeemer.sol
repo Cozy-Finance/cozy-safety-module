@@ -18,6 +18,7 @@ import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {CozyMath} from "./CozyMath.sol";
 import {RedemptionLib} from "./RedemptionLib.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
+import {console2} from "forge-std/console2.sol";
 
 abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   using SafeERC20 for IERC20;
@@ -71,10 +72,13 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
   {
+    SafetyModuleState safetyModuleState_ = safetyModuleState;
+    if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert InvalidState();
+
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
     (redemptionId_, reserveAssetAmount_) =
-      _redeem(reservePoolId_, reservePool_, depositReceiptTokenAmount_, receiver_, owner_);
+      _redeem(reservePoolId_, reservePool_, depositReceiptTokenAmount_, receiver_, owner_, safetyModuleState_);
   }
 
   /// @notice Completes the redemption request for the specified redemption ID.
@@ -91,6 +95,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     view
     returns (uint256 reserveAssetAmount_)
   {
+    SafetyModuleState safetyModuleState_ = safetyModuleState;
+    if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert InvalidState();
+
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     IDripModel feeDripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
     uint256 lastDripTime_ = reservePool_.lastFeesDripTime;
@@ -149,11 +156,9 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     ReservePool storage reservePool_,
     uint256 receiptTokenAmount_,
     address receiver_,
-    address owner_
+    address owner_,
+    SafetyModuleState safetyModuleState_
   ) internal returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
-    SafetyModuleState safetyModuleState_ = safetyModuleState;
-    if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert InvalidState();
-
     IReceiptToken receiptToken_ = reservePool_.depositReceiptToken;
     {
       uint256 assetsAvailableForRedemption_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
@@ -241,6 +246,10 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     // Compute the final reserve assets to redemptions, which can be scaled down if triggers have occurred
     // since the redemption was queued.
+    console2.log("redemption_.reservePoolId", redemption_.reservePoolId);
+    console2.log("redemption_.assetAmount", redemption_.assetAmount);
+    console2.log("redemption_.queuedAccISF", redemption_.queuedAccISF);
+    console2.log("redemption_.queuedAccISFsLength", redemption_.queuedAccISFsLength);
     reserveAssetAmountRedeemed_ = _computeFinalReserveAssetsRedeemed(
       redemption_.reservePoolId, redemption_.assetAmount, redemption_.queuedAccISF, redemption_.queuedAccISFsLength
     );

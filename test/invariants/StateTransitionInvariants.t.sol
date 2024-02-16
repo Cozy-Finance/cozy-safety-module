@@ -328,6 +328,16 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     }
   }
 
+  function invariant_previewRedemptionRevertsWhenTriggered() public syncCurrentTimestamp(safetyModuleHandler) {
+    uint8 reservePoolId_ = safetyModuleHandler.pickValidReservePoolId(_randomUint256());
+
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) {
+      vm.expectRevert(ICommonErrors.InvalidState.selector);
+      vm.prank(_randomAddress());
+      safetyModule.previewRedemption(reservePoolId_, _randomUint256());
+    }
+  }
+
   function invariant_depositReserveAssetsWithoutTransferRevertsWhenPaused()
     public
     syncCurrentTimestamp(safetyModuleHandler)
