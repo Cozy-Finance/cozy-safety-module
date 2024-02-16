@@ -17,6 +17,8 @@ import {ConfigUpdateMetadata, ReservePoolConfig, UpdateConfigsCalldataParams} fr
 import {TriggerConfig, Trigger} from "./structs/Trigger.sol";
 
 library ConfiguratorLib {
+  error InvalidTimestamp();
+
   /// @notice Signal an update to the safety module configs. Existing queued updates are overwritten.
   /// @param lastConfigUpdate_ Metadata about the most recently queued configuration update.
   /// @param reservePools_ The array of existing reserve pools.
@@ -79,8 +81,8 @@ library ConfiguratorLib {
     UpdateConfigsCalldataParams calldata configUpdates_
   ) external {
     if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert ICommonErrors.InvalidState();
-    if (block.timestamp < lastConfigUpdate_.configUpdateTime) revert ICommonErrors.InvalidStateTransition();
-    if (block.timestamp > lastConfigUpdate_.configUpdateDeadline) revert ICommonErrors.InvalidStateTransition();
+    if (block.timestamp < lastConfigUpdate_.configUpdateTime) revert InvalidTimestamp();
+    if (block.timestamp > lastConfigUpdate_.configUpdateDeadline) revert InvalidTimestamp();
     if (
       keccak256(
         abi.encode(configUpdates_.reservePoolConfigs, configUpdates_.triggerConfigUpdates, configUpdates_.delaysConfig)

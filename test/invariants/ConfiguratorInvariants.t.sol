@@ -6,6 +6,7 @@ import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {ICommonErrors} from "cozy-safety-module-shared/interfaces/ICommonErrors.sol";
+import {ConfiguratorLib} from "../../src/lib/ConfiguratorLib.sol";
 import {ReservePool} from "../../src/lib/structs/Pools.sol";
 import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
 import {Trigger} from "../../src/lib/structs/Trigger.sol";
@@ -226,7 +227,7 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     vm.warp(safetyModule.lastConfigUpdate().configUpdateTime - 1);
 
     if (safetyModule.safetyModuleState() != SafetyModuleState.TRIGGERED) {
-      vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
+      vm.expectRevert(ConfiguratorLib.InvalidTimestamp.selector);
     } else {
       vm.expectRevert(ICommonErrors.InvalidState.selector);
     }
@@ -247,7 +248,7 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     vm.warp(safetyModule.lastConfigUpdate().configUpdateDeadline + 1);
 
     if (safetyModule.safetyModuleState() != SafetyModuleState.TRIGGERED) {
-      vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
+      vm.expectRevert(ConfiguratorLib.InvalidTimestamp.selector);
     } else {
       vm.expectRevert(ICommonErrors.InvalidState.selector);
     }

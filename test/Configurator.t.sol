@@ -481,7 +481,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     // Current timestamp is before configUpdateTime.
     vm.warp(bound(_randomUint256(), 0, configUpdateTime_));
-    vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
+    vm.expectRevert(ConfiguratorLib.InvalidTimestamp.selector);
     component.finalizeUpdateConfigs(
       UpdateConfigsCalldataParams({
         reservePoolConfigs: reservePoolConfigs_,
@@ -510,7 +510,7 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
 
     // Current timestamp is after configUpdateDeadline.
     vm.warp(bound(_randomUint256(), configUpdateDeadline_ + 1, type(uint64).max));
-    vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
+    vm.expectRevert(ConfiguratorLib.InvalidTimestamp.selector);
     component.finalizeUpdateConfigs(
       UpdateConfigsCalldataParams({
         reservePoolConfigs: reservePoolConfigs_,
