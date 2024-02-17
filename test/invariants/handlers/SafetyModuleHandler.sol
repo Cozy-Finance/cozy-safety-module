@@ -635,7 +635,7 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useValidPayoutHandler(uint256 seed_) {
-    uint256 initIndex_ = seed_ % triggeredTriggers.length;
+    uint256 initIndex_ = triggeredTriggers.length > 0 ? seed_ % triggeredTriggers.length : 0;
     uint256 indicesVisited_ = 0;
 
     for (uint256 i = initIndex_; indicesVisited_ < triggeredTriggers.length; i = (i + 1) % triggeredTriggers.length) {
