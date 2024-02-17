@@ -45,10 +45,10 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
       Slash memory slash_ = slashes_[i];
       ReservePool storage reservePool_ = reservePools[slash_.reservePoolId];
       IERC20 reserveAsset_ = reservePool_.asset;
+      uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
 
       // Slash reserve pool assets
-      if (slash_.amount > 0) {
-        uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
+      if (slash_.amount > 0 && reservePoolDepositAmount_ > 0) {
         uint256 slashPercentage_ = _computeSlashPercentage(slash_.amount, reservePoolDepositAmount_);
         if (slashPercentage_ > reservePool_.maxSlashPercentage) {
           revert ExceedsMaxSlashPercentage(slash_.reservePoolId, slashPercentage_);
@@ -58,15 +58,15 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
           _updateWithdrawalsAfterTrigger(slash_.reservePoolId, reservePool_, reservePoolDepositAmount_, slash_.amount);
         reservePool_.depositAmount -= slash_.amount;
         assetPools[reserveAsset_].amount -= slash_.amount;
-      }
 
-      // Transfer the slashed assets to the receiver.
-      reserveAsset_.safeTransfer(receiver_, slash_.amount);
-      emit Slashed(msg.sender, receiver_, slash_.reservePoolId, slash_.amount);
+        // Transfer the slashed assets to the receiver.
+        reserveAsset_.safeTransfer(receiver_, slash_.amount);
+        emit Slashed(msg.sender, receiver_, slash_.reservePoolId, slash_.amount);
+      }
     }
   }
 
-  function getSlashableReservePoolAmount(uint8 reservePoolId_)
+  function getMaxSlashableReservePoolAmount(uint8 reservePoolId_)
     external
     view
     returns (uint256 slashableReservePoolAmount_)

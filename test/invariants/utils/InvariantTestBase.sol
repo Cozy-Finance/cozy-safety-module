@@ -32,6 +32,7 @@ abstract contract InvariantBaseDeploy is TestBase, MockDeployer {
 
   uint256 public numReservePools;
   ITrigger[] public triggers;
+  ITrigger[] public nonExistingTriggers;
   IERC20[] public assets;
 
   function _initSafetyModule() internal virtual;
@@ -134,9 +135,11 @@ abstract contract InvariantTestWithSingleReservePool is InvariantBaseDeploy {
 
 abstract contract InvariantTestWithMultipleReservePools is InvariantBaseDeploy {
   uint16 internal constant MAX_RESERVE_POOLS = 10;
+  uint16 internal constant MAX_TRIGGERS = 10;
 
   function _initSafetyModule() internal override {
     uint256 numReservePools_ = _randomUint256InRange(1, MAX_RESERVE_POOLS);
+    uint256 numTriggers_ = _randomUint256InRange(1, MAX_TRIGGERS);
 
     // Create some unique assets to use for the pools. We want to make sure the invariant tests cover the case where the
     // same asset is used for multiple reserve pools.
@@ -153,12 +156,17 @@ abstract contract InvariantTestWithMultipleReservePools is InvariantBaseDeploy {
       });
     }
 
-    triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
-    triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
+    for (uint256 i_; i_ < numTriggers_; i_++) {
+      triggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
+    }
+    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](numTriggers_ + 1);
+    for (uint256 i_; i_ < numTriggers_; i_++) {
+      triggerConfig_[i_] = TriggerConfig({trigger: triggers[i_], payoutHandler: _randomAddress(), exists: true});
+    }
 
-    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](2);
-    triggerConfig_[0] = TriggerConfig({trigger: triggers[0], payoutHandler: _randomAddress(), exists: true});
-    triggerConfig_[1] = TriggerConfig({trigger: triggers[1], payoutHandler: _randomAddress(), exists: true});
+    nonExistingTriggers.push(ITrigger(address(new MockTrigger(TriggerState.ACTIVE))));
+    triggerConfig_[numTriggers_] =
+      TriggerConfig({trigger: nonExistingTriggers[0], payoutHandler: _randomAddress(), exists: false});
 
     UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
       reservePoolConfigs: reservePoolConfigs_,

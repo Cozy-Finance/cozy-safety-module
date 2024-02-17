@@ -324,7 +324,7 @@ contract SlashHandlerTest is TestBase {
     component.slash(slashes_, receiver_);
   }
 
-  function test_getSlashableReservePoolAmount() public {
+  function test_getMaxSlashableReservePoolAmount() public {
     uint256 depositAmountA_ = 1000;
     component.mockAddReservePool(
       ReservePool({
@@ -337,7 +337,7 @@ contract SlashHandlerTest is TestBase {
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
-    assertEq(component.getSlashableReservePoolAmount(0), 1000);
+    assertEq(component.getMaxSlashableReservePoolAmount(0), 1000);
 
     uint256 depositAmountB_ = 900_000;
     component.mockAddReservePool(
@@ -351,7 +351,7 @@ contract SlashHandlerTest is TestBase {
         lastFeesDripTime: uint128(block.timestamp)
       })
     );
-    assertEq(component.getSlashableReservePoolAmount(1), 225_000);
+    assertEq(component.getMaxSlashableReservePoolAmount(1), 225_000);
   }
 }
 
