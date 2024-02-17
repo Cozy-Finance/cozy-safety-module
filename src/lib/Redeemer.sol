@@ -18,7 +18,6 @@ import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {CozyMath} from "./CozyMath.sol";
 import {RedemptionLib} from "./RedemptionLib.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
-import {console2} from "forge-std/console2.sol";
 
 abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   using SafeERC20 for IERC20;
@@ -246,10 +245,6 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     // Compute the final reserve assets to redemptions, which can be scaled down if triggers have occurred
     // since the redemption was queued.
-    console2.log("redemption_.reservePoolId", redemption_.reservePoolId);
-    console2.log("redemption_.assetAmount", redemption_.assetAmount);
-    console2.log("redemption_.queuedAccISF", redemption_.queuedAccISF);
-    console2.log("redemption_.queuedAccISFsLength", redemption_.queuedAccISFsLength);
     reserveAssetAmountRedeemed_ = _computeFinalReserveAssetsRedeemed(
       redemption_.reservePoolId, redemption_.assetAmount, redemption_.queuedAccISF, redemption_.queuedAccISFsLength
     );

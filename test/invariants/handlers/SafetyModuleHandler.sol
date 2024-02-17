@@ -64,7 +64,7 @@ contract SafetyModuleHandler is TestBase {
   mapping(uint8 reservePoolId_ => AssetUpdate) public ghost_completeRedeemAssetsPendingRedemptionChange;
 
   GhostRedemption[] public ghost_redemptions;
-  ActorAssets[] public ghost_redemptionsCompleted;
+  mapping(uint64 redemptionId_ => ActorAssets) public ghost_redemptionsCompleted;
 
   mapping(address actor_ => mapping(uint8 reservePoolId_ => GhostReservePool reservePool_)) public
     ghost_actorReservePoolCumulative;
@@ -213,8 +213,6 @@ contract SafetyModuleHandler is TestBase {
       depositReceiptTokenRedeemAmount_;
     ghost_redeemAssetsPendingRedemptionChange[currentReservePoolId].afterwards =
       getReservePool(safetyModule, currentReservePoolId).pendingWithdrawalsAmount;
-    // Redemptions queued when PAUSED immediately complete and do not get recorded in the safety module, so we skip
-    // them.
     ghost_redemptions.push(
       GhostRedemption(
         currentActor,
@@ -243,8 +241,8 @@ contract SafetyModuleHandler is TestBase {
     uint64 redemptionId_ = ghost_redemptions[redemptionIndex_].id;
 
     RedemptionPreview memory queuedRedemption_ = safetyModule.previewQueuedRedemption(redemptionId_);
-    uint8 reservePoolId_ = ghost_redemptions[redemptionId_].reservePoolId;
-    address owner_ = ghost_redemptions[redemptionId_].owner;
+    uint8 reservePoolId_ = ghost_redemptions[redemptionIndex_].reservePoolId;
+    address owner_ = ghost_redemptions[redemptionIndex_].owner;
     ghost_completeRedeemAssetsPendingRedemptionChange[reservePoolId_].before =
       getReservePool(safetyModule, reservePoolId_).pendingWithdrawalsAmount;
 
@@ -258,7 +256,7 @@ contract SafetyModuleHandler is TestBase {
     ghost_actorReservePoolCumulative[owner_][reservePoolId_].completedRedeemAssetAmount += assetAmount_;
     ghost_completeRedeemAssetsPendingRedemptionChange[reservePoolId_].afterwards =
       getReservePool(safetyModule, reservePoolId_).pendingWithdrawalsAmount;
-    ghost_redemptionsCompleted.push(ActorAssets(assetAmount_, queuedRedemption_.receiptTokenAmount));
+    ghost_redemptionsCompleted[redemptionId_] = ActorAssets(queuedRedemption_.receiptTokenAmount, assetAmount_);
   }
 
   function dripFees(address caller_, uint256 seed_) public virtual countCall("dripFees") advanceTime(seed_) {
@@ -459,8 +457,8 @@ contract SafetyModuleHandler is TestBase {
     return ghost_redemptions[id_];
   }
 
-  function getGhostRedemptionCompleted(uint256 id_) public view returns (ActorAssets memory) {
-    return ghost_redemptionsCompleted[id_];
+  function getGhostRedemptionCompleted(uint64 redemptionId_) public view returns (ActorAssets memory) {
+    return ghost_redemptionsCompleted[redemptionId_];
   }
 
   function getGhostRedemptionsLength() public view returns (uint256) {
