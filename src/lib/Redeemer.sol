@@ -96,18 +96,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   {
     SafetyModuleState safetyModuleState_ = safetyModuleState;
     if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert InvalidState();
-
-    ReservePool storage reservePool_ = reservePools[reservePoolId_];
-    IDripModel feeDripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
-    uint256 lastDripTime_ = reservePool_.lastFeesDripTime;
-
-    reserveAssetAmount_ = _previewRedemption(
-      reservePool_.depositReceiptToken,
-      receiptTokenAmount_,
-      feeDripModel_,
-      reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount,
-      lastDripTime_
-    );
+    return _convertToReserveAssetAmount(reservePoolId_, receiptTokenAmount_);
   }
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their queued redemption (i.e. view the
@@ -130,20 +119,24 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     });
   }
 
-  function _previewRedemption(
-    IReceiptToken receiptToken_,
-    uint256 receiptTokenAmount_,
-    IDripModel dripModel_,
-    uint256 totalPoolAmount_,
-    uint256 lastDripTime_
-  ) internal view returns (uint256 assetAmount_) {
-    uint256 nextTotalPoolAmount_ = totalPoolAmount_ - _getNextDripAmount(totalPoolAmount_, dripModel_, lastDripTime_);
-
-    assetAmount_ = nextTotalPoolAmount_ == 0
-      ? 0
-      : SafetyModuleCalculationsLib.convertToAssetAmount(
-        receiptTokenAmount_, receiptToken_.totalSupply(), nextTotalPoolAmount_
+  function _convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
+    internal
+    view
+    override
+    returns (uint256)
+  {
+    ReservePool memory reservePool_ = reservePools[reservePoolId_];
+    uint256 totalPoolAmount_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
+    uint256 nextTotalPoolAmount_ = totalPoolAmount_
+      - _getNextDripAmount(
+        totalPoolAmount_,
+        cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))),
+        reservePool_.lastFeesDripTime
       );
+
+    return SafetyModuleCalculationsLib.convertToAssetAmount(
+      depositReceiptTokenAmount_, reservePool_.depositReceiptToken.totalSupply(), nextTotalPoolAmount_
+    );
   }
 
   /// @notice Redeem by burning `receiptTokenAmount_` of `receiptToken_` and sending `reserveAssetAmount_` to

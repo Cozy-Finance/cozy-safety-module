@@ -40,17 +40,9 @@ contract SafetyModuleCalculationsLibTest is TestBase {
     assertEq(SafetyModuleCalculationsLib.convertToAssetAmount(100, 1000, 31), 3); // Rounds down
     assertEq(SafetyModuleCalculationsLib.convertToAssetAmount(100, 1000, 15), 1); // Rounds down
 
-    // Check that `poolAmount_` is floored properly.
     assertEq(SafetyModuleCalculationsLib.convertToAssetAmount(100, 1000, 0), 0);
     assertEq(SafetyModuleCalculationsLib.convertToAssetAmount(5, 30, 0), 0);
-    assertEq(SafetyModuleCalculationsLib.convertToAssetAmount(100, 10, 0), 10);
-  }
-
-  function testFuzz_floor_convertToAssetAmount(uint128 receiptTokenAmount_, uint128 receiptTokenSupply_) public {
-    assertEq(
-      SafetyModuleCalculationsLib.convertToAssetAmount(receiptTokenAmount_, receiptTokenSupply_, 0),
-      SafetyModuleCalculationsLib.convertToAssetAmount(receiptTokenAmount_, receiptTokenSupply_, 1)
-    );
+    assertEq(SafetyModuleCalculationsLib.convertToAssetAmount(100, 10, 0), 0);
   }
 
   function testFuzz_zeroTokenSupply_convertToAssetAmount(uint256 receiptTokenAmount_, uint256 poolAmount_) public {

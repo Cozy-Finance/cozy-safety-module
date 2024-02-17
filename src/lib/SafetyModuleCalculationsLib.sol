@@ -31,9 +31,7 @@ library SafetyModuleCalculationsLib {
     pure
     returns (uint256 assetAmount_)
   {
-    assetAmount_ = receiptTokenSupply_ == 0
-      ? 0
-      : receiptTokenAmount_.mulDivDown(_poolAmountWithFloor(poolAmount_), receiptTokenSupply_);
+    assetAmount_ = receiptTokenSupply_ == 0 ? 0 : receiptTokenAmount_.mulDivDown(poolAmount_, receiptTokenSupply_);
   }
 
   /// @notice The pool amount for the purposes of performing conversions. We set a floor once

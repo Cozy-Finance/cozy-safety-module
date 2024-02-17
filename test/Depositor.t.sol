@@ -392,6 +392,15 @@ contract TestableDepositor is Depositor {
     __readStub__();
   }
 
+  function _convertToReserveAssetAmount(uint256, /* depositReceiptTokenAmount_ */ uint256 /* reservePoolId_ */ )
+    internal
+    view
+    override
+    returns (uint256)
+  {
+    __readStub__();
+  }
+
   function _updateWithdrawalsAfterTrigger(
     uint8, /* reservePoolId_ */
     ReservePool storage, /* reservePool_ */
