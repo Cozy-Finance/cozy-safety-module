@@ -94,8 +94,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     view
     returns (uint256 reserveAssetAmount_)
   {
-    SafetyModuleState safetyModuleState_ = safetyModuleState;
-    if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert InvalidState();
+    if (safetyModuleState == SafetyModuleState.TRIGGERED) revert InvalidState();
     return _convertToReserveAssetAmount(reservePoolId_, receiptTokenAmount_);
   }
 

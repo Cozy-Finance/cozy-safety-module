@@ -122,9 +122,4 @@ interface ISafetyModule {
   function finalizeUpdateConfigs(UpdateConfigsCalldataParams calldata configUpdates_) external;
 
   function lastConfigUpdate() external view returns (ConfigUpdateMetadata memory);
-
-  function getSlashableReservePoolAmount(uint8 reservePoolId_)
-    external
-    view
-    returns (uint256 slashableReservePoolAmount_);
 }

@@ -324,7 +324,7 @@ contract SafetyModuleHandler is TestBase {
       ReservePool memory reservePool_ = getReservePool(safetyModule, i);
       uint256 amountToSlash_ = _randomUint128();
       uint256 slashableAmount_ = (reservePool_.maxSlashPercentage > 0 && reservePool_.depositAmount > 0)
-        ? safetyModule.getSlashableReservePoolAmount(i)
+        ? safetyModule.getMaxSlashableReservePoolAmount(i)
         : 0;
       amountToSlash_ = bound(amountToSlash_, 0, slashableAmount_);
       slashes_[i] = Slash({reservePoolId: i, amount: amountToSlash_});
