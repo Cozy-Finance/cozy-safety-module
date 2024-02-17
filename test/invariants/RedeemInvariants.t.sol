@@ -17,8 +17,6 @@ import {
 } from "./utils/InvariantTestBase.sol";
 
 abstract contract RedeemInvariantsWithStateTransitions is InvariantTestBaseWithStateTransitions {
-  using FixedPointMathLib for uint256;
-
   function assertActorCompleteRedeemedAssetsLteRedeemed(address actor_) external view {
     for (uint8 i = 0; i < numReservePools; i++) {
       SafetyModuleHandler.GhostReservePool memory reservePool_ =
