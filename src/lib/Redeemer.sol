@@ -144,7 +144,6 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       : SafetyModuleCalculationsLib.convertToAssetAmount(
         receiptTokenAmount_, receiptToken_.totalSupply(), nextTotalPoolAmount_
       );
-    if (assetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in conversion.
   }
 
   /// @notice Redeem by burning `receiptTokenAmount_` of `receiptToken_` and sending `reserveAssetAmount_` to

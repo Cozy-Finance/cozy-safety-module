@@ -233,7 +233,7 @@ contract SafetyModuleHandler is TestBase {
     countCall("completeRedemption")
     advanceTime(seed_)
   {
-    uint64 redemptionIndex_ = _pickRedemptionIndex(seed_);
+    uint64 redemptionIndex_ = pickRedemptionIndex(seed_);
     if (redemptionIndex_ == type(uint64).max) {
       invalidCalls["completeRedemption"] += 1;
       return;
@@ -503,6 +503,22 @@ contract SafetyModuleHandler is TestBase {
     return uint8(bound(seed_, 0, numReservePools - 1));
   }
 
+  function pickRedemptionIndex(uint256 seed_) public view returns (uint64 redemptionId_) {
+    uint16 numRedemptions_ = uint16(ghost_redemptions.length);
+    if (numRedemptions_ == 0) return type(uint64).max;
+
+    uint16 initIndex_ = uint16(seed_ % numRedemptions_);
+    uint16 indicesVisited_ = 0;
+
+    for (uint16 i = initIndex_; indicesVisited_ < numRedemptions_; i = uint16((i + 1) % numRedemptions_)) {
+      if (!ghost_redemptions[i].completed) return i;
+      indicesVisited_++;
+    }
+
+    // If no uncompleted pending redemption is found, we return type(uint64).max.
+    return type(uint64).max;
+  }
+
   function pickValidTrigger(uint256 seed_) public view returns (ITrigger) {
     uint256 initIndex_ = seed_ % triggers.length;
     uint256 indicesVisited_ = 0;
@@ -574,22 +590,6 @@ contract SafetyModuleHandler is TestBase {
       }
     }
     return addr_;
-  }
-
-  function _pickRedemptionIndex(uint256 seed_) internal view returns (uint64 redemptionId_) {
-    uint16 numRedemptions_ = uint16(ghost_redemptions.length);
-    if (numRedemptions_ == 0) return type(uint64).max;
-
-    uint16 initIndex_ = uint16(seed_ % numRedemptions_);
-    uint16 indicesVisited_ = 0;
-
-    for (uint16 i = initIndex_; indicesVisited_ < numRedemptions_; i = uint16((i + 1) % numRedemptions_)) {
-      if (!ghost_redemptions[i].completed) return i;
-      indicesVisited_++;
-    }
-
-    // If no uncompleted pending redemption is found, we return type(uint64).max.
-    return type(uint64).max;
   }
 
   // ----------------------------------

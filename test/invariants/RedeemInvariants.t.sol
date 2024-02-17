@@ -3,13 +3,10 @@ pragma solidity 0.8.22;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ICommonErrors} from "cozy-safety-module-shared/interfaces/ICommonErrors.sol";
-import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
-import {AssetPool, ReservePool} from "../../src/lib/structs/Pools.sol";
+import {ReservePool} from "../../src/lib/structs/Pools.sol";
 import {RedemptionPreview} from "../../src/lib/structs/Redemptions.sol";
 import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
-import {IDepositorErrors} from "../../src/interfaces/IDepositorErrors.sol";
 import {IRedemptionErrors} from "../../src/interfaces/IRedemptionErrors.sol";
 import {SafetyModuleHandler} from "./handlers/SafetyModuleHandler.sol";
 import {
@@ -18,7 +15,6 @@ import {
   InvariantTestWithSingleReservePool,
   InvariantTestWithMultipleReservePools
 } from "./utils/InvariantTestBase.sol";
-import {console2} from "forge-std/console2.sol";
 
 abstract contract RedeemInvariantsWithStateTransitions is InvariantTestBaseWithStateTransitions {
   using FixedPointMathLib for uint256;
@@ -193,62 +189,155 @@ abstract contract RedeemInvariantsWithStateTransitions is InvariantTestBaseWithS
     }
   }
 
-  /*
   function invariant_redeemMatchesConvertToReserveAssetAmount() public syncCurrentTimestamp(safetyModuleHandler) {
     address actor_ = safetyModuleHandler.pickActorWithReserveDeposits(_randomUint256());
     uint8 reservePoolId_ = safetyModuleHandler.pickReservePoolIdForActorWithReserveDeposits(_randomUint256(), actor_);
     uint256 redeemableBalance_ = getReservePool(safetyModule, reservePoolId_).depositReceiptToken.balanceOf(actor_);
+    SafetyModuleState state_ = safetyModule.safetyModuleState();
 
     // We only want to redeem the full amount sometimes, to reduce the amount of times all of the actors in the
     // invariant test run redeem all of their shares immediately after depositing.
     if (redeemableBalance_ != 0 && _randomUint256() % 2 != 1) {
-  uint256 balanceConvertedToAssets_ = safetyModule.convertToReserveAssetAmount(reservePoolId_, redeemableBalance_);
-      vm.prank(actor_);
-      (, uint256 redeemedAssets_) = safetyModule.redeem(reservePoolId_, redeemableBalance_, actor_, actor_);
+      uint256 balanceConvertedToAssets_ = safetyModule.convertToReserveAssetAmount(reservePoolId_, redeemableBalance_);
+      if (balanceConvertedToAssets_ > 0 && (state_ != SafetyModuleState.TRIGGERED)) {
+        vm.startPrank(actor_);
+        (, uint256 redeemedAssets_) = safetyModule.redeem(reservePoolId_, redeemableBalance_, actor_, actor_);
+        vm.stopPrank();
+        require(
+          balanceConvertedToAssets_ == redeemedAssets_,
+          "Invariant violated: The amount of shares converted to assets (using safetyModule.convertToReserveAssetAmount()) that a user can redeem should be equal to the amount of assets returned by safetyModule.redeem()."
+        );
+      } else {
+        // Here we expect reverts either InvalidState, RoundsToZero, or NotEnoughAssets.
+        vm.expectRevert();
+        vm.startPrank(actor_);
+        safetyModule.redeem(reservePoolId_, redeemableBalance_, actor_, actor_);
+        vm.stopPrank();
+      }
+    }
+  }
+
+  function invariant_redeemMatchesPreviewRedemption() public syncCurrentTimestamp(safetyModuleHandler) {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+    address actor_ = safetyModuleHandler.pickActorWithReserveDeposits(_randomUint256());
+    uint8 reservePoolId_ = safetyModuleHandler.pickReservePoolIdForActorWithReserveDeposits(_randomUint256(), actor_);
+
+    uint256 redeemedAmount_ =
+      bound(_randomUint64(), 0, getReservePool(safetyModule, reservePoolId_).depositReceiptToken.balanceOf(actor_));
+
+    uint256 previewRedeemedAssets_ = safetyModule.previewRedemption(reservePoolId_, redeemedAmount_);
+    if (previewRedeemedAssets_ > 0) {
+      vm.startPrank(actor_);
+      (, uint256 redeemedAssets_) = safetyModule.redeem(reservePoolId_, redeemedAmount_, actor_, actor_);
+      vm.stopPrank();
       require(
-        balanceConvertedToAssets_ == redeemedAssets_,
-  "Invariant violated: The amount of shares converted to assets (using safetyModule.convertToReserveAssetAmount()) that
-  a user can redeem should be equal to the amount of assets returned by safetyModule.redeem()."
+        previewRedeemedAssets_ == redeemedAssets_,
+        "Invariant violated: The amount of assets returned by safetyModule.redeem() should be equal to the amount of assets returned by safetyModule.previewRedeem()."
+      );
+    } else {
+      // Here we expect reverts either RoundsToZero or NotEnoughAssets.
+      vm.expectRevert();
+      vm.startPrank(actor_);
+      safetyModule.redeem(reservePoolId_, redeemedAmount_, actor_, actor_);
+      vm.stopPrank();
+    }
+  }
+
+  function invariant_completeRedemptionRevertsBeforeDelayElapsedElseSucceeds()
+    public
+    syncCurrentTimestamp(safetyModuleHandler)
+  {
+    uint64 redemptionIndex_ = safetyModuleHandler.pickRedemptionIndex(_randomUint256());
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED || redemptionIndex_ == type(uint64).max) return;
+
+    SafetyModuleHandler.GhostRedemption memory queuedRedemption_ =
+      safetyModuleHandler.getGhostRedemption(redemptionIndex_);
+
+    RedemptionPreview memory previewRedemption_ = safetyModule.previewQueuedRedemption(queuedRedemption_.id);
+    if (previewRedemption_.delayRemaining > 0) {
+      vm.warp(block.timestamp + previewRedemption_.delayRemaining - 1);
+      vm.expectRevert(IRedemptionErrors.DelayNotElapsed.selector);
+      safetyModule.completeRedemption(queuedRedemption_.id);
+    } else if (queuedRedemption_.state == SafetyModuleState.PAUSED) {
+      // Redemptions queued when PAUSED immediately complete and do not get recorded in the safety module.
+      vm.expectRevert(IRedemptionErrors.RedemptionNotFound.selector);
+      safetyModule.completeRedemption(queuedRedemption_.id);
+    } else {
+      // Suceessful completion of redemption.
+      safetyModule.completeRedemption(queuedRedemption_.id);
+    }
+  }
+
+  function invariant_completeRedemptionMatchesPreviewQueuedRedemption()
+    public
+    syncCurrentTimestamp(safetyModuleHandler)
+  {
+    uint64 redemptionIndex_ = safetyModuleHandler.pickRedemptionIndex(_randomUint256());
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED || redemptionIndex_ == type(uint64).max) return;
+
+    SafetyModuleHandler.GhostRedemption memory queuedRedemption_ =
+      safetyModuleHandler.getGhostRedemption(redemptionIndex_);
+
+    if (queuedRedemption_.state == SafetyModuleState.PAUSED) {
+      RedemptionPreview memory previewRedemption_ = safetyModule.previewQueuedRedemption(queuedRedemption_.id);
+      require(
+        previewRedemption_.owner == address(0),
+        "Invariant violated: The delay remaining of the previewed redemption must be 0 when the redemption is paused."
+      );
+      // Redemptions queued when PAUSED immediately complete and do not get recorded in the safety module.
+      vm.expectRevert(IRedemptionErrors.RedemptionNotFound.selector);
+      safetyModule.completeRedemption(queuedRedemption_.id);
+    } else {
+      vm.warp(block.timestamp + safetyModule.previewQueuedRedemption(queuedRedemption_.id).delayRemaining);
+      RedemptionPreview memory previewRedemption_ = safetyModule.previewQueuedRedemption(queuedRedemption_.id);
+      uint256 redeemedAssets_ = safetyModule.completeRedemption(queuedRedemption_.id);
+      require(
+        redeemedAssets_ == previewRedemption_.reserveAssetAmount,
+        "Invariant violated: The receipt token amount of the previewed redemption must be 0 when the redemption is completed."
+      );
+      require(
+        previewRedemption_.delayRemaining == 0,
+        "Invariant violated: The delay remaining of the previewed redemption must be 0 when the redemption is successfully completed."
       );
     }
   }
 
-  function invariant_revertRedeemBeforeMinDepositDuration() public syncCurrentTimestamp(safetyModuleHandler) {
-    (address actor_, uint8 reservePoolId_) = safetyModuleHandler
-      .depositReserveAssetsWithExistingActorWithoutCountingCall(
-      safetyModuleHandler.boundDepositAssetAmount(_randomUint256())
-    );
+  function invariant_redeemRevertsForInsufficientBalance() public syncCurrentTimestamp(safetyModuleHandler) {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
 
-    uint256 fullBalance_ = getReservePool(safetyModule, reservePoolId_).depositReceiptToken.balanceOf(actor_);
-    uint256 redeemAmount_ = bound(_randomUint256(), 1, fullBalance_);
-
-    vm.expectRevert(
-      safetyModule.convertToReserveAssetAmount(reservePoolId_, redeemAmount_) == 0
-        ? ICommonErrors.RoundsToZero.selector
-        : IRedemptionErrors.DelayNotElapsed.selector
+    address actor_ = safetyModuleHandler.pickActorWithReserveDeposits(_randomUint256());
+    uint8 reservePoolId_ = safetyModuleHandler.pickReservePoolIdForActorWithReserveDeposits(_randomUint256(), actor_);
+    uint256 redeemAmount_ = bound(
+      _randomUint256(),
+      getReservePool(safetyModule, reservePoolId_).depositReceiptToken.balanceOf(actor_) + 1,
+      type(uint128).max
     );
-    vm.prank(actor_);
-    safetyModule.redeem(reservePoolId_, redeemAmount_, _randomAddress(), actor_);
+    uint256 previewRedeemedAssets_ = safetyModule.previewRedemption(reservePoolId_, redeemAmount_);
+
+    if (previewRedeemedAssets_ > 0) {
+      _expectPanic(PANIC_MATH_UNDEROVERFLOW);
+      safetyModule.redeem(reservePoolId_, redeemAmount_, actor_, actor_);
+    }
   }
-  */
 }
 
 abstract contract RedeemInvariants is InvariantTestBase {
   function invariant_redeemAccounting() public syncCurrentTimestamp(safetyModuleHandler) {
     address actor_ = safetyModuleHandler.pickActorWithReserveDeposits(_randomUint256());
     uint8 reservePoolId_ = safetyModuleHandler.pickReservePoolIdForActorWithReserveDeposits(_randomUint256(), actor_);
-    uint256 redeemableBalance_ = getReservePool(safetyModule, reservePoolId_).depositReceiptToken.balanceOf(actor_);
 
-    // We only want to redeem the full amount sometimes, to reduce the amount of times all of the actors in the
-    // invariant test run redeem all of their shares immediately after depositing.
-    if (redeemableBalance_ != 0 && _randomUint256() % 2 != 1) {
+    uint256 redeemedAmount_ =
+      bound(_randomUint64(), 0, getReservePool(safetyModule, reservePoolId_).depositReceiptToken.balanceOf(actor_));
+    uint256 previewRedeemedAssets_ = safetyModule.previewRedemption(reservePoolId_, redeemedAmount_);
+
+    if (previewRedeemedAssets_ != 0) {
       ReservePool[] memory beforeReservePools_ = new ReservePool[](numReservePools);
       for (uint8 i; i < numReservePools; i++) {
         beforeReservePools_[i] = getReservePool(safetyModule, i);
       }
 
       vm.startPrank(actor_);
-      (, uint256 redeemedAssets_) = safetyModule.redeem(reservePoolId_, redeemableBalance_, actor_, actor_);
+      (, uint256 redeemedAssets_) = safetyModule.redeem(reservePoolId_, redeemedAmount_, actor_, actor_);
       vm.stopPrank();
 
       for (uint8 i; i < numReservePools; i++) {
