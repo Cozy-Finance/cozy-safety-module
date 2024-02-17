@@ -76,8 +76,29 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
     _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
-    (redemptionId_, reserveAssetAmount_) =
-      _redeem(reservePoolId_, reservePool_, depositReceiptTokenAmount_, receiver_, owner_, safetyModuleState_);
+
+    IReceiptToken receiptToken_ = reservePool_.depositReceiptToken;
+    {
+      uint256 assetsAvailableForRedemption_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
+      if (assetsAvailableForRedemption_ == 0) revert NoAssetsToRedeem();
+
+      reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
+        depositReceiptTokenAmount_, receiptToken_.totalSupply(), assetsAvailableForRedemption_
+      );
+      if (reserveAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in
+        // conversion.
+    }
+
+    redemptionId_ = _queueRedemption(
+      owner_,
+      receiver_,
+      reservePool_,
+      receiptToken_,
+      depositReceiptTokenAmount_,
+      reserveAssetAmount_,
+      reservePoolId_,
+      safetyModuleState_
+    );
   }
 
   /// @notice Completes the redemption request for the specified redemption ID.
@@ -135,41 +156,6 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     return SafetyModuleCalculationsLib.convertToAssetAmount(
       depositReceiptTokenAmount_, reservePool_.depositReceiptToken.totalSupply(), nextTotalPoolAmount_
-    );
-  }
-
-  /// @notice Redeem by burning `receiptTokenAmount_` of `receiptToken_` and sending `reserveAssetAmount_` to
-  /// `receiver_`. `receiptToken` can be the token received from either staking or depositing into the Safety Module.
-  /// @dev Assumes that user has approved the SafetyModule to spend its receipt tokens.
-  function _redeem(
-    uint8 reservePoolId_,
-    ReservePool storage reservePool_,
-    uint256 receiptTokenAmount_,
-    address receiver_,
-    address owner_,
-    SafetyModuleState safetyModuleState_
-  ) internal returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
-    IReceiptToken receiptToken_ = reservePool_.depositReceiptToken;
-    {
-      uint256 assetsAvailableForRedemption_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
-      if (assetsAvailableForRedemption_ == 0) revert NoAssetsToRedeem();
-
-      reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
-        receiptTokenAmount_, receiptToken_.totalSupply(), assetsAvailableForRedemption_
-      );
-      if (reserveAssetAmount_ == 0) revert RoundsToZero(); // Check for rounding error since we round down in
-        // conversion.
-    }
-
-    redemptionId_ = _queueRedemption(
-      owner_,
-      receiver_,
-      reservePool_,
-      receiptToken_,
-      receiptTokenAmount_,
-      reserveAssetAmount_,
-      reservePoolId_,
-      safetyModuleState_
     );
   }
 
