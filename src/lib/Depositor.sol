@@ -69,6 +69,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
 
     IReceiptToken depositReceiptToken_ = reservePool_.depositReceiptToken;
+    // Fees were dripped already in this function, so we can use the SafetyModuleCalculationsLib directly.
     depositReceiptTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       reserveAssetAmount_,
       depositReceiptToken_.totalSupply(),
