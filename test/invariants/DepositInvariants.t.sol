@@ -21,6 +21,7 @@ abstract contract DepositInvariants is InvariantTestBase {
     uint256 assetPoolAmount;
     uint256 reservePoolAmount;
     uint256 assetAmount;
+    uint256 feeAmount;
   }
 
   function invariant_reserveDepositReceiptTokenTotalSupplyAndInternalBalancesIncreaseOnReserveDeposit()
@@ -36,7 +37,8 @@ abstract contract DepositInvariants is InvariantTestBase {
       internalBalancesBeforeDepositReserves_[reservePoolId_] = InternalBalances({
         assetPoolAmount: safetyModule.assetPools(reservePool_.asset).amount,
         reservePoolAmount: reservePool_.depositAmount,
-        assetAmount: reservePool_.asset.balanceOf(address(safetyModule))
+        assetAmount: reservePool_.asset.balanceOf(address(safetyModule)),
+        feeAmount: reservePool_.feeAmount
       });
     }
 
@@ -50,6 +52,11 @@ abstract contract DepositInvariants is InvariantTestBase {
     for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory currentReservePool_ = getReservePool(safetyModule, reservePoolId_);
       AssetPool memory currentAssetPool_ = safetyModule.assetPools(currentReservePool_.asset);
+
+      require(
+        internalBalancesBeforeDepositReserves_[reservePoolId_].feeAmount <= currentReservePool_.feeAmount,
+        "Invariant violated: The reserve pool's fee amount may increase due to possible fees drip."
+      );
 
       if (reservePoolId_ == depositedReservePoolId_) {
         require(
