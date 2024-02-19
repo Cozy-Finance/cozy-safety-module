@@ -18,6 +18,7 @@ import {CozyMath} from "../src/lib/CozyMath.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {Redeemer} from "../src/lib/Redeemer.sol";
 import {RedemptionLib} from "../src/lib/RedemptionLib.sol";
+import {SafetyModuleInspector} from "../src/lib/SafetyModuleInspector.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
 import {RedemptionPreview} from "../src/lib/structs/Redemptions.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
@@ -919,7 +920,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
   }
 }
 
-contract TestableRedeemer is Redeemer {
+contract TestableRedeemer is Redeemer, SafetyModuleInspector {
   using SafeCastLib for uint256;
 
   uint256 internal mockNextDepositDripAmount;

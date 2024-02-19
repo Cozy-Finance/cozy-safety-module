@@ -8,6 +8,20 @@ import {SafetyModuleBaseStorage} from "./SafetyModuleBaseStorage.sol";
 import {ReservePool} from "./structs/Pools.sol";
 
 abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
+  function convertToReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
+    public
+    view
+    virtual
+    returns (uint256);
+
+  // @dev Returns the reserve asset amount for a given amount of deposit receipt tokens after taking into account any
+  // pending fee drip.
+  function convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
+    public
+    view
+    virtual
+    returns (uint256);
+
   /// @notice Updates the fee amounts for each reserve pool by applying a drip factor on the stake and deposit amounts.
   /// @dev Defined in FeesHandler.
   function dripFees() public virtual;
@@ -21,14 +35,6 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
 
   // @dev Returns the next amount of fees to be dripped given a base amount and a drip model.
   function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_)
-    internal
-    view
-    virtual
-    returns (uint256);
-
-  // @dev Returns the reserve asset amount for a given amount of deposit receipt tokens after taking into account any
-  // pending fee drip.
-  function _convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
     internal
     view
     virtual

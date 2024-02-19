@@ -7,10 +7,13 @@ import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
 import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {IDepositorErrors} from "../src/interfaces/IDepositorErrors.sol";
 import {Depositor} from "../src/lib/Depositor.sol";
+import {SafetyModuleInspector} from "../src/lib/SafetyModuleInspector.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
+import {MockDripModel} from "./utils/MockDripModel.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {TestBase} from "./utils/TestBase.sol";
@@ -352,9 +355,60 @@ contract DepositorUnitTest is TestBase {
     vm.prank(depositor_);
     _deposit(false, 0, amountToDeposit_, receiver_, address(0));
   }
+
+  function test_depositReserve_DepositReceiptTokensAndStorageUpdatesWithFeeDrip() external {
+    address depositor_ = _randomAddress();
+    address receiver_ = _randomAddress();
+    uint128 amountToDeposit_ = 10e18;
+    component.setNextDripAmount(25e18);
+
+    // Mint initial asset balance for set.
+    mockAsset.mint(address(component), initialSafetyModuleBal);
+    // Mint initial balance for depositor.
+    mockAsset.mint(depositor_, amountToDeposit_);
+    // Approve safety module to spend asset.
+    vm.prank(depositor_);
+    mockAsset.approve(address(component), amountToDeposit_);
+
+    // `depositReceiptToken.totalSupply() == 0`, so should be minted 1-1 with reserve assets deposited.
+    uint256 expectedDepositReceiptTokenAmount_ = 10e18;
+    _expectEmit();
+    emit Deposited(
+      depositor_,
+      receiver_,
+      IReceiptToken(address(mockReserveDepositReceiptToken)),
+      amountToDeposit_,
+      expectedDepositReceiptTokenAmount_
+    );
+
+    vm.prank(depositor_);
+    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
+
+    assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
+
+    ReservePool memory finalReservePool_ = component.getReservePool(0);
+    AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
+    // (50e18 - 25e18) + 10e18
+    assertEq(finalReservePool_.depositAmount, 35e18);
+    // 50e18 + 10e18
+    assertEq(finalAssetPool_.amount, 60e18);
+    assertEq(mockAsset.balanceOf(address(component)), 60e18 + initialSafetyModuleBal);
+
+    assertEq(mockAsset.balanceOf(depositor_), 0);
+    assertEq(mockReserveDepositReceiptToken.balanceOf(receiver_), expectedDepositReceiptTokenAmount_);
+  }
 }
 
-contract TestableDepositor is Depositor {
+contract TestableDepositor is Depositor, SafetyModuleInspector {
+  MockManager mockManager;
+  uint256 nextDripAmount;
+
+  constructor() Depositor() {
+    mockManager = new MockManager();
+    mockManager.setFeeDripModel(IDripModel(address(mockManager)));
+    cozySafetyModuleManager = ICozySafetyModuleManager(address(mockManager));
+  }
+
   // -------- Mock setters --------
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) external {
     safetyModuleState = safetyModuleState_;
@@ -366,6 +420,10 @@ contract TestableDepositor is Depositor {
 
   function mockAddAssetPool(IERC20 asset_, AssetPool memory assetPool_) external {
     assetPools[asset_] = assetPool_;
+  }
+
+  function setNextDripAmount(uint256 nextDripAmount_) external {
+    nextDripAmount = nextDripAmount_;
   }
 
   // -------- Mock getters --------
@@ -392,15 +450,6 @@ contract TestableDepositor is Depositor {
     __readStub__();
   }
 
-  function _convertToReserveAssetAmount(uint256, /* depositReceiptTokenAmount_ */ uint256 /* reservePoolId_ */ )
-    internal
-    view
-    override
-    returns (uint256)
-  {
-    __readStub__();
-  }
-
   function _updateWithdrawalsAfterTrigger(
     uint8, /* reservePoolId_ */
     ReservePool storage, /* reservePool_ */
@@ -410,11 +459,7 @@ contract TestableDepositor is Depositor {
     __readStub__();
   }
 
-  function _dripFeesFromReservePool(ReservePool storage, /*reservePool_*/ IDripModel /*dripModel_*/ )
-    internal
-    view
-    override
-  {
-    __readStub__();
+  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel /*dripModel_*/ ) internal override {
+    reservePool_.depositAmount -= nextDripAmount;
   }
 }

@@ -394,6 +394,24 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
     __readStub__();
   }
 
+  function convertToReceiptTokenAmount(uint256, /* reservePoolId_ */ uint256 /*reserveAssetAmount_ */ )
+    public
+    view
+    override
+    returns (uint256)
+  {
+    __readStub__();
+  }
+
+  function convertToReserveAssetAmount(uint256, /* depositReceiptTokenAmount_ */ uint256 /* reservePoolId_ */ )
+    public
+    view
+    override
+    returns (uint256)
+  {
+    __readStub__();
+  }
+
   function _assertValidDepositBalance(
     IERC20, /* token_ */
     uint256, /* tokenPoolBalance_ */

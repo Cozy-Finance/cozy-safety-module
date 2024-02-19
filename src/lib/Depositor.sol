@@ -6,6 +6,7 @@ import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.
 import {SafeERC20} from "cozy-safety-module-shared/lib/SafeERC20.sol";
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {IDepositorErrors} from "../interfaces/IDepositorErrors.sol";
+import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 import {ReservePool, AssetPool} from "./structs/Pools.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
@@ -65,8 +66,9 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     _assertValidDepositState();
     _assertValidDepositBalance(underlyingToken_, assetPool_.amount, reserveAssetAmount_);
 
-    IReceiptToken depositReceiptToken_ = reservePool_.depositReceiptToken;
+    _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
 
+    IReceiptToken depositReceiptToken_ = reservePool_.depositReceiptToken;
     depositReceiptTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       reserveAssetAmount_,
       depositReceiptToken_.totalSupply(),

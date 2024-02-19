@@ -77,18 +77,6 @@ abstract contract DepositInvariants is InvariantTestBase {
           )
         );
         require(
-          currentReservePool_.depositAmount > internalBalancesBeforeDepositReserves_[reservePoolId_].reservePoolAmount,
-          string.concat(
-            "Invariant Violated: A reserve pool's deposit amount must increase when a deposit occurs.",
-            " reservePoolId_: ",
-            Strings.toString(reservePoolId_),
-            ", currentReservePool_.depositAmount: ",
-            Strings.toString(currentReservePool_.depositAmount),
-            ", internalBalancesBeforeDepositReserves_[reservePoolId_].reservePoolAmount: ",
-            Strings.toString(internalBalancesBeforeDepositReserves_[reservePoolId_].reservePoolAmount)
-          )
-        );
-        require(
           currentReservePool_.asset.balanceOf(address(safetyModule))
             > internalBalancesBeforeDepositReserves_[reservePoolId_].assetAmount,
           string.concat(
