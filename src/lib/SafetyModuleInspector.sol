@@ -16,15 +16,7 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
     returns (uint256)
   {
     ReservePool memory reservePool_ = reservePools[reservePoolId_];
-
-    uint256 totalPoolAmount_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
-    uint256 nextTotalPoolAmount_ = totalPoolAmount_
-      - _getNextDripAmount(
-        totalPoolAmount_,
-        cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))),
-        reservePool_.lastFeesDripTime
-      );
-
+    uint256 nextTotalPoolAmount_ = _getTotalReservePoolAmountForExchangeRate(reservePool_);
     return SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       reserveAssetAmount_, reservePool_.depositReceiptToken.totalSupply(), nextTotalPoolAmount_
     );
@@ -39,16 +31,21 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
     returns (uint256)
   {
     ReservePool memory reservePool_ = reservePools[reservePoolId_];
+    uint256 nextTotalPoolAmount_ = _getTotalReservePoolAmountForExchangeRate(reservePool_);
+    return SafetyModuleCalculationsLib.convertToAssetAmount(
+      depositReceiptTokenAmount_, reservePool_.depositReceiptToken.totalSupply(), nextTotalPoolAmount_
+    );
+  }
+
+  /// @dev Returns the amount of assets in the reserve pool to be used for exchange rate calculations after taking into
+  /// account any pending fee drip.
+  function _getTotalReservePoolAmountForExchangeRate(ReservePool memory reservePool_) internal view returns (uint256) {
     uint256 totalPoolAmount_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
-    uint256 nextTotalPoolAmount_ = totalPoolAmount_
+    return totalPoolAmount_
       - _getNextDripAmount(
         totalPoolAmount_,
         cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))),
         reservePool_.lastFeesDripTime
       );
-
-    return SafetyModuleCalculationsLib.convertToAssetAmount(
-      depositReceiptTokenAmount_, reservePool_.depositReceiptToken.totalSupply(), nextTotalPoolAmount_
-    );
   }
 }
