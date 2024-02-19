@@ -343,7 +343,11 @@ abstract contract RedeemInvariants is InvariantTestBase {
         ReservePool memory afterReservePool_ = getReservePool(safetyModule, i);
         require(
           beforeReservePool_.depositAmount >= afterReservePool_.depositAmount,
-          "Invariant violated: The reserve pool's deposit amount decrease due to possible fees drip."
+          "Invariant violated: The reserve pool's deposit amount may decrease due to possible fees drip."
+        );
+        require(
+          beforeReservePool_.feeAmount <= afterReservePool_.feeAmount,
+          "Invariant violated: The reserve pool's fee amount may increase due to possible fees drip."
         );
         require(
           afterReservePool_.pendingWithdrawalsAmount

@@ -82,6 +82,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       uint256 assetsAvailableForRedemption_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
       if (assetsAvailableForRedemption_ == 0) revert NoAssetsToRedeem();
 
+      // Fees were dripped already in this function, so we can use the SafetyModuleCalculationsLib directly.
       reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
         depositReceiptTokenAmount_, receiptToken_.totalSupply(), assetsAvailableForRedemption_
       );
@@ -116,7 +117,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     returns (uint256 reserveAssetAmount_)
   {
     if (safetyModuleState == SafetyModuleState.TRIGGERED) revert InvalidState();
-    return _convertToReserveAssetAmount(reservePoolId_, receiptTokenAmount_);
+    return convertToReserveAssetAmount(reservePoolId_, receiptTokenAmount_);
   }
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their queued redemption (i.e. view the
@@ -137,26 +138,6 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       owner: redemption_.owner,
       receiver: redemption_.receiver
     });
-  }
-
-  function _convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
-    internal
-    view
-    override
-    returns (uint256)
-  {
-    ReservePool memory reservePool_ = reservePools[reservePoolId_];
-    uint256 totalPoolAmount_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
-    uint256 nextTotalPoolAmount_ = totalPoolAmount_
-      - _getNextDripAmount(
-        totalPoolAmount_,
-        cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))),
-        reservePool_.lastFeesDripTime
-      );
-
-    return SafetyModuleCalculationsLib.convertToAssetAmount(
-      depositReceiptTokenAmount_, reservePool_.depositReceiptToken.totalSupply(), nextTotalPoolAmount_
-    );
   }
 
   /// @dev Logic to queue a redemption.

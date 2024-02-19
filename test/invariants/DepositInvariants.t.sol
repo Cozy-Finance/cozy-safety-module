@@ -21,6 +21,7 @@ abstract contract DepositInvariants is InvariantTestBase {
     uint256 assetPoolAmount;
     uint256 reservePoolAmount;
     uint256 assetAmount;
+    uint256 feeAmount;
   }
 
   function invariant_reserveDepositReceiptTokenTotalSupplyAndInternalBalancesIncreaseOnReserveDeposit()
@@ -36,7 +37,8 @@ abstract contract DepositInvariants is InvariantTestBase {
       internalBalancesBeforeDepositReserves_[reservePoolId_] = InternalBalances({
         assetPoolAmount: safetyModule.assetPools(reservePool_.asset).amount,
         reservePoolAmount: reservePool_.depositAmount,
-        assetAmount: reservePool_.asset.balanceOf(address(safetyModule))
+        assetAmount: reservePool_.asset.balanceOf(address(safetyModule)),
+        feeAmount: reservePool_.feeAmount
       });
     }
 
@@ -50,6 +52,11 @@ abstract contract DepositInvariants is InvariantTestBase {
     for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory currentReservePool_ = getReservePool(safetyModule, reservePoolId_);
       AssetPool memory currentAssetPool_ = safetyModule.assetPools(currentReservePool_.asset);
+
+      require(
+        internalBalancesBeforeDepositReserves_[reservePoolId_].feeAmount <= currentReservePool_.feeAmount,
+        "Invariant violated: The reserve pool's fee amount may increase due to possible fees drip."
+      );
 
       if (reservePoolId_ == depositedReservePoolId_) {
         require(
@@ -74,18 +81,6 @@ abstract contract DepositInvariants is InvariantTestBase {
             Strings.toString(currentAssetPool_.amount),
             ", internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount: ",
             Strings.toString(internalBalancesBeforeDepositReserves_[reservePoolId_].assetPoolAmount)
-          )
-        );
-        require(
-          currentReservePool_.depositAmount > internalBalancesBeforeDepositReserves_[reservePoolId_].reservePoolAmount,
-          string.concat(
-            "Invariant Violated: A reserve pool's deposit amount must increase when a deposit occurs.",
-            " reservePoolId_: ",
-            Strings.toString(reservePoolId_),
-            ", currentReservePool_.depositAmount: ",
-            Strings.toString(currentReservePool_.depositAmount),
-            ", internalBalancesBeforeDepositReserves_[reservePoolId_].reservePoolAmount: ",
-            Strings.toString(internalBalancesBeforeDepositReserves_[reservePoolId_].reservePoolAmount)
           )
         );
         require(

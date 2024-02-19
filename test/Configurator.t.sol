@@ -763,8 +763,17 @@ contract TestableConfigurator is Configurator {
     __readStub__();
   }
 
-  function _convertToReserveAssetAmount(uint256, /* depositReceiptTokenAmount_ */ uint256 /* reservePoolId_ */ )
-    internal
+  function convertToReceiptTokenAmount(uint256, /* reservePoolId_ */ uint256 /*reserveAssetAmount_ */ )
+    public
+    view
+    override
+    returns (uint256)
+  {
+    __readStub__();
+  }
+
+  function convertToReserveAssetAmount(uint256, /* depositReceiptTokenAmount_ */ uint256 /* reservePoolId_ */ )
+    public
     view
     override
     returns (uint256)
