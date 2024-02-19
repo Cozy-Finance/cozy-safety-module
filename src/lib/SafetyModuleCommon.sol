@@ -26,6 +26,14 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     virtual
     returns (uint256);
 
+  // @dev Returns the reserve asset amount for a given amount of deposit receipt tokens after taking into account any
+  // pending fee drip.
+  function _convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
+    internal
+    view
+    virtual
+    returns (uint256);
+
   /// @dev Prepares pending withdrawals to have their exchange rates adjusted after a trigger. Defined in `Redeemer`.
   function _updateWithdrawalsAfterTrigger(
     uint8 reservePoolId_,

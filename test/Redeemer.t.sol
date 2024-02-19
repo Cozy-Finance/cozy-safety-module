@@ -858,8 +858,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     uint256 receiptTokenAmount_ = 3;
     _deposit(0, owner_, reserveAssetAmount_, receiptTokenAmount_);
 
-    vm.expectRevert(ICommonErrors.RoundsToZero.selector);
-    component.previewRedemption(0, 2);
+    assertEq(component.previewRedemption(0, 2), 0);
   }
 
   function test_previewQueuedRedemption() external {

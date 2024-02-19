@@ -24,16 +24,14 @@ library SafetyModuleCalculationsLib {
   }
 
   /// @notice The `assetAmount_` that the safety module would exchange for `receiptTokenAmount_` of the receipt
-  /// token.
+  /// token. Note that we do not floor the pool amount here, as the pool amount never shows up in the denominator.
   /// @dev See the ERC-4626 spec for more info.
   function convertToAssetAmount(uint256 receiptTokenAmount_, uint256 receiptTokenSupply_, uint256 poolAmount_)
     internal
     pure
     returns (uint256 assetAmount_)
   {
-    assetAmount_ = receiptTokenSupply_ == 0
-      ? 0
-      : receiptTokenAmount_.mulDivDown(_poolAmountWithFloor(poolAmount_), receiptTokenSupply_);
+    assetAmount_ = receiptTokenSupply_ == 0 ? 0 : receiptTokenAmount_.mulDivDown(poolAmount_, receiptTokenSupply_);
   }
 
   /// @notice The pool amount for the purposes of performing conversions. We set a floor once

@@ -60,30 +60,48 @@ contract SafetyModuleHandler is TestBase {
   // -------- Ghost Variables --------
 
   mapping(uint8 reservePoolId_ => GhostReservePool reservePool_) public ghost_reservePoolCumulative;
+  mapping(uint8 reservePoolId_ => AssetUpdate) public ghost_redeemAssetsPendingRedemptionChange;
+  mapping(uint8 reservePoolId_ => AssetUpdate) public ghost_completeRedeemAssetsPendingRedemptionChange;
 
+  GhostRedemption[] public ghost_redemptions;
+  mapping(uint64 redemptionId_ => ActorAssets) public ghost_redemptionsCompleted;
+
+  mapping(address actor_ => mapping(uint8 reservePoolId_ => GhostReservePool reservePool_)) public
+    ghost_actorReservePoolCumulative;
   mapping(address actor_ => mapping(uint8 reservePoolId_ => uint256 actorReserveDepositCount_)) public
     ghost_actorReserveDepositCount;
 
-  GhostRedemption[] public ghost_redemptions;
-
   // -------- Structs --------
-
   struct GhostReservePool {
     uint256 depositAssetAmount;
     uint256 depositSharesAmount;
-    uint256 depositRedeemAssetAmount;
-    uint256 depositRedeemSharesAmount;
+    uint256 completedRedeemAssetAmount;
+    uint256 redeemAssetAmount;
+    uint256 redeemSharesAmount;
   }
 
   struct GhostRedemption {
+    address owner;
+    address receiver;
+    uint8 reservePoolId;
     uint64 id;
     uint256 assetAmount;
     uint256 receiptTokenAmount;
     bool completed;
+    SafetyModuleState state;
+  }
+
+  struct AssetUpdate {
+    uint256 before;
+    uint256 afterwards;
+  }
+
+  struct ActorAssets {
+    uint256 shares;
+    uint256 assets;
   }
 
   // -------- Constructor --------
-
   constructor(
     CozySafetyModuleManager manager_,
     ISafetyModule safetyModule_,
@@ -171,12 +189,15 @@ contract SafetyModuleHandler is TestBase {
     countCall("redeem")
     advanceTime(seed_)
   {
-    IERC20 depositReceiptToken_ = getReservePool(safetyModule, currentReservePoolId).depositReceiptToken;
+    ReservePool memory reservePool_ = getReservePool(safetyModule, currentReservePoolId);
+    IERC20 depositReceiptToken_ = reservePool_.depositReceiptToken;
     uint256 actorDepositReceiptTokenBalance_ = depositReceiptToken_.balanceOf(currentActor);
-    if (actorDepositReceiptTokenBalance_ == 0 || safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) {
+    SafetyModuleState state_ = safetyModule.safetyModuleState();
+    if (actorDepositReceiptTokenBalance_ == 0 || state_ == SafetyModuleState.TRIGGERED) {
       invalidCalls["redeem"] += 1;
       return;
     }
+    ghost_redeemAssetsPendingRedemptionChange[currentReservePoolId].before = reservePool_.pendingWithdrawalsAmount;
 
     depositReceiptTokenRedeemAmount_ = bound(depositReceiptTokenRedeemAmount_, 1, actorDepositReceiptTokenBalance_);
     vm.startPrank(currentActor);
@@ -185,9 +206,25 @@ contract SafetyModuleHandler is TestBase {
       safetyModule.redeem(currentReservePoolId, depositReceiptTokenRedeemAmount_, receiver_, currentActor);
     vm.stopPrank();
 
-    ghost_reservePoolCumulative[currentReservePoolId].depositRedeemAssetAmount += assetAmount_;
-    ghost_reservePoolCumulative[currentReservePoolId].depositRedeemSharesAmount += depositReceiptTokenRedeemAmount_;
-    ghost_redemptions.push(GhostRedemption(redemptionId_, assetAmount_, depositReceiptTokenRedeemAmount_, false));
+    ghost_reservePoolCumulative[currentReservePoolId].redeemAssetAmount += assetAmount_;
+    ghost_reservePoolCumulative[currentReservePoolId].redeemSharesAmount += depositReceiptTokenRedeemAmount_;
+    ghost_actorReservePoolCumulative[currentActor][currentReservePoolId].redeemAssetAmount += assetAmount_;
+    ghost_actorReservePoolCumulative[currentActor][currentReservePoolId].redeemSharesAmount +=
+      depositReceiptTokenRedeemAmount_;
+    ghost_redeemAssetsPendingRedemptionChange[currentReservePoolId].afterwards =
+      getReservePool(safetyModule, currentReservePoolId).pendingWithdrawalsAmount;
+    ghost_redemptions.push(
+      GhostRedemption(
+        currentActor,
+        receiver_,
+        currentReservePoolId,
+        redemptionId_,
+        assetAmount_,
+        depositReceiptTokenRedeemAmount_,
+        false,
+        state_
+      )
+    );
   }
 
   function completeRedemption(address caller_, uint256 seed_)
@@ -196,20 +233,30 @@ contract SafetyModuleHandler is TestBase {
     countCall("completeRedemption")
     advanceTime(seed_)
   {
-    uint64 redemptionId_ = _pickRedemptionId(seed_);
-    if (redemptionId_ == type(uint64).max) {
+    uint64 redemptionIndex_ = pickRedemptionIndex(seed_);
+    if (redemptionIndex_ == type(uint64).max) {
       invalidCalls["completeRedemption"] += 1;
       return;
     }
+    uint64 redemptionId_ = ghost_redemptions[redemptionIndex_].id;
 
     RedemptionPreview memory queuedRedemption_ = safetyModule.previewQueuedRedemption(redemptionId_);
+    uint8 reservePoolId_ = ghost_redemptions[redemptionIndex_].reservePoolId;
+    address owner_ = ghost_redemptions[redemptionIndex_].owner;
+    ghost_completeRedeemAssetsPendingRedemptionChange[reservePoolId_].before =
+      getReservePool(safetyModule, reservePoolId_).pendingWithdrawalsAmount;
 
     skip(queuedRedemption_.delayRemaining);
     vm.startPrank(caller_);
-    safetyModule.completeRedemption(redemptionId_);
+    uint256 assetAmount_ = safetyModule.completeRedemption(redemptionId_);
     vm.stopPrank();
 
-    ghost_redemptions[redemptionId_].completed = true;
+    ghost_redemptions[redemptionIndex_].completed = true;
+    ghost_reservePoolCumulative[reservePoolId_].completedRedeemAssetAmount += assetAmount_;
+    ghost_actorReservePoolCumulative[owner_][reservePoolId_].completedRedeemAssetAmount += assetAmount_;
+    ghost_completeRedeemAssetsPendingRedemptionChange[reservePoolId_].afterwards =
+      getReservePool(safetyModule, reservePoolId_).pendingWithdrawalsAmount;
+    ghost_redemptionsCompleted[redemptionId_] = ActorAssets(queuedRedemption_.receiptTokenAmount, assetAmount_);
   }
 
   function dripFees(address caller_, uint256 seed_) public virtual countCall("dripFees") advanceTime(seed_) {
@@ -230,8 +277,9 @@ contract SafetyModuleHandler is TestBase {
   }
 
   function claimFees(address owner_, uint256 seed_) public virtual countCall("claimFees") advanceTime(seed_) {
-    vm.prank(address(manager));
+    vm.startPrank(address(manager));
     safetyModule.claimFees(owner_);
+    vm.stopPrank();
   }
 
   function pause(uint256 seed_) public virtual countCall("pause") advanceTime(seed_) {
@@ -239,8 +287,9 @@ contract SafetyModuleHandler is TestBase {
       invalidCalls["pause"] += 1;
       return;
     }
-    vm.prank(pauser);
+    vm.startPrank(pauser);
     safetyModule.pause();
+    vm.stopPrank();
   }
 
   function unpause(uint256 seed_) public virtual countCall("unpause") advanceTime(seed_) {
@@ -248,8 +297,9 @@ contract SafetyModuleHandler is TestBase {
       invalidCalls["unpause"] += 1;
       return;
     }
-    vm.prank(owner);
+    vm.startPrank(owner);
     safetyModule.unpause();
+    vm.stopPrank();
   }
 
   function trigger(uint256 seed_) public virtual useValidTrigger(seed_) countCall("trigger") advanceTime(seed_) {
@@ -272,23 +322,24 @@ contract SafetyModuleHandler is TestBase {
     Slash[] memory slashes_ = new Slash[](numReservePools);
     for (uint8 i = 0; i < numReservePools; i++) {
       ReservePool memory reservePool_ = getReservePool(safetyModule, i);
-
-      uint256 depositAmountToSlash_ = reservePool_.depositAmount > 0
-        ? bound(seed_, 0, reservePool_.depositAmount.mulWadUp(reservePool_.maxSlashPercentage))
+      uint256 amountToSlash_ = _randomUint128();
+      uint256 slashableAmount_ = (reservePool_.maxSlashPercentage > 0 && reservePool_.depositAmount > 0)
+        ? safetyModule.getMaxSlashableReservePoolAmount(i)
         : 0;
-
-      slashes_[i] = Slash({reservePoolId: i, amount: depositAmountToSlash_});
+      amountToSlash_ = bound(amountToSlash_, 0, slashableAmount_);
+      slashes_[i] = Slash({reservePoolId: i, amount: amountToSlash_});
     }
 
-    vm.prank(currentPayoutHandler);
+    vm.startPrank(currentPayoutHandler);
     safetyModule.slash(slashes_, _randomAddress());
+    vm.stopPrank();
   }
 
   // ----------------------------------
   // -------- Helper functions --------
   // ----------------------------------
 
-  function depositReserveAssetsWithExistingActorWithoutCountingCall(uint256 assets_) external returns (address) {
+  function depositReserveAssetsWithExistingActorWithoutCountingCall(uint256 assets_) external returns (address, uint8) {
     uint256 invalidCallsBefore_ = invalidCalls["depositReserveAssetsWithExistingActor"];
 
     address actor_ = depositReserveAssetsWithExistingActor(assets_, _randomUint256());
@@ -298,7 +349,7 @@ contract SafetyModuleHandler is TestBase {
       invalidCalls["depositReserveAssetsWithExistingActor"] -= 1;
     }
 
-    return actor_;
+    return (actor_, currentReservePoolId);
   }
 
   function depositReserveAssetsWithExistingActorWithoutCountingCall(
@@ -368,8 +419,14 @@ contract SafetyModuleHandler is TestBase {
     return bound(assetAmount_, 0.0001e6, type(uint72).max);
   }
 
-  function pickValidReservePoolId(uint256 seed_) public view returns (uint8) {
-    return uint8(bound(seed_, 0, numReservePools - 1));
+  function forEach(EnumerableSet.AddressSet storage s, function(address) external func) internal {
+    for (uint256 i; i < s.length(); ++i) {
+      func(s.at(i));
+    }
+  }
+
+  function forEachActor(function(address) external func_) public {
+    return forEach(actors, func_);
   }
 
   function getTriggeredTriggers() public view returns (ITrigger[] memory) {
@@ -380,25 +437,45 @@ contract SafetyModuleHandler is TestBase {
     return triggers;
   }
 
+  function getGhostReservePoolCumulative(uint8 reservePoolId_) public view returns (GhostReservePool memory) {
+    return ghost_reservePoolCumulative[reservePoolId_];
+  }
+
+  function getActorGhostReservePoolCumulative(address actor_, uint8 reservePoolId_)
+    public
+    view
+    returns (GhostReservePool memory)
+  {
+    return ghost_actorReservePoolCumulative[actor_][reservePoolId_];
+  }
+
+  function getGhostRedeemAssetsPendingRedemptionChange(uint8 reservePoolId_) public view returns (AssetUpdate memory) {
+    return ghost_redeemAssetsPendingRedemptionChange[reservePoolId_];
+  }
+
+  function getGhostRedemption(uint256 id_) public view returns (GhostRedemption memory) {
+    return ghost_redemptions[id_];
+  }
+
+  function getGhostRedemptionCompleted(uint64 redemptionId_) public view returns (ActorAssets memory) {
+    return ghost_redemptionsCompleted[redemptionId_];
+  }
+
+  function getGhostRedemptionsLength() public view returns (uint256) {
+    return ghost_redemptions.length;
+  }
+
+  function getGhostCompleteRedeemAssetsPendingRedemptionChange(uint8 reservePoolId_)
+    public
+    view
+    returns (AssetUpdate memory)
+  {
+    return ghost_completeRedeemAssetsPendingRedemptionChange[reservePoolId_];
+  }
+
   function pickActor(uint256 seed_) public view returns (address) {
     uint256 numActors_ = actors.length();
     return numActors_ == 0 ? DEFAULT_ADDRESS : actors.at(seed_ % numActors_);
-  }
-
-  function pickValidTrigger(uint256 seed_) public view returns (ITrigger) {
-    uint256 initIndex_ = seed_ % triggers.length;
-    uint256 indicesVisited_ = 0;
-
-    // Iterate through triggers to find the first trigger that has not yet triggered the safety module
-    // and the safety module is configured to use it, if there is one.
-    for (uint256 i = initIndex_; indicesVisited_ < triggers.length; i = (i + 1) % triggers.length) {
-      Trigger memory triggerData_ = safetyModule.triggerData(triggers[i]);
-      if (!triggerData_.triggered && triggerData_.exists) return triggers[i];
-      indicesVisited_++;
-    }
-
-    // If no valid trigger is found, return a default address.
-    return ITrigger(DEFAULT_ADDRESS);
   }
 
   function pickActorWithReserveDeposits(uint256 seed_) public view returns (address) {
@@ -422,6 +499,42 @@ contract SafetyModuleHandler is TestBase {
     return initIndex_;
   }
 
+  function pickValidReservePoolId(uint256 seed_) public view returns (uint8) {
+    return uint8(bound(seed_, 0, numReservePools - 1));
+  }
+
+  function pickRedemptionIndex(uint256 seed_) public view returns (uint64 redemptionId_) {
+    uint16 numRedemptions_ = uint16(ghost_redemptions.length);
+    if (numRedemptions_ == 0) return type(uint64).max;
+
+    uint16 initIndex_ = uint16(seed_ % numRedemptions_);
+    uint16 indicesVisited_ = 0;
+
+    for (uint16 i = initIndex_; indicesVisited_ < numRedemptions_; i = uint16((i + 1) % numRedemptions_)) {
+      if (!ghost_redemptions[i].completed) return i;
+      indicesVisited_++;
+    }
+
+    // If no uncompleted pending redemption is found, we return type(uint64).max.
+    return type(uint64).max;
+  }
+
+  function pickValidTrigger(uint256 seed_) public view returns (ITrigger) {
+    uint256 initIndex_ = seed_ % triggers.length;
+    uint256 indicesVisited_ = 0;
+
+    // Iterate through triggers to find the first trigger that has not yet triggered the safety module
+    // and the safety module is configured to use it, if there is one.
+    for (uint256 i = initIndex_; indicesVisited_ < triggers.length; i = (i + 1) % triggers.length) {
+      Trigger memory triggerData_ = safetyModule.triggerData(triggers[i]);
+      if (!triggerData_.triggered && triggerData_.exists) return triggers[i];
+      indicesVisited_++;
+    }
+
+    // If no valid trigger is found, return a default address.
+    return ITrigger(DEFAULT_ADDRESS);
+  }
+
   function _depositReserveAssets(uint256 assetAmount_, string memory callName_) internal {
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       invalidCalls[callName_] += 1;
@@ -438,7 +551,8 @@ contract SafetyModuleHandler is TestBase {
 
     ghost_reservePoolCumulative[currentReservePoolId].depositAssetAmount += assetAmount_;
     ghost_reservePoolCumulative[currentReservePoolId].depositSharesAmount += shares_;
-
+    ghost_actorReservePoolCumulative[currentActor][currentReservePoolId].depositAssetAmount += assetAmount_;
+    ghost_actorReservePoolCumulative[currentActor][currentReservePoolId].depositSharesAmount += shares_;
     ghost_actorReserveDepositCount[currentActor][currentReservePoolId] += 1;
   }
 
@@ -458,7 +572,8 @@ contract SafetyModuleHandler is TestBase {
 
     ghost_reservePoolCumulative[currentReservePoolId].depositAssetAmount += assetAmount_;
     ghost_reservePoolCumulative[currentReservePoolId].depositSharesAmount += shares_;
-
+    ghost_actorReservePoolCumulative[currentActor][currentReservePoolId].depositAssetAmount += assetAmount_;
+    ghost_actorReservePoolCumulative[currentActor][currentReservePoolId].depositSharesAmount += shares_;
     ghost_actorReserveDepositCount[currentActor][currentReservePoolId] += 1;
   }
 
@@ -475,20 +590,6 @@ contract SafetyModuleHandler is TestBase {
       }
     }
     return addr_;
-  }
-
-  function _pickRedemptionId(uint256 seed_) internal view returns (uint64 redemptionId_) {
-    uint16 numRedemptions_ = uint16(ghost_redemptions.length);
-    uint16 initIndex_ = uint16(bound(seed_, 0, numRedemptions_));
-    uint16 indicesVisited_ = 0;
-
-    for (uint16 i = initIndex_; indicesVisited_ < numRedemptions_; i = uint16((i + 1) % numRedemptions_)) {
-      if (!ghost_redemptions[i].completed) return ghost_redemptions[i].id;
-      indicesVisited_++;
-    }
-
-    // If no uncompleted pending redemption is found, we return type(uint64).max.
-    return type(uint64).max;
   }
 
   // ----------------------------------
@@ -534,7 +635,7 @@ contract SafetyModuleHandler is TestBase {
   }
 
   modifier useValidPayoutHandler(uint256 seed_) {
-    uint256 initIndex_ = seed_ % triggeredTriggers.length;
+    uint256 initIndex_ = triggeredTriggers.length > 0 ? seed_ % triggeredTriggers.length : 0;
     uint256 indicesVisited_ = 0;
 
     for (uint256 i = initIndex_; indicesVisited_ < triggeredTriggers.length; i = (i + 1) % triggeredTriggers.length) {

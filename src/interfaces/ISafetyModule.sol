@@ -85,6 +85,11 @@ interface ISafetyModule {
     view
     returns (RedemptionPreview memory redemptionPreview_);
 
+  function previewRedemption(uint8 reservePoolId_, uint256 depositReceiptTokenAmount_)
+    external
+    view
+    returns (uint256 reserveAssetAmount_);
+
   /// @notice Address of the Cozy protocol ReceiptTokenFactory.
   function receiptTokenFactory() external view returns (IReceiptTokenFactory);
 
