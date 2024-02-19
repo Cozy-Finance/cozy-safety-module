@@ -7,9 +7,8 @@ import {ReservePool} from "./structs/Pools.sol";
 import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 
 abstract contract SafetyModuleInspector is SafetyModuleCommon {
-  /// @notice Returns the reserve asset amount for a given amount of deposit receipt tokens after taking into account
-  /// any
-  /// pending fee drip.
+  /// @notice Returns the receipt token amount for a given amount of reserve assets after taking into account
+  /// any pending fee drip.
   function convertToReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
     public
     view
