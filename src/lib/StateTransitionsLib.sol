@@ -27,7 +27,7 @@ library StateTransitionsLib {
     SafetyModuleState to_,
     SafetyModuleState from_,
     bool nonZeroPendingSlashes_
-  ) external pure returns (bool) {
+  ) public pure returns (bool) {
     // STATE TRANSITION RULES FOR SAFETY MODULES.
     // To read the below table:
     //   - Rows headers are the "from" state,

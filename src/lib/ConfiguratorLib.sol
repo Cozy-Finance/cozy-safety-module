@@ -36,7 +36,7 @@ library ConfiguratorLib {
     Delays storage delays_,
     UpdateConfigsCalldataParams calldata configUpdates_,
     ICozySafetyModuleManager manager_
-  ) external {
+  ) internal {
     if (!isValidUpdate(reservePools_, triggerData_, configUpdates_, manager_)) {
       revert IConfiguratorErrors.InvalidConfiguration();
     }
@@ -79,7 +79,7 @@ library ConfiguratorLib {
     Delays storage delays_,
     IReceiptTokenFactory receiptTokenFactory_,
     UpdateConfigsCalldataParams calldata configUpdates_
-  ) external {
+  ) internal {
     if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert ICommonErrors.InvalidState();
     if (block.timestamp < lastConfigUpdate_.configUpdateTime) revert InvalidTimestamp();
     if (block.timestamp > lastConfigUpdate_.configUpdateDeadline) revert InvalidTimestamp();
@@ -158,8 +158,7 @@ library ConfiguratorLib {
     // change.
     uint8 numExistingReservePools_ = uint8(reservePools_.length);
     for (uint8 i = 0; i < numExistingReservePools_; i++) {
-      ReservePool storage reservePool_ = reservePools_[i];
-      reservePool_.maxSlashPercentage = configUpdates_.reservePoolConfigs[i].maxSlashPercentage;
+      reservePools_[i].maxSlashPercentage = configUpdates_.reservePoolConfigs[i].maxSlashPercentage;
     }
 
     // Initialize new reserve pools.

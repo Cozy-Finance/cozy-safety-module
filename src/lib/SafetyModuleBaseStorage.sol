@@ -35,6 +35,8 @@ abstract contract SafetyModuleBaseStorage {
   /// handler occurs. When this value is non-zero, the safety module is triggered (or paused).
   uint16 public numPendingSlashes;
 
+  bool public initialized;
+
   /// @dev The Cozy safety module protocol manager.
   ICozySafetyModuleManager public immutable cozySafetyModuleManager;
 
