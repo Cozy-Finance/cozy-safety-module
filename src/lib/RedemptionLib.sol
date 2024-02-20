@@ -48,7 +48,7 @@ library RedemptionLib {
     uint128 queuedReserveAssetAmount_,
     uint256 queuedAccISF_,
     uint32 queuedAccISFsLength_
-  ) external view returns (uint128 reserveAssetAmountRedeemed_) {
+  ) internal view returns (uint128 reserveAssetAmountRedeemed_) {
     // If a trigger occurs after the redemption was queued, the tokens returned will need to be scaled down
     // by a factor equivalent to how much was taken out relative to the usable reserve assets
     // (which includes pending redemptions):
@@ -96,7 +96,7 @@ library RedemptionLib {
     uint256 redemptionAmount_,
     uint256 slashAmount_,
     uint256[] storage pendingAccISFs_
-  ) external returns (uint256) {
+  ) internal returns (uint256) {
     uint256 numScalingFactors_ = pendingAccISFs_.length;
     uint256 currAccISF_ = numScalingFactors_ == 0 ? MathConstants.WAD : pendingAccISFs_[numScalingFactors_ - 1];
     (uint256 newAssetsPendingRedemption_, uint256 accISF_) = computeNewPendingRedemptionsAccumulatedScalingFactor(

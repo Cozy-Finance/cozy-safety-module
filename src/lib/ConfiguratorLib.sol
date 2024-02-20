@@ -36,7 +36,7 @@ library ConfiguratorLib {
     Delays storage delays_,
     UpdateConfigsCalldataParams calldata configUpdates_,
     ICozySafetyModuleManager manager_
-  ) external {
+  ) internal {
     if (!isValidUpdate(reservePools_, triggerData_, configUpdates_, manager_)) {
       revert IConfiguratorErrors.InvalidConfiguration();
     }
@@ -79,7 +79,7 @@ library ConfiguratorLib {
     Delays storage delays_,
     IReceiptTokenFactory receiptTokenFactory_,
     UpdateConfigsCalldataParams calldata configUpdates_
-  ) external {
+  ) internal {
     if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert ICommonErrors.InvalidState();
     if (block.timestamp < lastConfigUpdate_.configUpdateTime) revert InvalidTimestamp();
     if (block.timestamp > lastConfigUpdate_.configUpdateDeadline) revert InvalidTimestamp();
