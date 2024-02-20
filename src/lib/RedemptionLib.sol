@@ -161,7 +161,7 @@ library RedemptionLib {
     uint256 redemptionQueueTime_,
     uint256 redemptionDelay_,
     uint256 now_
-  ) public pure returns (uint256) {
+  ) internal pure returns (uint256) {
     // Redemptions can occur immediately when the safety module is paused.
     return safetyModuleState_ == SafetyModuleState.PAUSED
       ? 0
