@@ -24,8 +24,6 @@ contract SafetyModule is
   FeesHandler,
   StateChanger
 {
-  bool public initialized;
-
   /// @dev Thrown if the contract is already initialized.
   error Initialized();
 
