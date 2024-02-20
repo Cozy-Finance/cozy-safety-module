@@ -23,14 +23,14 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
   /// @notice Cozy protocol SafetyModuleFactory.
   ISafetyModuleFactory public immutable safetyModuleFactory;
 
-  /// @notice For the specified set, returns whether it's a valid Cozy Safety Module.
-  mapping(ISafetyModule => bool) public isSafetyModule;
-
   /// @notice The default fee drip model.
   IDripModel public feeDripModel;
 
   /// @notice Override fee drip models for specific SafetyModules.
   mapping(ISafetyModule => DripModelLookup) public overrideFeeDripModels;
+
+  /// @notice For the specified set, returns whether it's a valid Cozy Safety Module.
+  mapping(ISafetyModule => bool) public isSafetyModule;
 
   /// @dev Thrown when an safety module's configuration does not meet all requirements.
   error InvalidConfiguration();
@@ -133,8 +133,9 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
       revert InvalidConfiguration();
     }
 
-    isSafetyModule[ISafetyModule(safetyModuleFactory.computeAddress(salt_))] = true;
-    safetyModule_ = safetyModuleFactory.deploySafetyModule(owner_, pauser_, configs_, salt_);
+    ISafetyModuleFactory safetyModuleFactory_ = safetyModuleFactory;
+    isSafetyModule[ISafetyModule(safetyModuleFactory_.computeAddress(salt_))] = true;
+    safetyModule_ = safetyModuleFactory_.deploySafetyModule(owner_, pauser_, configs_, salt_);
   }
 
   function getFeeDripModel(ISafetyModule safetyModule_) external view returns (IDripModel) {

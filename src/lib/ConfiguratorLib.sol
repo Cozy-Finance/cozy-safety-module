@@ -158,8 +158,7 @@ library ConfiguratorLib {
     // change.
     uint8 numExistingReservePools_ = uint8(reservePools_.length);
     for (uint8 i = 0; i < numExistingReservePools_; i++) {
-      ReservePool storage reservePool_ = reservePools_[i];
-      reservePool_.maxSlashPercentage = configUpdates_.reservePoolConfigs[i].maxSlashPercentage;
+      reservePools_[i].maxSlashPercentage = configUpdates_.reservePoolConfigs[i].maxSlashPercentage;
     }
 
     // Initialize new reserve pools.
