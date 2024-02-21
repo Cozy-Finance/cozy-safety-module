@@ -22,6 +22,8 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
   /// @notice Slashes the reserve pools, sends the assets to the receiver, and returns the safety module to the ACTIVE
   /// state if there are no payout handlers that still need to slash assets. Note: Payout handlers can call this
   /// function once for each triggered trigger that has it assigned as its payout handler.
+  /// @param slashes_ The slashes to execute.
+  /// @param receiver_ The address to receive the slashed assets.
   function slash(Slash[] memory slashes_, address receiver_) external {
     // If the payout handler is invalid, the default numPendingSlashes state is also 0.
     if (payoutHandlerNumPendingSlashes[msg.sender] == 0) revert Ownable.Unauthorized();
@@ -36,9 +38,8 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
       emit IStateChangerEvents.SafetyModuleStateUpdated(SafetyModuleState.ACTIVE);
     }
 
-    // Create a bitmap to track which reserve pools have already been slashed.
+    // Create a bitmap to track which reserve pools have already been slashed during execution of the following loop.
     uint256 alreadySlashed_ = 0;
-
     for (uint16 i = 0; i < slashes_.length; i++) {
       alreadySlashed_ = _updateAlreadySlashed(alreadySlashed_, slashes_[i].reservePoolId);
 
@@ -47,7 +48,7 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
       IERC20 reserveAsset_ = reservePool_.asset;
       uint256 reservePoolDepositAmount_ = reservePool_.depositAmount;
 
-      // Slash reserve pool assets
+      // Slash reserve pool assets.
       if (slash_.amount > 0 && reservePoolDepositAmount_ > 0) {
         uint256 slashPercentage_ = _computeSlashPercentage(slash_.amount, reservePoolDepositAmount_);
         if (slashPercentage_ > reservePool_.maxSlashPercentage) {
@@ -59,13 +60,15 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
         reservePool_.depositAmount -= slash_.amount;
         assetPools[reserveAsset_].amount -= slash_.amount;
 
-        // Transfer the slashed assets to the receiver.
+        // Transfer the slashed assets to the specified receiver.
         reserveAsset_.safeTransfer(receiver_, slash_.amount);
         emit Slashed(msg.sender, receiver_, slash_.reservePoolId, slash_.amount);
       }
     }
   }
 
+  /// @notice Returns the maximum amount of assets that can be slashed from the specified reserve pool.
+  /// @param reservePoolId_ The ID of the reserve pool to get the maximum slashable amount for.
   function getMaxSlashableReservePoolAmount(uint8 reservePoolId_)
     external
     view
@@ -76,6 +79,9 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
     );
   }
 
+  /// @notice Returns the percentage corresponding to the amount of assets to be slashed from the reserve pool.
+  /// @param slashAmount_ The amount of assets to be slashed.
+  /// @param totalReservePoolAmount_ The total amount of assets in the reserve pool.
   function _computeSlashPercentage(uint256 slashAmount_, uint256 totalReservePoolAmount_)
     internal
     pure
@@ -85,6 +91,9 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
     return slashAmount_.mulDivUp(MathConstants.ZOC, totalReservePoolAmount_);
   }
 
+  /// @notice Updates the bitmap used to track which reserve pools have already been slashed.
+  /// @param alreadySlashed_ The bitmap to update.
+  /// @param poolId_ The ID of the reserve pool to update the bitmap for.
   function _updateAlreadySlashed(uint256 alreadySlashed_, uint8 poolId_) internal pure returns (uint256) {
     // Using the left shift here is valid because `poolId_ < Manager.allowedReservePools` <= 255.
     if ((alreadySlashed_ & (1 << poolId_)) != 0) revert AlreadySlashed(poolId_);

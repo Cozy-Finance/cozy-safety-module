@@ -17,8 +17,10 @@ abstract contract FeesHandler is SafetyModuleCommon {
   using FixedPointMathLib for uint256;
   using SafeERC20 for IERC20;
 
+  /// @dev Emitted when fees are claimed.
   event ClaimedFees(IERC20 indexed reserveAsset_, uint256 feeAmount_, address indexed owner_);
 
+  /// @inheritdoc SafetyModuleCommon
   function dripFees() public override {
     if (safetyModuleState != SafetyModuleState.ACTIVE) return;
     IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
@@ -29,6 +31,8 @@ abstract contract FeesHandler is SafetyModuleCommon {
     }
   }
 
+  /// @notice Drips fees from a specific reserve pool.
+  /// @param reservePoolId_ The ID of the reserve pool to drip fees from.
   function dripFeesFromReservePool(uint8 reservePoolId_) external {
     if (safetyModuleState != SafetyModuleState.ACTIVE) return;
     IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
@@ -36,11 +40,13 @@ abstract contract FeesHandler is SafetyModuleCommon {
     _dripFeesFromReservePool(reservePools[reservePoolId_], dripModel_);
   }
 
-  /// @notice Transfers accrued fees to the `owner_` address.
-  /// @dev Validation is handled in the manager, which is the only account authorized to call this method.
+  /// @notice Claims any accrued fees.
+  /// @dev Validation is handled in the CozySafetyModuleManager, which is the only account authorized to call this
+  /// method.
+  /// @param owner_ The address to transfer the fees to.
   function claimFees(address owner_) external {
-    // Cozy fee claims will often be batched, so we require it to be initiated from the manager to save gas by
-    // removing calls and SLOADs to check the owner addresses each time.
+    // Cozy fee claims will often be batched, so we require it to be initiated from the CozySafetyModuleManager to save
+    // gas by removing calls and SLOADs to check the owner addresses each time.
     if (msg.sender != address(cozySafetyModuleManager)) revert Ownable.Unauthorized();
     IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
 
@@ -61,6 +67,9 @@ abstract contract FeesHandler is SafetyModuleCommon {
     }
   }
 
+  /// @notice Drips fees from the specified reserve pool.
+  /// @param reservePool_ The reserve pool to drip fees from.
+  /// @param dripModel_ The drip model to use for calculating the fees to drip.
   function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal override {
     uint256 dripFactor_ = dripModel_.dripFactor(reservePool_.lastFeesDripTime);
     if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
@@ -77,6 +86,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
     reservePool_.lastFeesDripTime = uint128(block.timestamp);
   }
 
+  /// @inheritdoc SafetyModuleCommon
   function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_)
     internal
     view

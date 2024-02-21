@@ -1027,12 +1027,4 @@ contract TestableRedeemer is Redeemer, SafetyModuleInspector {
   {
     return block.timestamp == lastDripTime_ ? 0 : mockNextDepositDripAmount;
   }
-
-  function _assertValidDepositBalance(
-    IERC20, /* token_ */
-    uint256, /* tokenPoolBalance_ */
-    uint256 /* depositAmount_ */
-  ) internal view override {
-    __readStub__();
-  }
 }

@@ -63,10 +63,16 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint64 redemptionId_
   );
 
-  /// @notice Redeems by burning `depositReceiptTokenAmount_` of `reservePoolId_` reserve pool deposit tokens and
-  /// sending
-  /// `reserveAssetAmount_` of `reservePoolId_` reserve pool assets to `receiver_`.
+  /// @notice Queues a redemption by burning `depositReceiptTokenAmount_` of `reservePoolId_` reserve pool deposit
+  /// tokens.
+  /// When the redemption is completed, `reserveAssetAmount_` of `reservePoolId_` reserve pool assets will be sent
+  /// to `receiver_` if the reserve pool's assets are not slashed. If the SafetyModule is paused, the redemption
+  /// will be completed instantly.
   /// @dev Assumes that user has approved the SafetyModule to spend its deposit tokens.
+  /// @param reservePoolId_ The ID of the reserve pool to redeem from.
+  /// @param depositReceiptTokenAmount_ The amount of deposit receipt tokens to redeem.
+  /// @param receiver_ The address to receive the reserve assets.
+  /// @param owner_ The address that owns the deposit receipt tokens.
   function redeem(uint8 reservePoolId_, uint256 depositReceiptTokenAmount_, address receiver_, address owner_)
     external
     returns (uint64 redemptionId_, uint256 reserveAssetAmount_)
@@ -79,6 +85,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
     IReceiptToken receiptToken_ = reservePool_.depositReceiptToken;
     {
+      // Fees were dripped already in this function, so we don't need to accomodate for next fee drip amount here.
       uint256 assetsAvailableForRedemption_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
       if (assetsAvailableForRedemption_ == 0) revert NoAssetsToRedeem();
 
@@ -103,6 +110,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
   }
 
   /// @notice Completes the redemption request for the specified redemption ID.
+  /// @param redemptionId_ The ID of the redemption to complete.
   function completeRedemption(uint64 redemptionId_) external returns (uint256 reserveAssetAmount_) {
     Redemption memory redemption_ = redemptions[redemptionId_];
     delete redemptions[redemptionId_];
@@ -111,17 +119,20 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their redemption (i.e. view the number
   /// of reserve assets received) at the current block, given current on-chain conditions.
-  function previewRedemption(uint8 reservePoolId_, uint256 receiptTokenAmount_)
+  /// @param reservePoolId_ The ID of the reserve pool to redeem from.
+  /// @param depositReceiptTokenAmount_ The amount of deposit receipt tokens to redeem.
+  function previewRedemption(uint8 reservePoolId_, uint256 depositReceiptTokenAmount_)
     external
     view
     returns (uint256 reserveAssetAmount_)
   {
     if (safetyModuleState == SafetyModuleState.TRIGGERED) revert InvalidState();
-    return convertToReserveAssetAmount(reservePoolId_, receiptTokenAmount_);
+    return convertToReserveAssetAmount(reservePoolId_, depositReceiptTokenAmount_);
   }
 
   /// @notice Allows an on-chain or off-chain user to simulate the effects of their queued redemption (i.e. view the
   /// number of reserve assets received) at the current block, given current on-chain conditions.
+  /// @param redemptionId_ The ID of the redemption to preview.
   function previewQueuedRedemption(uint64 redemptionId_)
     external
     view
@@ -140,18 +151,26 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     });
   }
 
-  /// @dev Logic to queue a redemption.
+  /// @notice Logic to queue a redemption.
+  /// @param owner_ The owner of the deposit receipt tokens.
+  /// @param receiver_ The address to receive the reserve assets.
+  /// @param reservePool_ The reserve pool to redeem from.
+  /// @param depositReceiptToken_ The deposit receipt token being redeemed.
+  /// @param depositReceiptTokenAmount_ The amount of deposit receipt tokens to redeem.
+  /// @param reserveAssetAmount_ The amount of reserve assets to redeem.
+  /// @param reservePoolId_ The ID of the reserve pool to redeem from.
+  /// @param safetyModuleState_ The current state of the SafetyModule.
   function _queueRedemption(
     address owner_,
     address receiver_,
     ReservePool storage reservePool_,
-    IReceiptToken receiptToken_,
-    uint256 receiptTokenAmount_,
+    IReceiptToken depositReceiptToken_,
+    uint256 depositReceiptTokenAmount_,
     uint256 reserveAssetAmount_,
     uint8 reservePoolId_,
     SafetyModuleState safetyModuleState_
   ) internal returns (uint64 redemptionId_) {
-    receiptToken_.burn(msg.sender, owner_, receiptTokenAmount_);
+    depositReceiptToken_.burn(msg.sender, owner_, depositReceiptTokenAmount_);
 
     redemptionId_ = redemptionIdCounter;
     unchecked {
@@ -165,14 +184,16 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     uint256 numScalingFactors_ = reservePoolPendingAccISFs.length;
     Redemption memory redemption_ = Redemption({
       reservePoolId: reservePoolId_,
-      receiptToken: receiptToken_,
-      receiptTokenAmount: receiptTokenAmount_.safeCastTo216(),
+      receiptToken: depositReceiptToken_,
+      receiptTokenAmount: depositReceiptTokenAmount_.safeCastTo216(),
       assetAmount: reserveAssetAmount_.safeCastTo128(),
       owner: owner_,
       receiver: receiver_,
       queueTime: uint40(block.timestamp),
+      // If the safety module is paused, redemptions can occur instantly.
       delay: safetyModuleState_ == SafetyModuleState.PAUSED ? 0 : uint40(delays.withdrawDelay),
       queuedAccISFsLength: uint32(numScalingFactors_),
+      // If there are no scaling factors, the last scaling factor is 1.0.
       queuedAccISF: numScalingFactors_ == 0 ? MathConstants.WAD : reservePoolPendingAccISFs[numScalingFactors_ - 1]
     });
 
@@ -181,19 +202,25 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     } else {
       redemptions[redemptionId_] = redemption_;
       emit RedemptionPending(
-        msg.sender, receiver_, owner_, receiptToken_, receiptTokenAmount_, reserveAssetAmount_, redemptionId_
+        msg.sender,
+        receiver_,
+        owner_,
+        depositReceiptToken_,
+        depositReceiptTokenAmount_,
+        reserveAssetAmount_,
+        redemptionId_
       );
     }
   }
 
-  /// @dev Logic to complete a redemption.
+  /// @notice Logic to complete a redemption.
+  /// @param redemptionId_ The ID of the redemption to complete.
+  /// @param redemption_ The Redemption struct for the redemption to complete.
   function _completeRedemption(uint64 redemptionId_, Redemption memory redemption_)
     internal
     returns (uint128 reserveAssetAmountRedeemed_)
   {
     if (redemption_.owner == address(0)) revert RedemptionNotFound();
-
-    // If the safety module is paused, redemptions can occur instantly.
     {
       if (_getRedemptionDelayTimeRemaining(redemption_.queueTime, redemption_.delay) != 0) revert DelayNotElapsed();
     }
@@ -201,7 +228,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     ReservePool storage reservePool_ = reservePools[redemption_.reservePoolId];
     IERC20 reserveAsset_ = reservePool_.asset;
 
-    // Compute the final reserve assets to redemptions, which can be scaled down if triggers have occurred
+    // Compute the final reserve assets to redemptions, which can be scaled down if triggers and slashes have occurred
     // since the redemption was queued.
     reserveAssetAmountRedeemed_ = _computeFinalReserveAssetsRedeemed(
       redemption_.reservePoolId, redemption_.assetAmount, redemption_.queuedAccISF, redemption_.queuedAccISFsLength
@@ -237,13 +264,19 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     );
   }
 
-  /// @dev Returns the amount of time remaining before a queued redemption can be completed.
+  /// @notice Returns the amount of time remaining before a queued redemption can be completed.
+  /// @param queueTime_ The time at which the redemption was queued.
+  /// @param delay_ The delay for the redemption.
   function _getRedemptionDelayTimeRemaining(uint40 queueTime_, uint256 delay_) internal view returns (uint256) {
     return RedemptionLib.getRedemptionDelayTimeRemaining(safetyModuleState, queueTime_, delay_, block.timestamp);
   }
 
-  /// @dev Returns the amount of tokens to be redeemed, which may be less than the amount saved when the redemption
-  /// was queued if the tokens are used in a payout for a trigger since then.
+  /// @notice Returns the amount of assets to be redeemed, which may be less than the amount saved when the redemption
+  /// was queued if the assets are used in a payout for a trigger since then.
+  /// @param reservePoolId_ The ID of the reserve pool to redeem from.
+  /// @param queuedReserveAssetAmount_ The amount of reserve assets to redeem when the redemption was queued.
+  /// @param queuedAccISF_ The last pendingRedemptionAccISFs value at queue time.
+  /// @param queuedAccISFLength_ The length of pendingRedemptionAccISFs at queue time.
   function _computeFinalReserveAssetsRedeemed(
     uint8 reservePoolId_,
     uint128 queuedReserveAssetAmount_,

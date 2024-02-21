@@ -5,8 +5,13 @@ import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {Delays} from "./Delays.sol";
 import {TriggerConfig} from "./Trigger.sol";
 
+/// @notice Configuration for a reserve pool.
 struct ReservePoolConfig {
+  // The maximum percentage of the reserve pool assets that can be slashed in a single transaction, represented as a
+  // ZOC. If multiple slashes occur, they compound, and the final reserve pool amount can be less than
+  // (1 - maxSlashPercentage)% following all the slashes.
   uint256 maxSlashPercentage;
+  // The underlying asset of the reserve pool.
   IERC20 asset;
 }
 
@@ -26,8 +31,12 @@ struct ConfigUpdateMetadata {
   uint64 configUpdateDeadline;
 }
 
+/// @notice Parameters for configuration updates.
 struct UpdateConfigsCalldataParams {
+  // The new reserve pool configs.
   ReservePoolConfig[] reservePoolConfigs;
+  // The new trigger configs.
   TriggerConfig[] triggerConfigUpdates;
+  // The new delays config.
   Delays delaysConfig;
 }

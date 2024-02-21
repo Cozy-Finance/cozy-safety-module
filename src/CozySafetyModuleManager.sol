@@ -17,29 +17,29 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
     bool exists;
   }
 
-  /// @notice The max number of reserve pools allowed per safety module.
+  /// @notice The max number of reserve pools allowed per SafetyModule.
   uint8 public immutable allowedReservePools;
 
-  /// @notice Cozy protocol SafetyModuleFactory.
+  /// @notice Cozy Safety Module protocol SafetyModuleFactory.
   ISafetyModuleFactory public immutable safetyModuleFactory;
 
-  /// @notice The default fee drip model.
+  /// @notice The default fee drip model used for SafetyModules.
   IDripModel public feeDripModel;
 
   /// @notice Override fee drip models for specific SafetyModules.
   mapping(ISafetyModule => DripModelLookup) public overrideFeeDripModels;
 
-  /// @notice For the specified set, returns whether it's a valid Cozy Safety Module.
+  /// @notice For the specified SafetyModule, returns whether it's a valid Cozy Safety Module.
   mapping(ISafetyModule => bool) public isSafetyModule;
 
-  /// @dev Thrown when an safety module's configuration does not meet all requirements.
+  /// @dev Thrown when an SafetyModule's configuration does not meet all requirements.
   error InvalidConfiguration();
 
-  /// @param owner_ The Cozy protocol owner.
-  /// @param pauser_ The Cozy protocol pauser.
-  /// @param safetyModuleFactory_ The Cozy protocol SafetyModuleFactory.
-  /// @param feeDripModel_ The default fee drip model for all fees.
-  /// @param allowedReservePools_ The max number of reserve pools allowed per safety module.
+  /// @param owner_ The Cozy Safety Module protocol owner.
+  /// @param pauser_ The Cozy Safety Module protocol pauser.
+  /// @param safetyModuleFactory_ The Cozy Safety Module protocol SafetyModuleFactory.
+  /// @param feeDripModel_ The default fee drip model used for SafetyModules.
+  /// @param allowedReservePools_ The max number of reserve pools allowed per SafetyModule.
   constructor(
     address owner_,
     address pauser_,
@@ -62,22 +62,22 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
   // -------- Cozy Owner Actions --------
   // ------------------------------------
 
-  /// @notice Update the default fee drip model.
+  /// @notice Update the default fee drip model used for SafetyModules.
   /// @param feeDripModel_ The new default fee drip model.
   function updateFeeDripModel(IDripModel feeDripModel_) external onlyOwner {
     _updateFeeDripModel(feeDripModel_);
   }
 
-  /// @notice Update the fee drip model for the specified safety module.
-  /// @param safetyModule_ The safety module to update the fee drip model for.
-  /// @param feeDripModel_ The new fee drip model for the safety module.
+  /// @notice Update the fee drip model for the specified SafetyModule.
+  /// @param safetyModule_ The SafetyModule to update the fee drip model for.
+  /// @param feeDripModel_ The new fee drip model for the SafetyModule.
   function updateOverrideFeeDripModel(ISafetyModule safetyModule_, IDripModel feeDripModel_) external onlyOwner {
     overrideFeeDripModels[safetyModule_] = DripModelLookup({exists: true, dripModel: feeDripModel_});
     emit OverrideFeeDripModelUpdated(safetyModule_, feeDripModel_);
   }
 
-  /// @notice Reset the override fee drip model for the specified safety module back to th default.
-  /// @param safetyModule_ The safety module to update the fee drip model for.
+  /// @notice Reset the override fee drip model for the specified SafetyModule back to the default.
+  /// @param safetyModule_ The SafetyModule to update the fee drip model for.
   function resetOverrideFeeDripModel(ISafetyModule safetyModule_) external onlyOwner {
     delete overrideFeeDripModels[safetyModule_];
     emit OverrideFeeDripModelUpdated(safetyModule_, feeDripModel);
@@ -95,7 +95,7 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
     }
   }
 
-  /// @notice Batch pauses safetyModules_. The manager's pauser or owner can perform this action.
+  /// @notice Batch pauses `safetyModules_`. The CozySafetyModuleManager's pauser or owner can perform this action.
   function pause(ISafetyModule[] calldata safetyModules_) external {
     if (msg.sender != pauser && msg.sender != owner) revert Unauthorized();
     for (uint256 i = 0; i < safetyModules_.length; i++) {
@@ -103,7 +103,7 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
     }
   }
 
-  /// @notice Batch unpauses safetyModules_. The manager's owner can perform this action.
+  /// @notice Batch unpauses `safetyModules_`. The CozySafetyModuleManager's owner can perform this action.
   function unpause(ISafetyModule[] calldata safetyModules_) external onlyOwner {
     for (uint256 i = 0; i < safetyModules_.length; i++) {
       safetyModules_[i].unpause();
@@ -114,11 +114,11 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
   // -------- Permissionless Actions --------
   // ----------------------------------------
 
-  /// @notice Deploys a new Safety Module with the provided parameters.
-  /// @param owner_ The owner of the safety module.
-  /// @param pauser_ The pauser of the safety module.
-  /// @param configs_ The configuration for the safety module.
-  /// @param salt_ Used to compute the resulting address of the set.
+  /// @notice Deploys a new SafetyModule with the provided parameters.
+  /// @param owner_ The owner of the SafetyModule.
+  /// @param pauser_ The pauser of the SafetyModule.
+  /// @param configs_ The configuration for the SafetyModule.
+  /// @param salt_ Used to compute the resulting address of the SafetyModule.
   function createSafetyModule(
     address owner_,
     address pauser_,
@@ -138,6 +138,7 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
     safetyModule_ = safetyModuleFactory_.deploySafetyModule(owner_, pauser_, configs_, salt_);
   }
 
+  /// @notice For the specified SafetyModule, returns the drip model used for fee accrual.
   function getFeeDripModel(ISafetyModule safetyModule_) external view returns (IDripModel) {
     DripModelLookup memory overrideFeeDripModel_ = overrideFeeDripModels[safetyModule_];
     if (overrideFeeDripModel_.exists) return overrideFeeDripModel_.dripModel;

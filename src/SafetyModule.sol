@@ -27,6 +27,8 @@ contract SafetyModule is
   /// @dev Thrown if the contract is already initialized.
   error Initialized();
 
+  /// @param cozySafetyModuleManager_ The Cozy Safety Module protocol manager.
+  /// @param receiptTokenFactory_ The Cozy Safety Module protocol ReceiptTokenFactory.
   constructor(ICozySafetyModuleManager cozySafetyModuleManager_, IReceiptTokenFactory receiptTokenFactory_) {
     _assertAddressNotZero(address(cozySafetyModuleManager_));
     _assertAddressNotZero(address(receiptTokenFactory_));
@@ -34,6 +36,12 @@ contract SafetyModule is
     receiptTokenFactory = receiptTokenFactory_;
   }
 
+  /// @notice Initializes the SafetyModule with the specified parameters.
+  /// @dev Replaces the constructor for minimal proxies.
+  /// @param owner_ The SafetyModule owner.
+  /// @param pauser_ The SafetyModule pauser.
+  /// @param configs_ The SafetyModule configuration parameters. These configs must obey requirements described in
+  /// `Configurator.updateConfigs`.
   function initialize(address owner_, address pauser_, UpdateConfigsCalldataParams calldata configs_) external {
     if (initialized) revert Initialized();
 

@@ -9,6 +9,8 @@ import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 abstract contract SafetyModuleInspector is SafetyModuleCommon {
   /// @notice Returns the receipt token amount for a given amount of reserve assets after taking into account
   /// any pending fee drip.
+  /// @param reservePoolId_ The ID of the reserve pool to convert the reserve asset amount for.
+  /// @param reserveAssetAmount_ The amount of reserve assets to convert to deposit receipt tokens.
   function convertToReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
     public
     view
@@ -22,8 +24,11 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
     );
   }
 
-  // @dev Returns the reserve asset amount for a given amount of deposit receipt tokens after taking into account any
-  // pending fee drip.
+  /// @notice Returns the reserve asset amount for a given amount of deposit receipt tokens after taking into account
+  /// any
+  /// pending fee drip.
+  /// @param reservePoolId_ The ID of the reserve pool to convert the deposit receipt token amount for.
+  /// @param depositReceiptTokenAmount_ The amount of deposit receipt tokens to convert to reserve assets.
   function convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
     public
     view
@@ -37,8 +42,10 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
     );
   }
 
-  /// @dev Returns the amount of assets in the reserve pool to be used for exchange rate calculations after taking into
+  /// @notice Returns the amount of assets in the reserve pool to be used for exchange rate calculations after taking
+  /// into
   /// account any pending fee drip.
+  /// @param reservePool_ The reserve pool to target.
   function _getTotalReservePoolAmountForExchangeRate(ReservePool memory reservePool_) internal view returns (uint256) {
     uint256 totalPoolAmount_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
     return totalPoolAmount_
