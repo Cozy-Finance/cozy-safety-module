@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.22;
+pragma solidity 0.8.22;
 
 import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
 import {ICozySafetyModuleManager} from "./interfaces/ICozySafetyModuleManager.sol";
@@ -48,8 +48,8 @@ contract SafetyModule is
     // Safety Modules are minimal proxies, so the owner and pauser is set to address(0) in the constructor for the logic
     // contract. When the set is initialized for the minimal proxy, we update the owner and pauser.
     __initGovernable(owner_, pauser_);
-
-    ConfiguratorLib.applyConfigUpdates(reservePools, triggerData, delays, receiptTokenFactory, configs_);
+    
     initialized = true;
+    ConfiguratorLib.applyConfigUpdates(reservePools, triggerData, delays, receiptTokenFactory, configs_);
   }
 }
