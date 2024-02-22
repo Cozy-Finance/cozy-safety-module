@@ -11,7 +11,8 @@ import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {CallerRole, StateTransitionsLib} from "./StateTransitionsLib.sol";
 
 abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerEvents, IStateChangerErrors {
-  /// @dev Pauses the safety module if it's a valid state transition.
+  /// @notice Pauses the SafetyModule if it's a valid state transition.
+  /// @dev Only the owner or pauser can call this function.
   function pause() external {
     SafetyModuleState currState_ = safetyModuleState;
     if (
@@ -20,13 +21,14 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
       )
     ) revert InvalidStateTransition();
 
-    // Drip fees before pausing.
+    // Drip fees before pausing, since fees are not dripped while the SafetyModule is paused.
     dripFees();
     safetyModuleState = SafetyModuleState.PAUSED;
     emit SafetyModuleStateUpdated(SafetyModuleState.PAUSED);
   }
 
-  /// @dev Unpauses the safety module if it's a valid state transition.
+  /// @notice Unpauses the SafetyModule if it's a valid state transition.
+  /// @dev Only the owner can call this function.
   function unpause() external {
     SafetyModuleState currState_ = safetyModuleState;
     // If number of pending slashes is non-zero, when the safety module is unpaused it will transition to TRIGGERED.
@@ -39,12 +41,13 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
     ) revert InvalidStateTransition();
 
     safetyModuleState = newState_;
-    // Drip fees after unpausing.
+    // Drip fees after unpausing since fees are not dripped while the SafetyModule is paused.
     dripFees();
     emit SafetyModuleStateUpdated(newState_);
   }
 
-  /// @notice Triggers the safety module by referencing one of the triggers configured for this safety module.
+  /// @notice Triggers the SafetyModule by referencing one of the triggers configured for this SafetyModule.
+  /// @param trigger_ The trigger to reference when triggering the SafetyModule.
   function trigger(ITrigger trigger_) external {
     Trigger memory triggerData_ = triggerData[trigger_];
 
@@ -52,27 +55,29 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
       revert InvalidTrigger();
     }
 
-    // Drip fees before triggering the safety module.
+    // Drip fees before triggering the safety module, since fees are not dripped while the SafetyModule is triggered.
     dripFees();
 
     // Each trigger has an assigned payout handler that is authorized to slash assets once when the trigger is
-    // triggered. Payout handlers can be assigned to multiple triggers, but each trigger can only have one payout
-    // handler.
+    // used to trigger the SafetyModule. Payout handlers can be assigned to multiple triggers, but each trigger
+    // can only have one payout handler.
     numPendingSlashes += 1;
     payoutHandlerNumPendingSlashes[triggerData_.payoutHandler] += 1;
     triggerData[trigger_].triggered = true;
     emit Triggered(trigger_);
 
-    // If the safety module is PAUSED, it remains PAUSED and will transition to TRIGGERED when unpaused since
+    // If the SafetyModule is PAUSED, it remains PAUSED and will transition to TRIGGERED when unpaused since
     // now we have `numPendingSlashes` >= 1.
-    // If the safety module is TRIGGERED, it remains TRIGGERED since now we have `numPendingSlashes` >= 2.
-    // If the safety module is ACTIVE, it needs to be transition to TRIGGERED.
+    // If the SafetyModule is TRIGGERED, it remains TRIGGERED since now we have `numPendingSlashes` >= 2.
+    // If the SafetyModule is ACTIVE, it needs to be transition to TRIGGERED.
     if (safetyModuleState == SafetyModuleState.ACTIVE) {
       safetyModuleState = SafetyModuleState.TRIGGERED;
       emit SafetyModuleStateUpdated(SafetyModuleState.TRIGGERED);
     }
   }
 
+  /// @notice Returns the role of the caller.
+  /// @param who_ The address of the caller.
   function _getCallerRole(address who_) internal view returns (CallerRole) {
     CallerRole role_ = CallerRole.NONE;
     if (who_ == owner) role_ = CallerRole.OWNER;
@@ -83,6 +88,7 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
     return role_;
   }
 
+  /// @notice Returns whether the number of pending slashes is non-zero.
   function _nonZeroPendingSlashes() internal view returns (bool) {
     return numPendingSlashes > 0;
   }

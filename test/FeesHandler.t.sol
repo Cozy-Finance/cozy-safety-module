@@ -15,7 +15,6 @@ import {Depositor} from "../src/lib/Depositor.sol";
 import {FeesHandler} from "../src/lib/FeesHandler.sol";
 import {SafetyModuleState} from "../src/lib/SafetyModuleStates.sol";
 import {AssetPool, ReservePool} from "../src/lib/structs/Pools.sol";
-import {IdLookup} from "../src/lib/structs/Pools.sol";
 import {MockERC20} from "./utils/MockERC20.sol";
 import {MockManager} from "./utils/MockManager.sol";
 import {MockDripModel} from "./utils/MockDripModel.sol";

@@ -10,14 +10,13 @@ import {ConfigUpdateMetadata, ReservePoolConfig, UpdateConfigsCalldataParams} fr
 import {TriggerConfig} from "./structs/Trigger.sol";
 
 abstract contract Configurator is SafetyModuleCommon, Governable {
+  /// @notice Metadata about the most recently queued configuration update.
   ConfigUpdateMetadata public lastConfigUpdate;
 
   /// @notice Signal an update to the safety module configs. Existing queued updates are overwritten.
   /// @param configUpdates_ The new configs. Includes:
   /// - reservePoolConfigs: The array of new reserve pool configs, sorted by associated ID. The array may also
   /// include config for new reserve pools.
-  /// - rewardPoolConfigs: The array of new reward pool configs, sorted by associated ID. The
-  /// array may also include config for new reward pools.
   /// - triggerConfigUpdates: The array of trigger config updates. It only needs to include config for updates to
   /// existing triggers or new triggers.
   /// - delaysConfig: The new delays config.

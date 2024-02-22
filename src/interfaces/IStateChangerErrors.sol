@@ -2,6 +2,6 @@
 pragma solidity ^0.8.0;
 
 interface IStateChangerErrors {
-  /// @dev Thrown when the trigger is not allowed to trigger the safety module.
+  /// @dev Thrown when the trigger is not allowed to trigger the SafetyModule.
   error InvalidTrigger();
 }

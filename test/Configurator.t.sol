@@ -19,7 +19,7 @@ import {ConfiguratorLib} from "../src/lib/ConfiguratorLib.sol";
 import {Configurator} from "../src/lib/Configurator.sol";
 import {SafetyModuleBaseStorage} from "../src/lib/SafetyModuleBaseStorage.sol";
 import {SafetyModuleState, TriggerState} from "../src/lib/SafetyModuleStates.sol";
-import {ReservePool, AssetPool, IdLookup} from "../src/lib/structs/Pools.sol";
+import {ReservePool, AssetPool} from "../src/lib/structs/Pools.sol";
 import {ReservePoolConfig, ConfigUpdateMetadata, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {TriggerConfig, Trigger} from "../src/lib/structs/Trigger.sol";
@@ -787,14 +787,6 @@ contract TestableConfigurator is Configurator {
     uint256, /* oldDepositAmount_ */
     uint256 /* slashAmount_ */
   ) internal view override returns (uint256) {
-    __readStub__();
-  }
-
-  function _assertValidDepositBalance(
-    IERC20, /* token_ */
-    uint256, /* tokenPoolBalance_ */
-    uint256 /* depositAmount_ */
-  ) internal view override {
     __readStub__();
   }
 

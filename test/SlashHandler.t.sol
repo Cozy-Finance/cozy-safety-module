@@ -412,14 +412,6 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
     __readStub__();
   }
 
-  function _assertValidDepositBalance(
-    IERC20, /* token_ */
-    uint256, /* tokenPoolBalance_ */
-    uint256 /* depositAmount_ */
-  ) internal view virtual override {
-    __readStub__();
-  }
-
   function _getNextDripAmount(uint256, /* totalBaseAmount_ */ IDripModel, /* dripModel_ */ uint256 /* lastDripTime_ */ )
     internal
     view

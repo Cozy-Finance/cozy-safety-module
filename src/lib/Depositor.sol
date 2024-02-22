@@ -14,7 +14,7 @@ import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
   using SafeERC20 for IERC20;
 
-  /// @dev Emitted when a user deposits.
+  /// @dev Emitted when a user deposits reserve assets.
   event Deposited(
     address indexed caller_,
     address indexed receiver_,
@@ -23,8 +23,13 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     uint256 depositReceiptTokenAmount_
   );
 
+  /// @notice Deposits reserve assets into the SafetyModule and mints deposit receipt tokens.
   /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
-  /// `reservePools[reservePoolId_].asset` so it can `transferFrom`
+  /// `reservePools[reservePoolId_].asset` so it can `transferFrom` the assets to this SafetyModule.
+  /// @param reservePoolId_ The ID of the reserve pool to deposit assets into.
+  /// @param reserveAssetAmount_ The amount of reserve assets to deposit.
+  /// @param receiver_ The address to receive the deposit receipt tokens.
+  /// @param from_ The address that is depositing the reserve assets.
   function depositReserveAssets(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
     external
     returns (uint256 depositReceiptTokenAmount_)
@@ -43,7 +48,11 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
       _executeReserveDeposit(underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
 
+  /// @notice Deposits reserve assets into the SafetyModule and mints deposit receipt tokens.
   /// @dev Expects depositer to transfer assets to the SafetyModule beforehand.
+  /// @param reservePoolId_ The ID of the reserve pool to deposit assets into.
+  /// @param reserveAssetAmount_ The amount of reserve assets to deposit.
+  /// @param receiver_ The address to receive the deposit receipt tokens.
   function depositReserveAssetsWithoutTransfer(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
     external
     returns (uint256 depositReceiptTokenAmount_)
@@ -56,6 +65,12 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
       _executeReserveDeposit(underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
 
+  /// @notice Deposits reserve assets into the SafetyModule and mints deposit receipt tokens.
+  /// @param underlyingToken_ The address of the underlying token to deposit.
+  /// @param reserveAssetAmount_ The amount of reserve assets to deposit.
+  /// @param receiver_ The address to receive the deposit receipt tokens.
+  /// @param assetPool_ The asset pool for the underlying asset of the reserve pool that is being deposited into.
+  /// @param reservePool_ The reserve pool to deposit assets into.
   function _executeReserveDeposit(
     IERC20 underlyingToken_,
     uint256 reserveAssetAmount_,
@@ -63,8 +78,10 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     AssetPool storage assetPool_,
     ReservePool storage reservePool_
   ) internal returns (uint256 depositReceiptTokenAmount_) {
-    _assertValidDepositState();
-    _assertValidDepositBalance(underlyingToken_, assetPool_.amount, reserveAssetAmount_);
+    if (safetyModuleState == SafetyModuleState.PAUSED) revert InvalidState();
+
+    // Ensure the deposit amount is valid w.r.t. the balance of the SafetyModule.
+    if (underlyingToken_.balanceOf(address(this)) - assetPool_.amount < reserveAssetAmount_) revert InvalidDeposit();
 
     _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
 
@@ -83,17 +100,5 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
 
     depositReceiptToken_.mint(receiver_, depositReceiptTokenAmount_);
     emit Deposited(msg.sender, receiver_, depositReceiptToken_, reserveAssetAmount_, depositReceiptTokenAmount_);
-  }
-
-  function _assertValidDepositBalance(IERC20 token_, uint256 assetPoolBalance_, uint256 depositAmount_)
-    internal
-    view
-    override
-  {
-    if (token_.balanceOf(address(this)) - assetPoolBalance_ < depositAmount_) revert InvalidDeposit();
-  }
-
-  function _assertValidDepositState() internal view {
-    if (safetyModuleState == SafetyModuleState.PAUSED) revert InvalidState();
   }
 }

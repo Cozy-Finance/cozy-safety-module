@@ -9,9 +9,9 @@ interface IMetadataRegistry {
     string extraData;
   }
 
-  /// @notice Update metadata for a safety module. This function can be called by the CozyRouter.
-  /// @param safetyModule_ The address of the safety module.
-  /// @param metadata_ The new metadata for the safety module.
+  /// @notice Update metadata for a SafetyModule. This function can be called by the CozyRouter.
+  /// @param safetyModule_ The address of the SafetyModule.
+  /// @param metadata_ The new metadata for the SafetyModule.
   /// @param caller_ The address of the CozyRouter caller.
   function updateSafetyModuleMetadata(address safetyModule_, Metadata calldata metadata_, address caller_) external;
 }

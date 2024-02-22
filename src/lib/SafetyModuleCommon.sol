@@ -11,35 +11,40 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   /// @notice Returns the receipt token amount for a given amount of reserve assets after taking into account
   /// any pending fee drip.
   /// @dev Defined in SafetyModuleInspector.
+  /// @param reservePoolId_ The ID of the reserve pool to convert the reserve asset amount for.
+  /// @param reserveAssetAmount_ The amount of reserve assets to convert to deposit receipt tokens.
   function convertToReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
     public
     view
     virtual
     returns (uint256);
 
-  // @dev Returns the reserve asset amount for a given amount of deposit receipt tokens after taking into account any
+  // @notice Returns the reserve asset amount for a given amount of deposit receipt tokens after taking into account any
   // pending fee drip.
   /// @dev Defined in SafetyModuleInspector.
+  /// @param reservePoolId_ The ID of the reserve pool to convert the deposit receipt token amount for.
+  /// @param depositReceiptTokenAmount_ The amount of deposit receipt tokens to convert to reserve assets.
   function convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
     public
     view
     virtual
     returns (uint256);
 
-  /// @notice Updates the fee amounts for each reserve pool by applying a drip factor on the stake and deposit amounts.
+  /// @notice Updates the fee amounts for each reserve pool by applying a drip factor on the deposit amounts.
   /// @dev Defined in FeesHandler.
   function dripFees() public virtual;
 
-  /// @dev Helper to assert that the safety module has a balance of tokens that matches the required amount for a
-  /// deposit.
-  /// @dev Defined in Depositor.
-  function _assertValidDepositBalance(IERC20 token_, uint256 tokenPoolBalance_, uint256 depositAmount_)
-    internal
-    view
-    virtual;
-
-  /// @dev Returns the next amount of fees to be dripped given a base amount and a drip model.
+  /// @notice Drips fees from the specified reserve pool.
   /// @dev Defined in FeesHandler.
+  /// @param reservePool_ The reserve pool to drip fees from.
+  /// @param dripModel_ The drip model to use for calculating the fees to drip.
+  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal virtual;
+
+  /// @notice Returns the next amount of fees to drip from the reserve pool.
+  /// @dev Defined in FeesHandler.
+  /// @param totalBaseAmount_ The total amount assets in the reserve pool, before the next drip.
+  /// @param dripModel_ The drip model to use for calculating the fees to drip.
+  /// @param lastDripTime_ The last time fees were dripped from the reserve pool.
   function _getNextDripAmount(uint256 totalBaseAmount_, IDripModel dripModel_, uint256 lastDripTime_)
     internal
     view
@@ -54,8 +59,4 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
     uint256 depositAmount_,
     uint256 slashAmount_
   ) internal virtual returns (uint256 newPendingWithdrawalsAmount_);
-
-  /// @dev Drips fees from a specific reserve pool.
-  /// @dev Defined in FeesHandler.
-  function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel dripModel_) internal virtual;
 }

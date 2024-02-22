@@ -3,24 +3,26 @@ pragma solidity 0.8.22;
 
 import {ITrigger} from "../../interfaces/ITrigger.sol";
 
-/// @param exists Whether the trigger exists.
-/// @param payoutHandler The payout handler that is authorized to slash assets when the trigger is triggered.
-/// @param triggered Whether the trigger has triggered the safety module. A trigger cannot trigger the safety module
-///        more than once.
 struct Trigger {
+  // Whether the trigger exists.
   bool exists;
+  // The payout handler that is authorized to slash assets when the trigger is triggered.
   address payoutHandler;
+  // Whether the trigger has triggered the SafetyModule. A trigger cannot trigger the SafetyModule more than once.
   bool triggered;
 }
 
 struct TriggerConfig {
+  // The trigger that is being configured.
   ITrigger trigger;
+  // The address that is authorized to slash assets when the trigger is triggered.
   address payoutHandler;
+  // Whether the trigger is used by the SafetyModule.
   bool exists;
 }
 
 struct TriggerMetadata {
-  // The name that should be used for safety modules that use the trigger.
+  // The name that should be used for SafetyModules that use the trigger.
   string name;
   // A human-readable description of the trigger.
   string description;

@@ -11,7 +11,7 @@ import {IConfiguratorErrors} from "../interfaces/IConfiguratorErrors.sol";
 import {IConfiguratorEvents} from "../interfaces/IConfiguratorEvents.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
 import {ICozySafetyModuleManager} from "../interfaces/ICozySafetyModuleManager.sol";
-import {ReservePool, IdLookup} from "./structs/Pools.sol";
+import {ReservePool} from "./structs/Pools.sol";
 import {Delays} from "./structs/Delays.sol";
 import {ConfigUpdateMetadata, ReservePoolConfig, UpdateConfigsCalldataParams} from "./structs/Configs.sol";
 import {TriggerConfig, Trigger} from "./structs/Trigger.sol";
@@ -19,9 +19,10 @@ import {TriggerConfig, Trigger} from "./structs/Trigger.sol";
 library ConfiguratorLib {
   error InvalidTimestamp();
 
-  /// @notice Signal an update to the safety module configs. Existing queued updates are overwritten.
+  /// @notice Signal an update to the SafetyModule configs. Existing queued updates are overwritten.
   /// @param lastConfigUpdate_ Metadata about the most recently queued configuration update.
   /// @param reservePools_ The array of existing reserve pools.
+  /// @param triggerData_ The mapping of trigger to trigger data.
   /// @param delays_ The existing delays config.
   /// @param configUpdates_ The new configs. Includes:
   /// - reservePoolConfigs: The array of new reserve pool configs, sorted by associated ID. The array may also
@@ -29,6 +30,7 @@ library ConfiguratorLib {
   /// - triggerConfigUpdates: The array of trigger config updates. It only needs to include config for updates to
   /// existing triggers or new triggers.
   /// - delaysConfig: The new delays config.
+  /// @param manager_ The Cozy Safety Module protocol Manager.
   function updateConfigs(
     ConfigUpdateMetadata storage lastConfigUpdate_,
     ReservePool[] storage reservePools_,
@@ -60,11 +62,13 @@ library ConfiguratorLib {
     lastConfigUpdate_.configUpdateDeadline = configUpdateDeadline_;
   }
 
-  /// @notice Execute queued updates to safety module configs.
+  /// @notice Execute queued updates to SafetyModule configs.
   /// @param lastConfigUpdate_ Metadata about the most recently queued configuration update.
-  /// @param safetyModuleState_ The state of the safety module.
+  /// @param safetyModuleState_ The state of the SafetyModule.
   /// @param reservePools_ The array of existing reserve pools.
+  /// @param triggerData_ The mapping of trigger to trigger data.
   /// @param delays_ The existing delays config.
+  /// @param receiptTokenFactory_ The ReceiptToken factory.
   /// @param configUpdates_ The new configs. Includes:
   /// - reservePoolConfigs: The array of new reserve pool configs, sorted by associated ID. The array may also
   /// include config for new reserve pools.
@@ -83,6 +87,8 @@ library ConfiguratorLib {
     if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert ICommonErrors.InvalidState();
     if (block.timestamp < lastConfigUpdate_.configUpdateTime) revert InvalidTimestamp();
     if (block.timestamp > lastConfigUpdate_.configUpdateDeadline) revert InvalidTimestamp();
+
+    // Ensure the queued config update hash matches the provided config updates.
     if (
       keccak256(
         abi.encode(configUpdates_.reservePoolConfigs, configUpdates_.triggerConfigUpdates, configUpdates_.delaysConfig)
@@ -94,14 +100,18 @@ library ConfiguratorLib {
     applyConfigUpdates(reservePools_, triggerData_, delays_, receiptTokenFactory_, configUpdates_);
   }
 
-  /// @notice Returns true if the provided configs are valid for the safety module, false otherwise.
+  /// @notice Returns true if the provided configs are valid for the SafetyModule, false otherwise.
+  /// @param reservePools_ The array of existing reserve pools.
+  /// @param triggerData_ The mapping of trigger to trigger data.
+  /// @param configUpdates_ The new configs.
+  /// @param manager_ The Cozy Safety Module protocol Manager.
   function isValidUpdate(
     ReservePool[] storage reservePools_,
     mapping(ITrigger => Trigger) storage triggerData_,
     UpdateConfigsCalldataParams calldata configUpdates_,
     ICozySafetyModuleManager manager_
   ) internal view returns (bool) {
-    // Validate the configuration parameters.
+    // Generic validation of the configuration parameters.
     if (
       !isValidConfiguration(
         configUpdates_.reservePoolConfigs, configUpdates_.delaysConfig, manager_.allowedReservePools()
@@ -114,9 +124,11 @@ library ConfiguratorLib {
 
     // Validate existing reserve pools.
     for (uint16 i = 0; i < numExistingReservePools_; i++) {
+      // Existing reserve pools cannot have their asset updated.
       if (reservePools_[i].asset != configUpdates_.reservePoolConfigs[i].asset) return false;
     }
 
+    // Validate trigger config.
     for (uint16 i = 0; i < configUpdates_.triggerConfigUpdates.length; i++) {
       // Triggers that have successfully called trigger() on the safety module cannot be updated.
       if (triggerData_[configUpdates_.triggerConfigUpdates[i].trigger].triggered) return false;
@@ -126,7 +138,7 @@ library ConfiguratorLib {
   }
 
   /// @notice Returns true if the provided configs are generically valid, false otherwise.
-  /// @dev Does not include safety module-specific checks, e.g. checks based on existing reserve pools.
+  /// @dev Does not include SafetyModule-specific checks, e.g. checks based on existing reserve pools.
   function isValidConfiguration(
     ReservePoolConfig[] calldata reservePoolConfigs_,
     Delays calldata delaysConfig_,
@@ -146,7 +158,12 @@ library ConfiguratorLib {
     return true;
   }
 
-  /// @notice Apply queued updates to safety module config.
+  /// @notice Apply queued updates to SafetyModule config.
+  /// @param reservePools_ The array of existing reserve pools.
+  /// @param triggerData_ The mapping of trigger to trigger data.
+  /// @param delays_ The existing delays config.
+  /// @param receiptTokenFactory_ The ReceiptToken factory.
+  /// @param configUpdates_ The new configs.
   function applyConfigUpdates(
     ReservePool[] storage reservePools_,
     mapping(ITrigger => Trigger) storage triggerData_,
@@ -154,8 +171,7 @@ library ConfiguratorLib {
     IReceiptTokenFactory receiptTokenFactory_,
     UpdateConfigsCalldataParams calldata configUpdates_
   ) public {
-    // Update existing reserve pool maxSlashPercentages. No need to update the reserve pool asset since it cannot
-    // change.
+    // Update existing reserve pool maxSlashPercentages. Reserve pool assets cannot be updated.
     uint8 numExistingReservePools_ = uint8(reservePools_.length);
     for (uint8 i = 0; i < numExistingReservePools_; i++) {
       reservePools_[i].maxSlashPercentage = configUpdates_.reservePoolConfigs[i].maxSlashPercentage;
@@ -168,7 +184,8 @@ library ConfiguratorLib {
 
     // Update trigger configs.
     for (uint256 i = 0; i < configUpdates_.triggerConfigUpdates.length; i++) {
-      // Triggers that have successfully called trigger() on the safety module cannot be updated.
+      // Triggers that have successfully called trigger() on the Safety cannot be updated.
+      // The trigger must also not be in a triggered state.
       if (
         triggerData_[configUpdates_.triggerConfigUpdates[i].trigger].triggered
           || configUpdates_.triggerConfigUpdates[i].trigger.state() == TriggerState.TRIGGERED
@@ -190,7 +207,11 @@ library ConfiguratorLib {
     );
   }
 
-  /// @dev Initializes a new reserve pool when it is added to the safety module.
+  /// @notice Initializes a new reserve pool when it is added to the SafetyModule.
+  /// @param reservePools_ The array of existing reserve pools.
+  /// @param receiptTokenFactory_ The ReceiptToken factory.
+  /// @param reservePoolConfig_ The new reserve pool config.
+  /// @param reservePoolId_ The ID of the new reserve pool.
   function initializeReservePool(
     ReservePool[] storage reservePools_,
     IReceiptTokenFactory receiptTokenFactory_,

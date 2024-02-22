@@ -8,6 +8,6 @@ interface IRedemptionErrors {
   /// @dev Thrown when redemption delay has not elapsed.
   error DelayNotElapsed();
 
-  /// @dev Thrown when attempting to queue a redemption when there are not assets available in the pool.
+  /// @dev Thrown when attempting to queue a redemption when there are not assets available in the reserve pool.
   error NoAssetsToRedeem();
 }
