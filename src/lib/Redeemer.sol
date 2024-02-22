@@ -191,6 +191,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     internal
     returns (uint128 reserveAssetAmountRedeemed_)
   {
+    if (safetyModuleState == SafetyModuleState.TRIGGERED) revert InvalidState();
     if (redemption_.owner == address(0)) revert RedemptionNotFound();
 
     // If the safety module is paused, redemptions can occur instantly.
