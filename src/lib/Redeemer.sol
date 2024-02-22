@@ -220,6 +220,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     internal
     returns (uint128 reserveAssetAmountRedeemed_)
   {
+    if (safetyModuleState == SafetyModuleState.TRIGGERED) revert InvalidState();
     if (redemption_.owner == address(0)) revert RedemptionNotFound();
     {
       if (_getRedemptionDelayTimeRemaining(redemption_.queueTime, redemption_.delay) != 0) revert DelayNotElapsed();

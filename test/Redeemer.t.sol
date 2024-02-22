@@ -542,6 +542,32 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     _completeRedeem(nextRedemptionId_);
   }
 
+  function test_redeem_cannotCompleteRedeemWhenTriggered() external {
+    (
+      address owner_,
+      address receiver_,
+      uint256 reserveAssetAmount_,
+      uint256 receiptTokenAmount_,
+      uint64 nextRedemptionId_
+    ) = _setupDefaultSingleUserFixture(0);
+
+    // Queue.
+    _expectEmit();
+    emit RedemptionPending(
+      owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+    );
+    vm.prank(owner_);
+    _redeem(0, receiptTokenAmount_, receiver_, owner_);
+
+    skip(_getRedemptionDelay());
+
+    component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
+
+    // Cannot complete.
+    vm.expectRevert(ICommonErrors.InvalidState.selector);
+    _completeRedeem(nextRedemptionId_);
+  }
+
   function test_redeem_cannotRedeemInvalidReservePoolId() external {
     (address owner_, address receiver_,, uint256 receiptTokenAmount_,) = _setupDefaultSingleUserFixture(0);
 
