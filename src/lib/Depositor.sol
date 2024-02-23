@@ -18,7 +18,8 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
   event Deposited(
     address indexed caller_,
     address indexed receiver_,
-    IReceiptToken indexed depositReceiptToken_,
+    uint8 indexed reservePoolId_,
+    IReceiptToken depositReceiptToken_,
     uint256 assetAmount_,
     uint256 depositReceiptTokenAmount_
   );
@@ -45,7 +46,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     underlyingToken_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
 
     depositReceiptTokenAmount_ =
-      _executeReserveDeposit(underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
+      _executeReserveDeposit(reservePoolId_, underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
 
   /// @notice Deposits reserve assets into the SafetyModule and mints deposit receipt tokens.
@@ -62,16 +63,18 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     AssetPool storage assetPool_ = assetPools[underlyingToken_];
 
     depositReceiptTokenAmount_ =
-      _executeReserveDeposit(underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
+      _executeReserveDeposit(reservePoolId_, underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
   }
 
   /// @notice Deposits reserve assets into the SafetyModule and mints deposit receipt tokens.
+  /// @param reservePoolId_ The ID of the reserve pool to deposit assets into.
   /// @param underlyingToken_ The address of the underlying token to deposit.
   /// @param reserveAssetAmount_ The amount of reserve assets to deposit.
   /// @param receiver_ The address to receive the deposit receipt tokens.
   /// @param assetPool_ The asset pool for the underlying asset of the reserve pool that is being deposited into.
   /// @param reservePool_ The reserve pool to deposit assets into.
   function _executeReserveDeposit(
+    uint8 reservePoolId_,
     IERC20 underlyingToken_,
     uint256 reserveAssetAmount_,
     address receiver_,
@@ -99,6 +102,8 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     assetPool_.amount += reserveAssetAmount_;
 
     depositReceiptToken_.mint(receiver_, depositReceiptTokenAmount_);
-    emit Deposited(msg.sender, receiver_, depositReceiptToken_, reserveAssetAmount_, depositReceiptTokenAmount_);
+    emit Deposited(
+      msg.sender, receiver_, reservePoolId_, depositReceiptToken_, reserveAssetAmount_, depositReceiptTokenAmount_
+    );
   }
 }
