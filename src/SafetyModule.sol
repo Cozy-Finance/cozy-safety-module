@@ -48,7 +48,7 @@ contract SafetyModule is
     // Safety Modules are minimal proxies, so the owner and pauser is set to address(0) in the constructor for the logic
     // contract. When the set is initialized for the minimal proxy, we update the owner and pauser.
     __initGovernable(owner_, pauser_);
-    
+
     initialized = true;
     ConfiguratorLib.applyConfigUpdates(reservePools, triggerData, delays, receiptTokenFactory, configs_);
   }

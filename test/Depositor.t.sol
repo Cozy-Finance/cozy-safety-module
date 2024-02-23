@@ -28,7 +28,8 @@ contract DepositorUnitTest is TestBase {
   event Deposited(
     address indexed caller_,
     address indexed receiver_,
-    IReceiptToken indexed depositReceiptToken_,
+    uint8 indexed reservePoolId_,
+    IReceiptToken depositReceiptToken_,
     uint256 assetAmount_,
     uint256 depositReceiptTokenAmount_
   );
@@ -84,6 +85,7 @@ contract DepositorUnitTest is TestBase {
     emit Deposited(
       depositor_,
       receiver_,
+      0,
       IReceiptToken(address(mockReserveDepositReceiptToken)),
       amountToDeposit_,
       expectedDepositReceiptTokenAmount_
@@ -128,6 +130,7 @@ contract DepositorUnitTest is TestBase {
     emit Deposited(
       depositor_,
       receiver_,
+      0,
       IReceiptToken(address(mockReserveDepositReceiptToken)),
       amountToDeposit_,
       expectedDepositReceiptTokenAmount_
@@ -219,6 +222,7 @@ contract DepositorUnitTest is TestBase {
     emit Deposited(
       depositor_,
       receiver_,
+      0,
       IReceiptToken(address(mockReserveDepositReceiptToken)),
       amountToDeposit_,
       expectedDepositReceiptTokenAmount_
@@ -263,6 +267,7 @@ contract DepositorUnitTest is TestBase {
     emit Deposited(
       depositor_,
       receiver_,
+      0,
       IReceiptToken(address(mockReserveDepositReceiptToken)),
       amountToDeposit_,
       expectedDepositReceiptTokenAmount_
@@ -376,6 +381,7 @@ contract DepositorUnitTest is TestBase {
     emit Deposited(
       depositor_,
       receiver_,
+      0,
       IReceiptToken(address(mockReserveDepositReceiptToken)),
       amountToDeposit_,
       expectedDepositReceiptTokenAmount_

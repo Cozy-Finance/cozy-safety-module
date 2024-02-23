@@ -46,7 +46,8 @@ abstract contract ReedemerUnitTestBase is TestBase {
     address caller_,
     address indexed receiver_,
     address indexed owner_,
-    IReceiptToken indexed receiptToken_,
+    uint8 indexed reservePoolId_,
+    IReceiptToken receiptToken_,
     uint256 receiptTokenAmount_,
     uint256 reserveAssetAmount_,
     uint64 redemptionId_
@@ -57,7 +58,8 @@ abstract contract ReedemerUnitTestBase is TestBase {
     address caller_,
     address indexed receiver_,
     address indexed owner_,
-    IReceiptToken indexed receiptToken_,
+    uint8 indexed reservePoolId_,
+    IReceiptToken receiptToken_,
     uint256 receiptTokenAmount_,
     uint256 reserveAssetAmount_,
     uint64 redemptionId_
@@ -201,7 +203,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     emit Transfer(owner_, address(0), receiptTokenAmount_);
     _expectEmit();
     emit Redeemed(
-      owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      owner_, receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
 
     vm.prank(owner_);
@@ -227,7 +229,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
 
     _expectEmit();
     emit Redeemed(
-      owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      owner_, receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     vm.prank(owner_);
     (, uint256 resultReserveAssetAmount_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
@@ -257,6 +259,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
       owner_,
       receiver_,
       owner_,
+      0,
       testReceiptToken,
       receiptTokenAmountToRedeem_,
       reserveAssetsToReceive_,
@@ -297,6 +300,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
       owner_,
       receiver_,
       owner_,
+      0,
       testReceiptToken,
       receiptTokenAmountToRedeem_,
       reserveAssetsToReceive_,
@@ -325,6 +329,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
       owner_,
       receiver_,
       owner_,
+      0,
       testReceiptToken,
       receiptTokenAmountToRedeem_,
       reserveAssetsToReceive_,
@@ -390,7 +395,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
 
     _expectEmit();
     emit Redeemed(
-      spender_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      spender_, receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
 
     vm.prank(spender_);
@@ -425,7 +430,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     // Queue.
     _expectEmit();
     emit RedemptionPending(
-      owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      owner_, receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     vm.prank(owner_);
     {
@@ -440,7 +445,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     // Complete.
     _expectEmit();
     emit Redeemed(
-      address(this), receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      address(this), receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     _completeRedeem(nextRedemptionId_);
 
@@ -461,7 +466,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     // Queue.
     _expectEmit();
     emit RedemptionPending(
-      owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      owner_, receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     vm.prank(owner_);
     {
@@ -476,7 +481,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     // Complete.
     _expectEmit();
     emit Redeemed(
-      address(this), receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      address(this), receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     _completeRedeem(nextRedemptionId_);
 
@@ -497,7 +502,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     // Queue.
     _expectEmit();
     emit RedemptionPending(
-      owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      owner_, receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     vm.prank(owner_);
     (, uint256 resultReserveAssetAmount_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
@@ -510,7 +515,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     // Complete.
     _expectEmit();
     emit Redeemed(
-      address(this), receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      address(this), receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     _completeRedeem(nextRedemptionId_);
 
@@ -531,7 +536,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     // Queue.
     _expectEmit();
     emit RedemptionPending(
-      owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      owner_, receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     vm.prank(owner_);
     _redeem(0, receiptTokenAmount_, receiver_, owner_);
@@ -554,7 +559,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     // Queue.
     _expectEmit();
     emit RedemptionPending(
-      owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      owner_, receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     vm.prank(owner_);
     _redeem(0, receiptTokenAmount_, receiver_, owner_);
@@ -596,7 +601,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     // Queue.
     _expectEmit();
     emit RedemptionPending(
-      owner_, receiver_, owner_, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
+      owner_, receiver_, owner_, 0, testReceiptToken, receiptTokenAmount_, reserveAssetAmount_, nextRedemptionId_
     );
     vm.prank(owner_);
     (, uint256 resultReserveAssetAmount_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
@@ -815,6 +820,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
           user_.owner,
           user_.owner,
           user_.owner,
+          0,
           IReceiptToken(address(_getReceiptToken(0))),
           uint256(user_.receiptTokensRedeemed),
           uint256(user_.assetsRedeemed),
@@ -843,6 +849,7 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
         address(this),
         user_.owner,
         user_.owner,
+        0,
         IReceiptToken(address(_getReceiptToken(0))),
         uint256(user_.receiptTokensRedeemed),
         uint256(user_.assetsRedeemed),
