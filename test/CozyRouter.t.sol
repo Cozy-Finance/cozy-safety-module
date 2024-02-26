@@ -12,6 +12,8 @@ import {OptimisticOracleV2Interface} from "cozy-safety-module-triggers/src/inter
 import {UMATriggerFactory} from "cozy-safety-module-triggers/src/UMATriggerFactory.sol";
 import {MockChainlinkOracle} from "cozy-safety-module-triggers/test/utils/MockChainlinkOracle.sol";
 import {CozyRouter} from "../src/CozyRouter.sol";
+import {TokenHelpers} from "../src/lib/router/TokenHelpers.sol";
+import {CozyRouterCommon} from "../src/lib/router/CozyRouterCommon.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {TriggerState} from "../src/lib/SafetyModuleStates.sol";
 import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
@@ -245,7 +247,7 @@ contract CozyRouterSweepTokenTest is CozyWEthHelperTest {
     amountMin_ = uint128(bound(amountMin_, 1, type(uint128).max));
     invalidBalance_ = uint128(bound(invalidBalance_, 0, amountMin_ - 1));
     dealAndDepositEth(invalidBalance_);
-    vm.expectRevert(CozyRouter.InsufficientBalance.selector);
+    vm.expectRevert(TokenHelpers.InsufficientBalance.selector);
     router.sweepToken(IERC20(address(weth)), address(alice), amountMin_);
   }
 
@@ -872,7 +874,7 @@ contract CozyRouterRedeemTest is CozyRouterTestSetup {
   // }
 
   function test_RedeemRevertsIfReceiverIsZeroAddress() public {
-    vm.expectRevert(CozyRouter.InvalidAddress.selector);
+    vm.expectRevert(CozyRouterCommon.InvalidAddress.selector);
     router.redeemReservePoolDepositReceiptTokens(safetyModule, wethReservePoolId, 100, address(0));
 
     // vm.expectRevert(CozyRouter.InvalidAddress.selector);
