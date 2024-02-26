@@ -2,7 +2,6 @@
 pragma solidity 0.8.22;
 
 import {IChainlinkTriggerFactory} from "src/interfaces/IChainlinkTriggerFactory.sol";
-import {IConnector} from "./interfaces/IConnector.sol";
 import {ICozySafetyModuleManager} from "./interfaces/ICozySafetyModuleManager.sol";
 import {IOwnableTriggerFactory} from "./interfaces/IOwnableTriggerFactory.sol";
 import {IWeth} from "./interfaces/IWeth.sol";
