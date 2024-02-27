@@ -95,7 +95,7 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
   /// @param alreadySlashed_ The bitmap to update.
   /// @param poolId_ The ID of the reserve pool to update the bitmap for.
   function _updateAlreadySlashed(uint256 alreadySlashed_, uint8 poolId_) internal pure returns (uint256) {
-    // Using the left shift here is valid because `poolId_ < Manager.allowedReservePools` <= 255.
+    // Using the left shift here is valid because poolId_ < allowedReservePools <= 255.
     if ((alreadySlashed_ & (1 << poolId_)) != 0) revert AlreadySlashed(poolId_);
     return alreadySlashed_ | (1 << poolId_);
   }

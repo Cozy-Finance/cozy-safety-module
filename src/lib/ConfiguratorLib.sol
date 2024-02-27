@@ -123,7 +123,7 @@ library ConfiguratorLib {
     if (configUpdates_.reservePoolConfigs.length < numExistingReservePools_) return false;
 
     // Validate existing reserve pools.
-    for (uint16 i = 0; i < numExistingReservePools_; i++) {
+    for (uint8 i = 0; i < numExistingReservePools_; i++) {
       // Existing reserve pools cannot have their asset updated.
       if (reservePools_[i].asset != configUpdates_.reservePoolConfigs[i].asset) return false;
     }
@@ -151,7 +151,7 @@ library ConfiguratorLib {
     if (delaysConfig_.configUpdateDelay <= delaysConfig_.withdrawDelay) return false;
 
     // Validate max slash percentages.
-    for (uint16 i = 0; i < reservePoolConfigs_.length; i++) {
+    for (uint8 i = 0; i < reservePoolConfigs_.length; i++) {
       if (reservePoolConfigs_[i].maxSlashPercentage > MathConstants.ZOC) return false;
     }
 

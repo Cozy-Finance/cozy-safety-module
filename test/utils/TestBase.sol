@@ -96,11 +96,7 @@ contract TestBase is Test, TestAssertions {
     return safetyModule_.delays();
   }
 
-  function getReservePool(ISafetyModule safetyModule_, uint256 reservePoolId_)
-    internal
-    view
-    returns (ReservePool memory)
-  {
+  function getReservePool(ISafetyModule safetyModule_, uint8 reservePoolId_) internal view returns (ReservePool memory) {
     return safetyModule_.reservePools(reservePoolId_);
   }
 

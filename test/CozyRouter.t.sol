@@ -129,7 +129,7 @@ contract CozyRouterAggregateTest is CozyRouterTestSetup {
     deal(address(this), ethAmount_);
 
     bytes[] memory calls_ = new bytes[](2);
-    uint256 reservePoolId_ = 1; // The weth reserve pool ID.
+    uint8 reservePoolId_ = 1; // The weth reserve pool ID.
 
     calls_[0] = abi.encodeWithSelector(bytes4(keccak256(bytes("wrapWeth(address)"))), (address(safetyModule)));
     calls_[1] = abi.encodeWithSelector(

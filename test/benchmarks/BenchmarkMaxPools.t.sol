@@ -106,7 +106,7 @@ abstract contract BenchmarkMaxPools is MockDeployProtocol {
   function _setUpConfigUpdate() internal returns (UpdateConfigsCalldataParams memory updateConfigs_) {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numReserveAssets + 1);
 
-    for (uint256 i = 0; i < numReserveAssets + 1; i++) {
+    for (uint8 i = 0; i < numReserveAssets + 1; i++) {
       IERC20 asset_ = i < numReserveAssets
         ? getReservePool(ISafetyModule(address(safetyModule)), i).asset
         : IERC20(address(new MockERC20("Mock Reserve Asset", "cozyRes", 18)));

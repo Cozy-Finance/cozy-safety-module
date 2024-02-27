@@ -13,7 +13,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   /// @dev Defined in SafetyModuleInspector.
   /// @param reservePoolId_ The ID of the reserve pool to convert the reserve asset amount for.
   /// @param reserveAssetAmount_ The amount of reserve assets to convert to deposit receipt tokens.
-  function convertToReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
+  function convertToReceiptTokenAmount(uint8 reservePoolId_, uint256 reserveAssetAmount_)
     public
     view
     virtual
@@ -24,7 +24,7 @@ abstract contract SafetyModuleCommon is SafetyModuleBaseStorage, ICommonErrors {
   /// @dev Defined in SafetyModuleInspector.
   /// @param reservePoolId_ The ID of the reserve pool to convert the deposit receipt token amount for.
   /// @param depositReceiptTokenAmount_ The amount of deposit receipt tokens to convert to reserve assets.
-  function convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
+  function convertToReserveAssetAmount(uint8 reservePoolId_, uint256 depositReceiptTokenAmount_)
     public
     view
     virtual
