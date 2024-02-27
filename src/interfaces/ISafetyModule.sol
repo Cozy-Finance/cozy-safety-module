@@ -33,7 +33,7 @@ interface ISafetyModule {
   /// any pending fee drip.
   /// @param reservePoolId_ The ID of the reserve pool to convert the reserve asset amount for.
   /// @param reserveAssetAmount_ The amount of reserve assets to convert to deposit receipt tokens.
-  function convertToReceiptTokenAmount(uint256 reservePoolId_, uint256 reserveAssetAmount_)
+  function convertToReceiptTokenAmount(uint8 reservePoolId_, uint256 reserveAssetAmount_)
     external
     view
     returns (uint256 depositReceiptTokenAmount_);
@@ -43,7 +43,7 @@ interface ISafetyModule {
   /// pending fee drip.
   /// @param reservePoolId_ The ID of the reserve pool to convert the deposit receipt token amount for.
   /// @param depositReceiptTokenAmount_ The amount of deposit receipt tokens to convert to reserve assets.
-  function convertToReserveAssetAmount(uint256 reservePoolId_, uint256 depositReceiptTokenAmount_)
+  function convertToReserveAssetAmount(uint8 reservePoolId_, uint256 depositReceiptTokenAmount_)
     external
     view
     returns (uint256 reserveAssetAmount_);

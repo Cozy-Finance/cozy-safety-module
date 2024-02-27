@@ -416,7 +416,7 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     __readStub__();
   }
 
-  function convertToReceiptTokenAmount(uint256, /* reservePoolId_ */ uint256 /*reserveAssetAmount_ */ )
+  function convertToReceiptTokenAmount(uint8, /* reservePoolId_ */ uint256 /*reserveAssetAmount_ */ )
     public
     view
     override
@@ -425,7 +425,7 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     __readStub__();
   }
 
-  function convertToReserveAssetAmount(uint256, /* depositReceiptTokenAmount_ */ uint256 /* reservePoolId_ */ )
+  function convertToReserveAssetAmount(uint8, /* reservePoolId_ */ uint256 /* depositReceiptTokenAmount_ */ )
     public
     view
     override

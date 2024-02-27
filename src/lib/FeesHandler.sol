@@ -26,7 +26,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
     IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
 
     uint256 numReserveAssets_ = reservePools.length;
-    for (uint16 i = 0; i < numReserveAssets_; i++) {
+    for (uint8 i = 0; i < numReserveAssets_; i++) {
       _dripFeesFromReservePool(reservePools[i], dripModel_);
     }
   }
@@ -51,7 +51,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
     IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
 
     uint256 numReservePools_ = reservePools.length;
-    for (uint16 i = 0; i < numReservePools_; i++) {
+    for (uint8 i = 0; i < numReservePools_; i++) {
       ReservePool storage reservePool_ = reservePools[i];
       _dripFeesFromReservePool(reservePool_, dripModel_);
 

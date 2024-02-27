@@ -584,7 +584,7 @@ contract SafetyModuleHandler is TestBase {
 
   function _createValidRandomAddress(address addr_) internal view returns (address) {
     if (addr_ == address(safetyModule)) return _randomAddress();
-    for (uint256 i = 0; i < numReservePools; i++) {
+    for (uint8 i = 0; i < numReservePools; i++) {
       if (addr_ == address(getReservePool(ISafetyModule(address(safetyModule)), i).depositReceiptToken)) {
         return _randomAddress();
       }

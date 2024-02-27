@@ -177,7 +177,7 @@ abstract contract InvariantTestWithMultipleReservePools is InvariantBaseDeploy {
     numReservePools = reservePoolConfigs_.length;
     safetyModule = manager.createSafetyModule(owner, pauser, configs_, _randomBytes32());
 
-    for (uint256 i_; i_ < numReservePools_; i_++) {
+    for (uint8 i_; i_ < numReservePools_; i_++) {
       vm.label(
         address(getReservePool(safetyModule, i_).depositReceiptToken),
         string.concat("reservePool", Strings.toString(i_), "DepositReceiptToken")
