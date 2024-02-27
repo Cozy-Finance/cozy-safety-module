@@ -54,9 +54,8 @@ contract SafetyModuleFactory is ISafetyModuleFactory {
 
     // SafetyModules deployed by this factory are minimal proxies.
     safetyModule_ = ISafetyModule(address(safetyModuleLogic).cloneDeterministic(salt(baseSalt_)));
-    safetyModule_.initialize(owner_, pauser_, configs_);
-
     emit SafetyModuleDeployed(safetyModule_);
+    safetyModule_.initialize(owner_, pauser_, configs_);
   }
 
   /// @notice Given the `baseSalt_` compute and return the address that SafetyModule will be deployed to.
