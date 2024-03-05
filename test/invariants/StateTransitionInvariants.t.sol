@@ -379,7 +379,7 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       vm.expectRevert(ICommonErrors.InvalidState.selector);
       vm.prank(actor_);
-      safetyModule.depositReserveAssets(reservePoolId_, depositAmount_, _randomAddress(), actor_);
+      safetyModule.depositReserveAssets(reservePoolId_, depositAmount_, _randomAddress());
     }
   }
 

@@ -40,7 +40,7 @@ interface IRewardsManager {
     view
     returns (uint256 depositReceiptTokenAmount_);
 
-  function depositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_, address from_)
+  function depositRewardAssets(uint16 rewardPoolId_, uint256 rewardAssetAmount_, address receiver_)
     external
     returns (uint256 depositReceiptTokenAmount_);
 

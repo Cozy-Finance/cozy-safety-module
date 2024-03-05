@@ -55,13 +55,12 @@ interface ISafetyModule {
   function delays() external view returns (Delays memory delays_);
 
   /// @notice Deposits reserve assets into the SafetyModule and mints deposit receipt tokens.
-  /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
+  /// @dev Expects `msg.sender` to have approved this SafetyModule for `reserveAssetAmount_` of
   /// `reservePools[reservePoolId_].asset` so it can `transferFrom` the assets to this SafetyModule.
   /// @param reservePoolId_ The ID of the reserve pool to deposit assets into.
   /// @param reserveAssetAmount_ The amount of reserve assets to deposit.
   /// @param receiver_ The address to receive the deposit receipt tokens.
-  /// @param from_ The address that is depositing the reserve assets.
-  function depositReserveAssets(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
+  function depositReserveAssets(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
     external
     returns (uint256 depositReceiptTokenAmount_);
 
