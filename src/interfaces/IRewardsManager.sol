@@ -59,7 +59,7 @@ interface IRewardsManager {
 
   function stakePools(uint256 id_) external view returns (RewardPool memory stakePool_);
 
-  function stake(uint16 stakePoolId_, uint256 assetAmount_, address receiver_, address from_) external;
+  function stake(uint16 stakePoolId_, uint256 assetAmount_, address receiver_) external;
 
   function stakeWithoutTransfer(uint16 stakePoolId_, uint256 assetAmount_, address receiver_) external;
 
