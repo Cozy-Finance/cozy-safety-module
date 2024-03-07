@@ -403,6 +403,57 @@ contract DepositorUnitTest is TestBase {
     assertEq(mockAsset.balanceOf(depositor_), 0);
     assertEq(mockReserveDepositReceiptToken.balanceOf(receiver_), expectedDepositReceiptTokenAmount_);
   }
+
+  function test_depositReserve_DepositReceiptTokensAndStorageUpdatesWithFeeDripWhenTriggered() external {
+    address depositor_ = _randomAddress();
+    address receiver_ = _randomAddress();
+    uint128 amountToDeposit_ = 10e18;
+    component.setNextDripAmount(25e18);
+    component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
+
+    // Mint initial asset balance for set.
+    mockAsset.mint(address(component), initialSafetyModuleBal);
+    // Mint initial balance for depositor.
+    mockAsset.mint(depositor_, amountToDeposit_);
+    // Approve safety module to spend asset.
+    vm.prank(depositor_);
+    mockAsset.approve(address(component), amountToDeposit_);
+
+    // Set total supply of the deposit receipt token to 50e18.
+    mockReserveDepositReceiptToken.mint(address(0), 50e18);
+
+    // Even though fees are not dripped, nextDripAmount is used to calculate the exchange rate.
+    // expectedDepositReceiptTokenAmount_ = deposit amount * totalSupply / (pool deposit amount - nextDripAmount)
+    //                                    = 10e18 * 50e18 / (50e18 - 0e18)
+    uint256 expectedDepositReceiptTokenAmount_ = 10e18;
+
+    _expectEmit();
+    emit Deposited(
+      depositor_,
+      receiver_,
+      0,
+      IReceiptToken(address(mockReserveDepositReceiptToken)),
+      amountToDeposit_,
+      expectedDepositReceiptTokenAmount_
+    );
+
+    vm.prank(depositor_);
+    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
+
+    assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
+
+    ReservePool memory finalReservePool_ = component.getReservePool(0);
+    AssetPool memory finalAssetPool_ = component.getAssetPool(IERC20(address(mockAsset)));
+    // Next drip amount is not subtracted because the SM is triggered.
+    // (50e18) + 10e18
+    assertEq(finalReservePool_.depositAmount, 60e18);
+    // 50e18 + 10e18
+    assertEq(finalAssetPool_.amount, 60e18);
+    assertEq(mockAsset.balanceOf(address(component)), 60e18 + initialSafetyModuleBal);
+
+    assertEq(mockAsset.balanceOf(depositor_), 0);
+    assertEq(mockReserveDepositReceiptToken.balanceOf(receiver_), expectedDepositReceiptTokenAmount_);
+  }
 }
 
 contract TestableDepositor is Depositor, SafetyModuleInspector {

@@ -83,15 +83,19 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
     if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert InvalidState();
 
     ReservePool storage reservePool_ = reservePools[reservePoolId_];
-    _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
+    if (safetyModuleState_ == SafetyModuleState.ACTIVE) {
+      _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
+    }
 
     IReceiptToken receiptToken_ = reservePool_.depositReceiptToken;
     {
-      // Fees were dripped already in this function, so we don't need to accomodate for next fee drip amount here.
+      // Fees were dripped already in this function if the SafetyModule is active, so we don't need to accomodate for
+      // next fee drip amount here.
       uint256 assetsAvailableForRedemption_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
       if (assetsAvailableForRedemption_ == 0) revert NoAssetsToRedeem();
 
-      // Fees were dripped already in this function, so we can use the SafetyModuleCalculationsLib directly.
+      // Fees were dripped already in this function if the SafetyModule is active, so we can use the
+      // SafetyModuleCalculationsLib directly.
       reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
         depositReceiptTokenAmount_, receiptToken_.totalSupply(), assetsAvailableForRedemption_
       );

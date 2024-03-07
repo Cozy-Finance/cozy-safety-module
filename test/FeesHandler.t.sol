@@ -427,6 +427,47 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
     }
   }
 
+  function test_claimFeesWhenTriggered() public {
+    _setUpConcrete();
+    component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
+
+    // Add new reserve pool.
+    MockERC20 mockAsset_ = new MockERC20("Mock Asset", "MOCK", 6);
+    ReservePool memory reservePool_ = ReservePool({
+      asset: IERC20(address(mockAsset_)),
+      depositReceiptToken: IReceiptToken(address(0)),
+      depositAmount: 10_000,
+      pendingWithdrawalsAmount: 9000,
+      feeAmount: 50,
+      maxSlashPercentage: MathConstants.ZOC,
+      lastFeesDripTime: 0
+    });
+    component.mockAddReservePool(reservePool_);
+    component.mockAddAssetPool(IERC20(address(mockAsset_)), AssetPool({amount: 20_000 + 50}));
+    mockAsset_.mint(address(component), 20_000 + 50);
+
+    skip(10);
+
+    address owner_ = _randomAddress();
+    vm.startPrank(address(mockManager));
+    component.claimFees(owner_);
+    vm.stopPrank();
+
+    // Make sure owner received rewards from new reserve asset pool.
+    // totalExistingFeeAmount = 50
+    // newDrippedDepositFees = (depositAmount - pendingWithdrawalAmount) * dripRate = (10_000 - 9_000) * 0.05 = 50
+    // but, newDrippedDepositFees = 0, since the SafetyModule is in the triggered state.
+    // totalFeeAmount = totalExistingFeeAmount + totalNewFeeAmount = 50
+    assertEq(mockAsset_.balanceOf(owner_), 50);
+
+    // Make sure reserve pools reflects the new reserve pool.
+    ReservePool[] memory reservePools_ = component.getReservePools();
+    assertEq(address(reservePools_[2].asset), address(mockAsset_));
+    assertEq(reservePools_[2].depositAmount, 10_000); // depositAmount - newDrippedDepositFees = 10_000 - 0
+    assertEq(reservePools_[2].pendingWithdrawalsAmount, 9000);
+    assertEq(reservePools_[2].feeAmount, 0);
+  }
+
   function testFuzz_RevertOnNonManagerCall(address caller_, address owner_) public {
     _setUpDefault();
     vm.assume(caller_ != address(mockManager));

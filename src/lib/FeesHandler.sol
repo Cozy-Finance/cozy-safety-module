@@ -53,7 +53,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
     uint256 numReservePools_ = reservePools.length;
     for (uint8 i = 0; i < numReservePools_; i++) {
       ReservePool storage reservePool_ = reservePools[i];
-      _dripFeesFromReservePool(reservePool_, dripModel_);
+      if (safetyModuleState == SafetyModuleState.ACTIVE) _dripFeesFromReservePool(reservePool_, dripModel_);
 
       uint256 feeAmount_ = reservePool_.feeAmount;
       if (feeAmount_ > 0) {

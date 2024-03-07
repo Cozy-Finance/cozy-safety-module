@@ -203,7 +203,13 @@ abstract contract RedeemInvariantsWithStateTransitions is InvariantTestBaseWithS
         vm.stopPrank();
         require(
           balanceConvertedToAssets_ == redeemedAssets_,
-          "Invariant violated: The amount of shares converted to assets (using safetyModule.convertToReserveAssetAmount()) that a user can redeem should be equal to the amount of assets returned by safetyModule.redeem()."
+          string.concat(
+            "Invariant violated: The amount of shares converted to assets (using safetyModule.convertToReserveAssetAmount()) that a user can redeem should be equal to the amount of assets returned by safetyModule.redeem().",
+            " balanceConvertedToAssets_: ",
+            Strings.toString(balanceConvertedToAssets_),
+            " redeemedAssets_: ",
+            Strings.toString(redeemedAssets_)
+          )
         );
       } else {
         // Here we expect reverts either InvalidState, RoundsToZero, or NotEnoughAssets.
@@ -338,6 +344,8 @@ abstract contract RedeemInvariants is InvariantTestBase {
       (, uint256 redeemedAssets_) = safetyModule.redeem(reservePoolId_, redeemedAmount_, actor_, actor_);
       vm.stopPrank();
 
+      SafetyModuleState safetyModuleState_ = safetyModule.safetyModuleState();
+
       for (uint8 i; i < numReservePools; i++) {
         ReservePool memory beforeReservePool_ = beforeReservePools_[i];
         ReservePool memory afterReservePool_ = getReservePool(safetyModule, i);
@@ -346,14 +354,22 @@ abstract contract RedeemInvariants is InvariantTestBase {
           "Invariant violated: The reserve pool's deposit amount may decrease due to possible fees drip."
         );
         require(
-          beforeReservePool_.feeAmount <= afterReservePool_.feeAmount,
-          "Invariant violated: The reserve pool's fee amount may increase due to possible fees drip."
-        );
-        require(
           afterReservePool_.pendingWithdrawalsAmount
             == beforeReservePool_.pendingWithdrawalsAmount + (i == reservePoolId_ ? redeemedAssets_ : 0),
           "Invariant violated: The reserve pool's pending withdrawals amount should increase on redemption by the amount of redeemed assets."
         );
+
+        if (safetyModuleState_ != SafetyModuleState.ACTIVE) {
+          require(
+            beforeReservePool_.feeAmount == afterReservePool_.feeAmount,
+            "Invariant violated: The reserve pool's fee amount should not change on redemption when the safety module is not active."
+          );
+        } else {
+          require(
+            beforeReservePool_.feeAmount <= afterReservePool_.feeAmount,
+            "Invariant violated: The reserve pool's fee amount may increase due to possible fees drip on redemption."
+          );
+        }
       }
     }
   }
