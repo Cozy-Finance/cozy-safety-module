@@ -81,20 +81,36 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     AssetPool storage assetPool_,
     ReservePool storage reservePool_
   ) internal returns (uint256 depositReceiptTokenAmount_) {
-    if (safetyModuleState == SafetyModuleState.PAUSED) revert InvalidState();
+    SafetyModuleState safetyModuleState_ = safetyModuleState;
+    if (safetyModuleState_ == SafetyModuleState.PAUSED) revert InvalidState();
 
     // Ensure the deposit amount is valid w.r.t. the balance of the SafetyModule.
     if (underlyingToken_.balanceOf(address(this)) - assetPool_.amount < reserveAssetAmount_) revert InvalidDeposit();
 
-    _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
-
     IReceiptToken depositReceiptToken_ = reservePool_.depositReceiptToken;
-    // Fees were dripped already in this function, so we can use the SafetyModuleCalculationsLib directly.
-    depositReceiptTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
-      reserveAssetAmount_,
-      depositReceiptToken_.totalSupply(),
-      reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount
-    );
+    if (safetyModuleState_ == SafetyModuleState.ACTIVE) {
+      _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
+      depositReceiptTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
+        reserveAssetAmount_,
+        depositReceiptToken_.totalSupply(),
+        // Fees were dripped in this block, so we don't need to subtract next drip amount.
+        reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount
+      );
+    } else {
+      // If the SafetyModule is TRIGGERED, we calculate the exchange rate with consideration for the next drip amount,
+      // but we don't actually drip the fees. Fees can only be dripped when the SafetyModule is active.
+      uint256 totalPoolAmount_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
+      depositReceiptTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
+        reserveAssetAmount_,
+        depositReceiptToken_.totalSupply(),
+        totalPoolAmount_
+          - _getNextDripAmount(
+            totalPoolAmount_,
+            cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))),
+            reservePool_.lastFeesDripTime
+          )
+      );
+    }
     if (depositReceiptTokenAmount_ == 0) revert RoundsToZero();
 
     // Increment reserve pool accounting only after calculating `depositReceiptTokenAmount_` to mint.

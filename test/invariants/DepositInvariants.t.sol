@@ -48,15 +48,39 @@ abstract contract DepositInvariants is InvariantTestBase {
     // this invariant test.
     uint8 depositedReservePoolId_ = safetyModuleHandler.currentReservePoolId();
     IERC20 depositReservePoolAsset_ = getReservePool(safetyModule, depositedReservePoolId_).asset;
+    SafetyModuleState safetyModuleState_ = safetyModule.safetyModuleState();
 
     for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory currentReservePool_ = getReservePool(safetyModule, reservePoolId_);
       AssetPool memory currentAssetPool_ = safetyModule.assetPools(currentReservePool_.asset);
 
-      require(
-        internalBalancesBeforeDepositReserves_[reservePoolId_].feeAmount <= currentReservePool_.feeAmount,
-        "Invariant violated: The reserve pool's fee amount may increase due to possible fees drip."
-      );
+      if (safetyModuleState_ != SafetyModuleState.ACTIVE) {
+        require(
+          internalBalancesBeforeDepositReserves_[reservePoolId_].feeAmount == currentReservePool_.feeAmount,
+          string.concat(
+            "Invariant violated: The reserve pool's fee amount must not change after a deposit when the safety module is not active.",
+            " reservePoolId_: ",
+            Strings.toString(reservePoolId_),
+            ", internalBalancesBeforeDepositReserves_[reservePoolId_].feeAmount: ",
+            Strings.toString(internalBalancesBeforeDepositReserves_[reservePoolId_].feeAmount),
+            ", currentReservePool_.feeAmount: ",
+            Strings.toString(currentReservePool_.feeAmount)
+          )
+        );
+      } else {
+        require(
+          internalBalancesBeforeDepositReserves_[reservePoolId_].feeAmount <= currentReservePool_.feeAmount,
+          string.concat(
+            "Invariant violated: The reserve pool's fee amount may increase due to possible fees drip on deposit.",
+            " reservePoolId_: ",
+            Strings.toString(reservePoolId_),
+            ", internalBalancesBeforeDepositReserves_[reservePoolId_].feeAmount: ",
+            Strings.toString(internalBalancesBeforeDepositReserves_[reservePoolId_].feeAmount),
+            ", currentReservePool_.feeAmount: ",
+            Strings.toString(currentReservePool_.feeAmount)
+          )
+        );
+      }
 
       if (reservePoolId_ == depositedReservePoolId_) {
         require(

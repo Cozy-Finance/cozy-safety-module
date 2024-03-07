@@ -180,7 +180,10 @@ abstract contract FeesInvariantsWithStateTransitions is InvariantTestBase, FeesI
       beforeAssetPoolAmounts_[assetId_] = safetyModule.assetPools(asset_).amount;
     }
 
+    uint256 timeBeforeClaimFees_ = block.timestamp;
     safetyModuleHandler.claimFees(owner_, _randomUint256());
+
+    SafetyModuleState safetyModuleState_ = safetyModule.safetyModuleState();
 
     for (uint8 reservePoolId_; reservePoolId_ < numReservePools; reservePoolId_++) {
       ReservePool memory afterReservePool_ = getReservePool(safetyModule, reservePoolId_);
@@ -213,18 +216,36 @@ abstract contract FeesInvariantsWithStateTransitions is InvariantTestBase, FeesI
         )
       );
 
-      require(
-        afterReservePool_.lastFeesDripTime == block.timestamp,
-        string.concat(
-          "Invariant Violated: A reserve pool's last fees drip time must be block.timestamp when fees are claimed.",
-          " reservePoolId_: ",
-          Strings.toString(reservePoolId_),
-          ", afterReservePool_.lastFeesDripTime: ",
-          Strings.toString(afterReservePool_.lastFeesDripTime),
-          ", block.timestamp: ",
-          Strings.toString(block.timestamp)
-        )
-      );
+      if (safetyModuleState_ == SafetyModuleState.ACTIVE) {
+        require(
+          afterReservePool_.lastFeesDripTime == block.timestamp,
+          string.concat(
+            "Invariant Violated: A reserve pool's last fees drip time must be block.timestamp when fees are claimed.",
+            " reservePoolId_: ",
+            Strings.toString(reservePoolId_),
+            ", afterReservePool_.lastFeesDripTime: ",
+            Strings.toString(afterReservePool_.lastFeesDripTime),
+            ", block.timestamp: ",
+            Strings.toString(block.timestamp)
+          )
+        );
+      } else {
+        require(
+          // If block.timestamp == timeBeforeClaimFees_, the SafetyModule may have been paused/triggered in the
+          // same block before the fees were claimed. Thus, we allow the last fees drip time to be equal to
+          // timeBeforeClaimFees_ as well here.
+          afterReservePool_.lastFeesDripTime <= timeBeforeClaimFees_,
+          string.concat(
+            "Invariant Violated: A reserve pool's last fees drip time must be less than or equal to block.timestamp when fees are claimed and the SafetyModule is not active.",
+            " reservePoolId_: ",
+            Strings.toString(reservePoolId_),
+            ", afterReservePool_.lastFeesDripTime: ",
+            Strings.toString(afterReservePool_.lastFeesDripTime),
+            ", block.timestamp: ",
+            Strings.toString(block.timestamp)
+          )
+        );
+      }
     }
 
     for (uint16 assetId_; assetId_ < numAssets_; assetId_++) {

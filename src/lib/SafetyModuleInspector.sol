@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
 import {SafetyModuleCalculationsLib} from "./SafetyModuleCalculationsLib.sol";
 import {ReservePool} from "./structs/Pools.sol";
+import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {ISafetyModule} from "../interfaces/ISafetyModule.sol";
 
 abstract contract SafetyModuleInspector is SafetyModuleCommon {
@@ -43,8 +44,7 @@ abstract contract SafetyModuleInspector is SafetyModuleCommon {
   }
 
   /// @notice Returns the amount of assets in the reserve pool to be used for exchange rate calculations after taking
-  /// into
-  /// account any pending fee drip.
+  /// into account any pending fee drip.
   /// @param reservePool_ The reserve pool to target.
   function _getTotalReservePoolAmountForExchangeRate(ReservePool memory reservePool_) internal view returns (uint256) {
     uint256 totalPoolAmount_ = reservePool_.depositAmount - reservePool_.pendingWithdrawalsAmount;
