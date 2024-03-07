@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import {Governable} from "cozy-safety-module-shared/lib/Governable.sol";
 import {ConfiguratorLib} from "./ConfiguratorLib.sol";
 import {SafetyModuleCommon} from "./SafetyModuleCommon.sol";
+import {IConfiguratorErrors} from "../interfaces/IConfiguratorErrors.sol";
 import {Delays} from "./structs/Delays.sol";
 import {ReservePool} from "./structs/Pools.sol";
 import {ConfigUpdateMetadata, ReservePoolConfig, UpdateConfigsCalldataParams} from "./structs/Configs.sol";
@@ -37,5 +38,12 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
     ConfiguratorLib.finalizeUpdateConfigs(
       lastConfigUpdate, safetyModuleState, reservePools, triggerData, delays, receiptTokenFactory, configUpdates_
     );
+  }
+
+  /// @notice Update pauser to `newPauser_`.
+  /// @param newPauser_ The new pauser.
+  function updatePauser(address newPauser_) external {
+    if (newPauser_ == address(cozySafetyModuleManager)) revert IConfiguratorErrors.InvalidConfiguration();
+    _updatePauser(newPauser_);
   }
 }

@@ -674,6 +674,18 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
       })
     );
   }
+
+  function testFuzz_updatePauser(address newPauser_) external {
+    vm.assume(newPauser_ != address(component.cozySafetyModuleManager()));
+    component.updatePauser(newPauser_);
+    assertEq(component.pauser(), newPauser_);
+  }
+
+  function test_updatePauser_revertNewPauserCozySafetyModuleManager() external {
+    address manager_ = address(component.cozySafetyModuleManager());
+    vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
+    component.updatePauser(manager_);
+  }
 }
 
 contract TestableConfigurator is Configurator {
