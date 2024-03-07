@@ -95,7 +95,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       if (assetsAvailableForRedemption_ == 0) revert NoAssetsToRedeem();
 
       // Fees were dripped already in this function if the SafetyModule is active, so we can use the
-      // SafetyModuleCalculationsLib directly.
+      // SafetyModuleCalculationsLib directly. Fees do not drip while the SafetyModule is not active.
       reserveAssetAmount_ = SafetyModuleCalculationsLib.convertToAssetAmount(
         depositReceiptTokenAmount_, receiptToken_.totalSupply(), assetsAvailableForRedemption_
       );

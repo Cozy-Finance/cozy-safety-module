@@ -93,7 +93,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
 
     IReceiptToken depositReceiptToken_ = reservePool_.depositReceiptToken;
     // Fees were dripped in this block if the SafetyModule is active, so we don't need to subtract next drip amount
-    // and can use the SafetyModuleCalculationsLib directly.
+    // and can use the SafetyModuleCalculationsLib directly. Fees do not drip while the SafetyModule is not active.
     depositReceiptTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       reserveAssetAmount_,
       depositReceiptToken_.totalSupply(),
