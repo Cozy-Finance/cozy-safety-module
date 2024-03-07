@@ -80,15 +80,19 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     AssetPool storage assetPool_,
     ReservePool storage reservePool_
   ) internal returns (uint256 depositReceiptTokenAmount_) {
-    if (safetyModuleState == SafetyModuleState.PAUSED) revert InvalidState();
+    SafetyModuleState safetyModuleState_ = safetyModuleState;
+    if (safetyModuleState_ == SafetyModuleState.PAUSED) revert InvalidState();
 
     // Ensure the deposit amount is valid w.r.t. the balance of the SafetyModule.
     if (underlyingToken_.balanceOf(address(this)) - assetPool_.amount < reserveAssetAmount_) revert InvalidDeposit();
 
-    _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
+    if (safetyModuleState_ == SafetyModuleState.ACTIVE) {
+      _dripFeesFromReservePool(reservePool_, cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this))));
+    }
 
     IReceiptToken depositReceiptToken_ = reservePool_.depositReceiptToken;
-    // Fees were dripped already in this function, so we can use the SafetyModuleCalculationsLib directly.
+    // Fees were dripped in this block if the SafetyModule is active, so we don't need to subtract next drip amount
+    // and can use the SafetyModuleCalculationsLib directly. Fees do not drip while the SafetyModule is not active.
     depositReceiptTokenAmount_ = SafetyModuleCalculationsLib.convertToReceiptTokenAmount(
       reserveAssetAmount_,
       depositReceiptToken_.totalSupply(),

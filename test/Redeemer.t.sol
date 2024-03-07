@@ -884,6 +884,30 @@ contract RedeemerUnitTest is ReedemerUnitTestBase {
     (, uint256 resultRedeemedAssets_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
     assertEq(previewRedeemedAssets_, resultRedeemedAssets_, "redeemed assets");
     assertEq(previewRedeemedAssets_, reserveAssetAmount_ * 3 / 4);
+    // Fees are dripped when a redemption occurs and the safety module is active.
+    assertEq(component.getReservePool(0).feeAmount, reserveAssetAmount_ / 4);
+  }
+
+  function test_previewRedemptionWhenPaused() external {
+    (address owner_, address receiver_, uint256 reserveAssetAmount_, uint256 receiptTokenAmount_,) =
+      _setupDefaultSingleUserFixture(0);
+
+    mockManager.setFeeDripModel(IDripModel(_randomAddress()));
+    _setNextDripAmount(reserveAssetAmount_ / 4);
+    component.mockSetSafetyModuleState(SafetyModuleState.PAUSED);
+
+    skip(_randomUint128());
+
+    uint256 feeAmountBeforeRedeem_ = component.getReservePool(0).feeAmount;
+
+    // Preview and actually redeemed assets match.
+    uint256 previewRedeemedAssets_ = component.previewRedemption(0, receiptTokenAmount_);
+    vm.prank(owner_);
+    (, uint256 resultRedeemedAssets_) = _redeem(0, receiptTokenAmount_, receiver_, owner_);
+    assertEq(previewRedeemedAssets_, resultRedeemedAssets_, "redeemed assets");
+    assertEq(previewRedeemedAssets_, reserveAssetAmount_);
+    // Next fee drip is accounted for when calculating exchange rate, but not actually dripped.
+    assertEq(component.getReservePool(0).feeAmount, feeAmountBeforeRedeem_);
   }
 
   function test_previewRedemption_roundsDownToZero() external {
@@ -1049,6 +1073,7 @@ contract TestableRedeemer is Redeemer, SafetyModuleInspector {
 
   function _dripFeesFromReservePool(ReservePool storage reservePool_, IDripModel /* dripModel_*/ ) internal override {
     reservePool_.depositAmount -= mockNextDepositDripAmount;
+    reservePool_.feeAmount += mockNextDepositDripAmount;
     reservePool_.lastFeesDripTime = uint128(block.timestamp);
   }
 

@@ -51,9 +51,10 @@ abstract contract FeesHandler is SafetyModuleCommon {
     IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
 
     uint256 numReservePools_ = reservePools.length;
+    bool safetyModuleIsActive_ = safetyModuleState == SafetyModuleState.ACTIVE;
     for (uint8 i = 0; i < numReservePools_; i++) {
       ReservePool storage reservePool_ = reservePools[i];
-      _dripFeesFromReservePool(reservePool_, dripModel_);
+      if (safetyModuleIsActive_) _dripFeesFromReservePool(reservePool_, dripModel_);
 
       uint256 feeAmount_ = reservePool_.feeAmount;
       if (feeAmount_ > 0) {
