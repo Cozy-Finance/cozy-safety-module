@@ -546,7 +546,7 @@ contract SafetyModuleHandler is TestBase {
 
     vm.startPrank(currentActor);
     asset_.approve(address(safetyModule), assetAmount_);
-    uint256 shares_ = safetyModule.depositReserveAssets(currentReservePoolId, assetAmount_, currentActor, currentActor);
+    uint256 shares_ = safetyModule.depositReserveAssets(currentReservePoolId, assetAmount_, currentActor);
     vm.stopPrank();
 
     ghost_reservePoolCumulative[currentReservePoolId].depositAssetAmount += assetAmount_;

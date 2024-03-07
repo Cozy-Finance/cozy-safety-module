@@ -52,17 +52,14 @@ contract DepositorUnitTest is TestBase {
     deal(address(mockAsset), address(component), initialSafetyModuleBal);
   }
 
-  function _deposit(
-    bool withoutTransfer_,
-    uint8 poolId_,
-    uint256 amountToDeposit_,
-    address receiver_,
-    address depositor_
-  ) internal returns (uint256 depositReceiptTokenAmount_) {
+  function _deposit(bool withoutTransfer_, uint8 poolId_, uint256 amountToDeposit_, address receiver_)
+    internal
+    returns (uint256 depositReceiptTokenAmount_)
+  {
     if (withoutTransfer_) {
       depositReceiptTokenAmount_ = component.depositReserveAssetsWithoutTransfer(poolId_, amountToDeposit_, receiver_);
     } else {
-      depositReceiptTokenAmount_ = component.depositReserveAssets(poolId_, amountToDeposit_, receiver_, depositor_);
+      depositReceiptTokenAmount_ = component.depositReserveAssets(poolId_, amountToDeposit_, receiver_);
     }
   }
 
@@ -92,7 +89,7 @@ contract DepositorUnitTest is TestBase {
     );
 
     vm.prank(depositor_);
-    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
+    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_);
 
     assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
 
@@ -137,7 +134,7 @@ contract DepositorUnitTest is TestBase {
     );
 
     vm.prank(depositor_);
-    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
+    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_);
 
     assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
 
@@ -174,7 +171,7 @@ contract DepositorUnitTest is TestBase {
 
     vm.expectRevert(ICommonErrors.InvalidState.selector);
     vm.prank(depositor_);
-    _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
+    _deposit(false, 0, amountToDeposit_, receiver_);
   }
 
   function test_depositReserve_RevertOutOfBoundsReservePoolId() external {
@@ -183,7 +180,7 @@ contract DepositorUnitTest is TestBase {
 
     _expectPanic(INDEX_OUT_OF_BOUNDS);
     vm.prank(depositor_);
-    _deposit(false, 1, 10e18, receiver_, depositor_);
+    _deposit(false, 1, 10e18, receiver_);
   }
 
   function testFuzz_depositReserve_RevertInsufficientAssetsAvailable(uint256 amountToDeposit_) external {
@@ -200,7 +197,7 @@ contract DepositorUnitTest is TestBase {
 
     _expectPanic(PANIC_MATH_UNDEROVERFLOW);
     vm.prank(depositor_);
-    _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
+    _deposit(false, 0, amountToDeposit_, receiver_);
   }
 
   function test_depositReserveAssetsWithoutTransfer_DepositReceiptTokensAndStorageUpdates() external {
@@ -229,7 +226,7 @@ contract DepositorUnitTest is TestBase {
     );
 
     vm.prank(depositor_);
-    uint256 depositReceiptTokenAmount_ = _deposit(true, 0, amountToDeposit_, receiver_, receiver_);
+    uint256 depositReceiptTokenAmount_ = _deposit(true, 0, amountToDeposit_, receiver_);
 
     assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
 
@@ -274,7 +271,7 @@ contract DepositorUnitTest is TestBase {
     );
 
     vm.prank(depositor_);
-    uint256 depositReceiptTokenAmount_ = _deposit(true, 0, amountToDeposit_, receiver_, receiver_);
+    uint256 depositReceiptTokenAmount_ = _deposit(true, 0, amountToDeposit_, receiver_);
 
     assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
 
@@ -311,14 +308,14 @@ contract DepositorUnitTest is TestBase {
 
     vm.expectRevert(ICommonErrors.InvalidState.selector);
     vm.prank(depositor_);
-    _deposit(true, 0, amountToDeposit_, receiver_, receiver_);
+    _deposit(true, 0, amountToDeposit_, receiver_);
   }
 
   function test_depositReserveAssetsWithoutTransfer_RevertOutOfBoundsReservePoolId() external {
     address receiver_ = _randomAddress();
 
     _expectPanic(INDEX_OUT_OF_BOUNDS);
-    _deposit(true, 1, 10e18, receiver_, receiver_);
+    _deposit(true, 1, 10e18, receiver_);
   }
 
   function testFuzz_depositReserveAssetsWithoutTransfer_RevertInsufficientAssetsAvailable(uint256 amountToDeposit_)
@@ -336,7 +333,7 @@ contract DepositorUnitTest is TestBase {
 
     vm.expectRevert(IDepositorErrors.InvalidDeposit.selector);
     vm.prank(depositor_);
-    _deposit(true, 0, amountToDeposit_, receiver_, address(0));
+    _deposit(true, 0, amountToDeposit_, receiver_);
   }
 
   function test_deposit_RevertZeroShares() external {
@@ -347,7 +344,7 @@ contract DepositorUnitTest is TestBase {
     // 0 assets should give 0 shares.
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
     vm.prank(depositor_);
-    _deposit(true, 0, amountToDeposit_, receiver_, address(0));
+    _deposit(true, 0, amountToDeposit_, receiver_);
   }
 
   function test_depositWithoutTransfer_RevertZeroShares() external {
@@ -358,7 +355,7 @@ contract DepositorUnitTest is TestBase {
     // 0 assets should give 0 shares.
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
     vm.prank(depositor_);
-    _deposit(false, 0, amountToDeposit_, receiver_, address(0));
+    _deposit(false, 0, amountToDeposit_, receiver_);
   }
 
   function test_depositReserve_DepositReceiptTokensAndStorageUpdatesWithFeeDrip() external {
@@ -388,7 +385,7 @@ contract DepositorUnitTest is TestBase {
     );
 
     vm.prank(depositor_);
-    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
+    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_);
 
     assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
 

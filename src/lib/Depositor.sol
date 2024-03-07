@@ -25,13 +25,12 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
   );
 
   /// @notice Deposits reserve assets into the SafetyModule and mints deposit receipt tokens.
-  /// @dev Expects `from_` to have approved this SafetyModule for `reserveAssetAmount_` of
+  /// @dev Expects `msg.sender` to have approved this SafetyModule for `reserveAssetAmount_` of
   /// `reservePools[reservePoolId_].asset` so it can `transferFrom` the assets to this SafetyModule.
   /// @param reservePoolId_ The ID of the reserve pool to deposit assets into.
   /// @param reserveAssetAmount_ The amount of reserve assets to deposit.
   /// @param receiver_ The address to receive the deposit receipt tokens.
-  /// @param from_ The address that is depositing the reserve assets.
-  function depositReserveAssets(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_, address from_)
+  function depositReserveAssets(uint8 reservePoolId_, uint256 reserveAssetAmount_, address receiver_)
     external
     returns (uint256 depositReceiptTokenAmount_)
   {
@@ -43,7 +42,7 @@ abstract contract Depositor is SafetyModuleCommon, IDepositorErrors {
     // Pull in deposited assets. After the transfer we ensure we no longer need any assets. This check is
     // required to support fee on transfer tokens, for example if USDT enables a fee.
     // Also, we need to transfer before minting or ERC777s could reenter.
-    underlyingToken_.safeTransferFrom(from_, address(this), reserveAssetAmount_);
+    underlyingToken_.safeTransferFrom(msg.sender, address(this), reserveAssetAmount_);
 
     depositReceiptTokenAmount_ =
       _executeReserveDeposit(reservePoolId_, underlyingToken_, reserveAssetAmount_, receiver_, assetPool_, reservePool_);
