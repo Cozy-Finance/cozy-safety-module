@@ -21,9 +21,12 @@ interface ISafetyModule {
   /// @dev Used for doing aggregate accounting of reserve assets.
   function assetPools(IERC20 asset_) external view returns (AssetPool memory assetPool_);
 
-  /// @notice Claims the SafetyModule's fees.
+  /// @notice Claims any accrued fees to the CozySafetyModuleManager owner.
+  /// @dev Validation is handled in the CozySafetyModuleManager, which is the only account authorized to call this
+  /// method.
   /// @param owner_ The address to transfer the fees to.
-  function claimFees(address owner_) external;
+  /// @param dripModel_ The drip model to use for calculating fee drip.
+  function claimFees(address owner_, IDripModel dripModel_) external;
 
   /// @notice Completes the redemption request for the specified redemption ID.
   /// @param redemptionId_ The ID of the redemption to complete.

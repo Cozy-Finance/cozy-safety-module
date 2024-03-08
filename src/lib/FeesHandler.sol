@@ -40,31 +40,58 @@ abstract contract FeesHandler is SafetyModuleCommon {
     _dripFeesFromReservePool(reservePools[reservePoolId_], dripModel_);
   }
 
-  /// @notice Claims any accrued fees.
+  /// @notice Claims any accrued fees to the CozySafetyModuleManager owner.
   /// @dev Validation is handled in the CozySafetyModuleManager, which is the only account authorized to call this
   /// method.
   /// @param owner_ The address to transfer the fees to.
-  function claimFees(address owner_) external {
+  /// @param dripModel_ The drip model to use for calculating fee drip.
+  function claimFees(address owner_, IDripModel dripModel_) external {
     // Cozy fee claims will often be batched, so we require it to be initiated from the CozySafetyModuleManager to save
     // gas by removing calls and SLOADs to check the owner addresses each time.
     if (msg.sender != address(cozySafetyModuleManager)) revert Ownable.Unauthorized();
-    IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
 
     uint256 numReservePools_ = reservePools.length;
     bool safetyModuleIsActive_ = safetyModuleState == SafetyModuleState.ACTIVE;
     for (uint8 i = 0; i < numReservePools_; i++) {
       ReservePool storage reservePool_ = reservePools[i];
-      if (safetyModuleIsActive_) _dripFeesFromReservePool(reservePool_, dripModel_);
+      _claimFees(reservePool_, dripModel_, safetyModuleIsActive_, owner_);
+    }
+  }
 
-      uint256 feeAmount_ = reservePool_.feeAmount;
-      if (feeAmount_ > 0) {
-        IERC20 asset_ = reservePool_.asset;
-        reservePool_.feeAmount = 0;
-        assetPools[asset_].amount -= feeAmount_;
-        asset_.safeTransfer(owner_, feeAmount_);
+  /// @notice Claims any accrued fees for the specified reserve pools to the CozySafetyModuleManager owner.
+  /// @param reservePoolIds_ The IDs of the reserve pools to claim fees from.
+  function claimFees(uint8[] calldata reservePoolIds_) external {
+    address receiver_ = cozySafetyModuleManager.owner();
+    IDripModel dripModel_ = cozySafetyModuleManager.getFeeDripModel(ISafetyModule(address(this)));
 
-        emit ClaimedFees(asset_, feeAmount_, owner_);
-      }
+    bool safetyModuleIsActive_ = safetyModuleState == SafetyModuleState.ACTIVE;
+    for (uint8 i = 0; i < reservePoolIds_.length; i++) {
+      ReservePool storage reservePool_ = reservePools[reservePoolIds_[i]];
+      _claimFees(reservePool_, dripModel_, safetyModuleIsActive_, receiver_);
+    }
+  }
+
+  /// @notice Claims any accrued fees from the specified reserve pool to the specified receiver.
+  /// @param reservePool_ The reserve pool to claim fees from.
+  /// @param dripModel_ The drip model to use for calculating fee drip.
+  /// @param safetyModuleIsActive Whether the safety module is active.
+  /// @param receiver_ The address to transfer the fees to.
+  function _claimFees(
+    ReservePool storage reservePool_,
+    IDripModel dripModel_,
+    bool safetyModuleIsActive,
+    address receiver_
+  ) internal {
+    if (safetyModuleIsActive) _dripFeesFromReservePool(reservePool_, dripModel_);
+
+    uint256 feeAmount_ = reservePool_.feeAmount;
+    if (feeAmount_ > 0) {
+      IERC20 asset_ = reservePool_.asset;
+      reservePool_.feeAmount = 0;
+      assetPools[asset_].amount -= feeAmount_;
+      asset_.safeTransfer(receiver_, feeAmount_);
+
+      emit ClaimedFees(asset_, feeAmount_, receiver_);
     }
   }
 
