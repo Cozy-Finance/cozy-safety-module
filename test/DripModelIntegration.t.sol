@@ -82,8 +82,9 @@ contract FeesDripModelIntegration is DripModelIntegrationTestSetup {
     skip(skipTime_);
     address receiver_ = _randomAddress();
 
+    IDripModel dripModel_ = manager.getFeeDripModel(safetyModule);
     vm.prank(address(manager));
-    safetyModule.claimFees(receiver_);
+    safetyModule.claimFees(receiver_, dripModel_);
     assertEq(reserveAsset.balanceOf(receiver_), expectedClaimedFees_);
 
     // Reset reserve pool.

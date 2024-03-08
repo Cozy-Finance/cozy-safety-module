@@ -315,13 +315,91 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
 
     // Claim fees the second time.
     vm.startPrank(address(mockManager));
-    component.claimFees(owner_);
+    component.claimFees(owner_, IDripModel(address(mockFeesDripModel)));
     vm.stopPrank();
 
     // Get reserve pools after claim.
     ReservePool[] memory reservePools_ = component.getReservePools();
 
     // `owner_` is transferred fee amounts from both fee drips
+    assertEq(asset1_.balanceOf(owner_), 1.25e6 + 1.1875e6);
+    assertEq(asset2_.balanceOf(owner_), 1e6 + 0.95e6);
+
+    // Fee pools are emptied.
+    assertEq(reservePools_[0].feeAmount, 0);
+    assertEq(reservePools_[1].feeAmount, 0);
+
+    // Deposit amounts are correct.
+    assertEq(reservePools_[0].depositAmount, 47_562_500); // depositAmount - totalDepositFeesDripped = 50e6 - 1.25e6 -
+      // 1.1875e6
+    assertEq(reservePools_[1].depositAmount, 18_050_000); // depositAmount - totalDepositFeesDripped = 20e6 - 1e6 -
+      // 0.95e6
+
+    // Asset pools are updated.
+    assertEq(component.getAssetPool(asset1_).amount, 50e6 - 1.25e6 - 1.1875e6);
+    assertEq(component.getAssetPool(asset2_).amount, 20e6 - 1e6 - 0.95e6);
+  }
+
+  function test_claimFeesConcrete_SpecificReservePool() public {
+    _setUpConcrete();
+
+    // Drip fees once and skip some time, so we will drip again on the next call of `claimFees`.
+    component.dripFees();
+    skip(99);
+
+    // First fee drip for reservePools[0]:
+    // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 25e6 * 0.05 = 1.25e6
+
+    // First fee drip for reservePools[1]:
+    // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 20e6 * 0.05 = 1e6
+
+    // Second fee drip for reservePools[0]:
+    // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 23.75e6 * 0.05 = 1.1875e6
+
+    // Second fee drip for reservePools[1]:
+    // drippedFromDepositAmount = (depositAmount - pendingWithdrawalsAmount) * dripRate = 19e6 * 0.05 = 0.95e6
+
+    IERC20 asset1_ = IERC20(address(component.getReservePool(0).asset));
+    IERC20 asset2_ = IERC20(address(component.getReservePool(1).asset));
+
+    address owner_ = mockManager.owner();
+    uint8[] memory reservePoolIds_ = new uint8[](1);
+    reservePoolIds_[0] = 0;
+
+    // First, we claim from only reserve pool 0.
+    _expectEmit();
+    emit ClaimedFees(asset1_, 1.25e6 + 1.1875e6, owner_);
+    component.claimFees(reservePoolIds_);
+
+    // Get reserve pools after claim.
+    ReservePool[] memory reservePools_ = component.getReservePools();
+
+    // `owner_` is transferred fee amounts from reserve pool 0
+    assertEq(asset1_.balanceOf(owner_), 1.25e6 + 1.1875e6);
+    assertEq(asset2_.balanceOf(owner_), 0);
+
+    // Fee pool 0 is emptied.
+    assertEq(reservePools_[0].feeAmount, 0);
+    assertEq(reservePools_[1].feeAmount, 1e6);
+
+    // Deposit amounts are correct.
+    assertEq(reservePools_[0].depositAmount, 47_562_500); // depositAmount - totalDepositFeesDripped = 50e6 - 1.25e6 -
+      // 1.1875e6
+    assertEq(reservePools_[1].depositAmount, 19e6); // depositAmount - totalDepositFeesDripped = 20e6 - 1e6
+
+    // Asset pools are correct.
+    assertEq(component.getAssetPool(asset1_).amount, 50e6 - 1.25e6 - 1.1875e6);
+    assertEq(component.getAssetPool(asset2_).amount, 20e6);
+
+    // Now, the second reserve pool has its fees claimed as well.
+    reservePoolIds_[0] = 1;
+    _expectEmit();
+    emit ClaimedFees(asset2_, 1e6 + 0.95e6, owner_);
+    component.claimFees(reservePoolIds_);
+
+    reservePools_ = component.getReservePools();
+
+    // `owner_` now has the fee amounts from both fee drips
     assertEq(asset1_.balanceOf(owner_), 1.25e6 + 1.1875e6);
     assertEq(asset2_.balanceOf(owner_), 1e6 + 0.95e6);
 
@@ -348,7 +426,7 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
 
     address owner_ = _randomAddress();
     vm.startPrank(address(mockManager));
-    component.claimFees(owner_);
+    component.claimFees(owner_, IDripModel(address(mockFeesDripModel)));
     vm.stopPrank();
 
     ReservePool[] memory newReservePools_ = component.getReservePools();
@@ -385,7 +463,7 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
 
     address owner_ = _randomAddress();
     vm.startPrank(address(mockManager));
-    component.claimFees(owner_);
+    component.claimFees(owner_, IDripModel(address(mockFeesDripModel)));
     vm.stopPrank();
 
     // Make sure owner received rewards from new reserve asset pool.
@@ -408,14 +486,14 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
     // Someone claims fees.
     address owner_ = _randomAddress();
     vm.startPrank(address(mockManager));
-    component.claimFees(owner_);
+    component.claimFees(owner_, IDripModel(address(mockFeesDripModel)));
     ReservePool[] memory oldReservePools_ = component.getReservePools();
     vm.stopPrank();
 
     // Someone claims fees again, with no time elapsed.
     address newOwner_ = _randomAddress();
     vm.startPrank(address(mockManager));
-    component.claimFees(owner_);
+    component.claimFees(owner_, IDripModel(address(mockFeesDripModel)));
     ReservePool[] memory newReservePools_ = component.getReservePools();
     vm.stopPrank();
 
@@ -450,7 +528,7 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
 
     address owner_ = _randomAddress();
     vm.startPrank(address(mockManager));
-    component.claimFees(owner_);
+    component.claimFees(owner_, IDripModel(address(mockFeesDripModel)));
     vm.stopPrank();
 
     // Make sure owner received rewards from new reserve asset pool.
@@ -474,7 +552,7 @@ contract FeesHandlerClaimUnitTest is FeesHandlerUnitTest {
 
     vm.prank(caller_);
     vm.expectRevert(Ownable.Unauthorized.selector);
-    component.claimFees(owner_);
+    component.claimFees(owner_, IDripModel(address(mockFeesDripModel)));
   }
 }
 
