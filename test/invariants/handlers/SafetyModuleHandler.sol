@@ -278,7 +278,7 @@ contract SafetyModuleHandler is TestBase {
 
   function claimFees(address owner_, uint256 seed_) public virtual countCall("claimFees") advanceTime(seed_) {
     vm.startPrank(address(manager));
-    safetyModule.claimFees(owner_);
+    safetyModule.claimFees(owner_, manager.getFeeDripModel(safetyModule));
     vm.stopPrank();
   }
 

@@ -89,8 +89,9 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
 
   /// @notice For all specified `safetyModules_`, transfers accrued fees to the owner address.
   function claimFees(ISafetyModule[] calldata safetyModules_) external {
+    address owner_ = owner;
     for (uint256 i = 0; i < safetyModules_.length; i++) {
-      safetyModules_[i].claimFees(owner);
+      safetyModules_[i].claimFees(owner_, getFeeDripModel(safetyModules_[i]));
       emit ClaimedSafetyModuleFees(safetyModules_[i]);
     }
   }
@@ -150,7 +151,7 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
   }
 
   /// @notice For the specified SafetyModule, returns the drip model used for fee accrual.
-  function getFeeDripModel(ISafetyModule safetyModule_) external view returns (IDripModel) {
+  function getFeeDripModel(ISafetyModule safetyModule_) public view returns (IDripModel) {
     DripModelLookup memory overrideFeeDripModel_ = overrideFeeDripModels[safetyModule_];
     if (overrideFeeDripModel_.exists) return overrideFeeDripModel_.dripModel;
     else return feeDripModel;

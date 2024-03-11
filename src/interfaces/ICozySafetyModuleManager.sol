@@ -2,11 +2,12 @@
 pragma solidity ^0.8.0;
 
 import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
+import {IOwnable} from "cozy-safety-module-shared/interfaces/IOwnable.sol";
 import {ICozySafetyModuleManagerEvents} from "./ICozySafetyModuleManagerEvents.sol";
 import {ISafetyModule} from "./ISafetyModule.sol";
 import {UpdateConfigsCalldataParams} from "../lib/structs/Configs.sol";
 
-interface ICozySafetyModuleManager is ICozySafetyModuleManagerEvents {
+interface ICozySafetyModuleManager is IOwnable, ICozySafetyModuleManagerEvents {
   /// @notice Deploys a new SafetyModule with the provided parameters.
   /// @param owner_ The owner of the SafetyModule.
   /// @param pauser_ The pauser of the SafetyModule.
