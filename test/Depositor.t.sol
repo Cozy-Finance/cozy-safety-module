@@ -435,7 +435,7 @@ contract DepositorUnitTest is TestBase {
     );
 
     vm.prank(depositor_);
-    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_, depositor_);
+    uint256 depositReceiptTokenAmount_ = _deposit(false, 0, amountToDeposit_, receiver_);
 
     assertEq(depositReceiptTokenAmount_, expectedDepositReceiptTokenAmount_);
 

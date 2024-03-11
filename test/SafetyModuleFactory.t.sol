@@ -15,6 +15,7 @@ import {ReservePoolConfig, UpdateConfigsCalldataParams} from "../src/lib/structs
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {TriggerConfig} from "../src/lib/structs/Trigger.sol";
+import {IConfiguratorErrors} from "../src/interfaces/IConfiguratorErrors.sol";
 import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
 import {ITrigger} from "../src/interfaces/ITrigger.sol";
@@ -153,6 +154,38 @@ contract SafetyModuleFactoryTest is TestBase {
 
     vm.expectRevert(SafetyModuleFactory.Unauthorized.selector);
     vm.prank(caller_);
+    safetyModuleFactory.deploySafetyModule(owner_, pauser_, configs_, baseSalt_);
+  }
+
+  function test_deploySafetyModuleRevertPauserCozySafetyModuleManager() external {
+    address owner_ = _randomAddress();
+    address pauser_ = address(mockManager);
+    IERC20 asset_ = IERC20(address(new MockERC20("Mock Asset", "cozyMock", 6)));
+
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
+    reservePoolConfigs_[0] = ReservePoolConfig({maxSlashPercentage: 0, asset: asset_});
+
+    Delays memory delaysConfig_ =
+      Delays({withdrawDelay: 2 days, configUpdateDelay: 15 days, configUpdateGracePeriod: 1 days});
+
+    TriggerConfig[] memory triggerConfig_ = new TriggerConfig[](1);
+    triggerConfig_[0] = TriggerConfig({
+      trigger: ITrigger(address(new MockTrigger(TriggerState.ACTIVE))),
+      payoutHandler: _randomAddress(),
+      exists: true
+    });
+
+    UpdateConfigsCalldataParams memory configs_ = UpdateConfigsCalldataParams({
+      reservePoolConfigs: reservePoolConfigs_,
+      triggerConfigUpdates: triggerConfig_,
+      delaysConfig: delaysConfig_
+    });
+
+    bytes32 baseSalt_ = _randomBytes32();
+
+    // Pauser is set to the CozySafetyModuleManager, which is not allowed.
+    vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
+    vm.prank(address(mockManager));
     safetyModuleFactory.deploySafetyModule(owner_, pauser_, configs_, baseSalt_);
   }
 }
