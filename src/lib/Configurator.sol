@@ -24,6 +24,8 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
   }
 
   /// @notice Execute queued updates to the safety module configs.
+  /// @dev If the SafetyModule becomes triggered before the queued update is applied, the queued update is cancelled
+  /// and can be requeued by the owner when the SafetyModule returns to the active or paused states.
   /// @param configUpdates_ The new configs. Includes:
   /// - reservePoolConfigs: The array of new reserve pool configs, sorted by associated ID. The array may also
   /// include config for new reserve pools.
