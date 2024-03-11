@@ -133,9 +133,20 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
       revert InvalidConfiguration();
     }
 
+    bytes32 deploySalt_ = _computeDeploySalt(msg.sender, salt_);
+
     ISafetyModuleFactory safetyModuleFactory_ = safetyModuleFactory;
-    isSafetyModule[ISafetyModule(safetyModuleFactory_.computeAddress(salt_))] = true;
-    safetyModule_ = safetyModuleFactory_.deploySafetyModule(owner_, pauser_, configs_, salt_);
+    isSafetyModule[ISafetyModule(safetyModuleFactory_.computeAddress(deploySalt_))] = true;
+    safetyModule_ = safetyModuleFactory_.deploySafetyModule(owner_, pauser_, configs_, deploySalt_);
+  }
+
+  /// @notice Given a `caller_` and `salt_`, compute and return the address of the SafetyModule deployed with
+  /// `createSafetyModule`.
+  /// @param caller_ The caller of the `createSafetyModule` function.
+  /// @param salt_ Used to compute the resulting address of the SafetyModule along with `caller_`.
+  function computeSafetyModuleAddress(address caller_, bytes32 salt_) external view returns (address) {
+    bytes32 deploySalt_ = _computeDeploySalt(caller_, salt_);
+    return safetyModuleFactory.computeAddress(deploySalt_);
   }
 
   /// @notice For the specified SafetyModule, returns the drip model used for fee accrual.
@@ -153,5 +164,14 @@ contract CozySafetyModuleManager is Governable, ICozySafetyModuleManager {
   function _updateFeeDripModel(IDripModel feeDripModel_) internal {
     feeDripModel = feeDripModel_;
     emit FeeDripModelUpdated(feeDripModel_);
+  }
+
+  /// @notice Given a `caller_` and `salt_`, return the salt used to compute the SafetyModule address deployed from
+  /// the `safetyModuleFactory`.
+  /// @param caller_ The caller of the `createSafetyModule` function.
+  /// @param salt_ Used to compute the resulting address of the SafetyModule along with `caller_`.
+  function _computeDeploySalt(address caller_, bytes32 salt_) internal pure returns (bytes32) {
+    // To avoid front-running of SafetyModule deploys, msg.sender is used for the deploy salt.
+    return keccak256(abi.encodePacked(salt_, caller_));
   }
 }

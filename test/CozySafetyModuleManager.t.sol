@@ -123,6 +123,36 @@ contract CozySafetyModuleManagerTestCreateSafetyModule is MockDeployProtocol, Co
     vm.expectRevert(CozySafetyModuleManager.InvalidConfiguration.selector);
     manager.createSafetyModule(_randomAddress(), _randomAddress(), updateConfigsCalldataParams_, _randomBytes32());
   }
+
+  function test_createRewardsManager_cannotFrontRun() public {
+    UpdateConfigsCalldataParams memory updateConfigsCalldataParams_ = _defaultSetUp();
+    address owner_ = _randomAddress();
+    address pauser_ = _randomAddress();
+    bytes32 salt_ = _randomBytes32();
+    address caller_ = _randomAddress();
+    address frontRunCaller_ = _randomAddress();
+
+    // To avoid front-running of SafetyModule deploys, msg.sender is used for the deploy salt in
+    // CozySafetyModuleManager.createSafetyModule.
+    bytes32 deploySalt_ = keccak256(abi.encodePacked(salt_, caller_));
+
+    address expectedDeployAddress_ = safetyModuleFactory.computeAddress(deploySalt_);
+    address managerExpectedDeployAddress_ = manager.computeSafetyModuleAddress(caller_, salt_);
+    assertEq(expectedDeployAddress_, managerExpectedDeployAddress_);
+
+    vm.prank(frontRunCaller_);
+    ISafetyModule safetyModule_ = manager.createSafetyModule(owner_, pauser_, updateConfigsCalldataParams_, salt_);
+    assertEq(manager.isSafetyModule(safetyModule_), true);
+    // The deployed SafetyModule has a different than expected address - cannot front-run even if using the same
+    // configs and salt.
+    assertFalse(address(safetyModule_) == expectedDeployAddress_);
+
+    vm.prank(caller_);
+    safetyModule_ = manager.createSafetyModule(owner_, pauser_, updateConfigsCalldataParams_, salt_);
+    assertEq(manager.isSafetyModule(safetyModule_), true);
+    // The deployed SafetyModule has the expected address when deployed by the correct caller.
+    assertTrue(address(safetyModule_) == expectedDeployAddress_);
+  }
 }
 
 contract CozySafetyModuleManagerTestDeploy is MockDeployProtocol {
