@@ -20,7 +20,10 @@ library ConfiguratorLib {
   error InvalidTimestamp();
 
   /// @notice Signal an update to the SafetyModule configs. Existing queued updates are overwritten.
+  /// @dev If the SafetyModule becomes triggered before the queued update is applied, the queued update is cancelled
+  /// and can be requeued by the owner when the SafetyModule returns to the active or paused states.
   /// @param lastConfigUpdate_ Metadata about the most recently queued configuration update.
+  /// @param safetyModuleState_ The state of the SafetyModule.
   /// @param reservePools_ The array of existing reserve pools.
   /// @param triggerData_ The mapping of trigger to trigger data.
   /// @param delays_ The existing delays config.
@@ -33,12 +36,14 @@ library ConfiguratorLib {
   /// @param manager_ The Cozy Safety Module protocol Manager.
   function updateConfigs(
     ConfigUpdateMetadata storage lastConfigUpdate_,
+    SafetyModuleState safetyModuleState_,
     ReservePool[] storage reservePools_,
     mapping(ITrigger => Trigger) storage triggerData_,
     Delays storage delays_,
     UpdateConfigsCalldataParams calldata configUpdates_,
     ICozySafetyModuleManager manager_
   ) internal {
+    if (safetyModuleState_ == SafetyModuleState.TRIGGERED) revert ICommonErrors.InvalidState();
     if (!isValidUpdate(reservePools_, triggerData_, configUpdates_, manager_)) {
       revert IConfiguratorErrors.InvalidConfiguration();
     }

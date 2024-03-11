@@ -34,6 +34,12 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
     numPendingSlashes -= 1;
     payoutHandlerNumPendingSlashes[msg.sender] -= 1;
     if (numPendingSlashes == 0) {
+      // If transitioning to triggered from active, any queued config update is reset to prevent config updates
+      // from accruing config delay time while triggered, which would result in the possibility of finalizing config
+      // updates when the SafetyModule returns to active, before users have sufficient time to react to the queued
+      // update.
+      lastConfigUpdate.configUpdateDeadline = 0;
+
       safetyModuleState = SafetyModuleState.ACTIVE;
       emit IStateChangerEvents.SafetyModuleStateUpdated(SafetyModuleState.ACTIVE);
     }

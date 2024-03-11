@@ -21,6 +21,11 @@ abstract contract StateChanger is SafetyModuleCommon, Governable, IStateChangerE
       )
     ) revert InvalidStateTransition();
 
+    // If transitioning to paused from triggered, any queued config update is reset to prevent config updates from
+    // accruing config delay time while triggered, which would result in the possibility of finalizing config updates
+    // when the SafetyModule becomes paused, before users have sufficient time to react to the queued update.
+    if (currState_ == SafetyModuleState.TRIGGERED) lastConfigUpdate.configUpdateDeadline = 0;
+
     // Drip fees before pausing, since fees are not dripped while the SafetyModule is paused.
     dripFees();
     safetyModuleState = SafetyModuleState.PAUSED;

@@ -68,6 +68,9 @@ contract StateChangerPauseTest is StateChangerUnitTest {
   function _testPauseSuccess(ComponentParams memory testParams_, TestCaller testCaller_) internal {
     (TestableStateChanger component_, address caller_) = _initializeComponentAndCaller(testParams_, testCaller_);
 
+    uint64 queuedConfigUpdateDeadline_ = _randomUint64();
+    component_.mockSetQueuedConfigUpdateDeadline(queuedConfigUpdateDeadline_);
+
     _expectEmit();
     emit DripFeesCalled();
     _expectEmit();
@@ -77,6 +80,13 @@ contract StateChangerPauseTest is StateChangerUnitTest {
     component_.pause();
 
     assertEq(component_.safetyModuleState(), SafetyModuleState.PAUSED);
+
+    // The queued config update hash should be reset to 0 if the Safety Module was triggered before pausing.
+    if (testParams_.initialState == SafetyModuleState.TRIGGERED) {
+      assertEq(component_.getQueuedConfigUpdateDeadline(), 0);
+    } else {
+      assertEq(component_.getQueuedConfigUpdateDeadline(), queuedConfigUpdateDeadline_);
+    }
   }
 
   function _testPauseInvalidStateTransition(ComponentParams memory testParams_, TestCaller testCaller_) internal {
@@ -392,6 +402,10 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     triggerData[trigger_] = triggerData_;
   }
 
+  function mockSetQueuedConfigUpdateDeadline(uint64 deadline_) external {
+    lastConfigUpdate.configUpdateDeadline = deadline_;
+  }
+
   // -------- Mock getters --------
   function manager() public view returns (ICozySafetyModuleManager) {
     return cozySafetyModuleManager;
@@ -399,6 +413,10 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
 
   function getTriggerData(ITrigger trigger_) external view returns (Trigger memory) {
     return triggerData[trigger_];
+  }
+
+  function getQueuedConfigUpdateDeadline() external view returns (uint64) {
+    return lastConfigUpdate.configUpdateDeadline;
   }
 
   // -------- Overridden abstract function placeholders --------

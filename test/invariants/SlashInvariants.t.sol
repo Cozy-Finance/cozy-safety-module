@@ -9,6 +9,7 @@ import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {AssetPool, ReservePool} from "../../src/lib/structs/Pools.sol";
 import {SafetyModuleState} from "../../src/lib/SafetyModuleStates.sol";
+import {ConfigUpdateMetadata} from "../../src/lib/structs/Configs.sol";
 import {Slash} from "../../src/lib/structs/Slash.sol";
 import {Trigger} from "../../src/lib/structs/Trigger.sol";
 import {TriggerState} from "../../src/lib/SafetyModuleStates.sol";
@@ -132,6 +133,14 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
           ", expectedAssetSlashAmounts[assets[i]]: ",
           Strings.toString(expectedAssetSlashAmounts[assets[i]])
         )
+      );
+    }
+
+    if (safetyModule.safetyModuleState() == SafetyModuleState.ACTIVE) {
+      ConfigUpdateMetadata memory lastConfigUpdate_ = safetyModule.lastConfigUpdate();
+      require(
+        lastConfigUpdate_.configUpdateDeadline == 0,
+        "Invariant failed: The queued config update deadline must be reset to zero when the Safety Module returns to the ACTIVE state after slashing."
       );
     }
   }

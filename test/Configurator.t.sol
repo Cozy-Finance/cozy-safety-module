@@ -172,6 +172,24 @@ contract ConfiguratorUnitTest is TestBase, IConfiguratorEvents {
     assertEq(result_.configUpdateDeadline, now_ + DEFAULT_CONFIG_UPDATE_DELAY + DEFAULT_CONFIG_UPDATE_GRACE_PERIOD);
   }
 
+  function test_updateConfigs_revertSafetyModuleTriggered() external {
+    Delays memory delaysConfig_ = _generateValidDelays();
+    ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
+    reservePoolConfigs_[0] = _generateValidReservePoolConfig(MathConstants.ZOC);
+    TriggerConfig[] memory triggerConfigUpdates_ = new TriggerConfig[](1);
+    triggerConfigUpdates_[0] = _generateValidTriggerConfig();
+
+    component.mockSetSafetyModuleState(SafetyModuleState.TRIGGERED);
+    vm.expectRevert(ICommonErrors.InvalidState.selector);
+    component.updateConfigs(
+      UpdateConfigsCalldataParams({
+        reservePoolConfigs: reservePoolConfigs_,
+        triggerConfigUpdates: triggerConfigUpdates_,
+        delaysConfig: delaysConfig_
+      })
+    );
+  }
+
   function test_updateConfigs_revertNonOwner() external {
     Delays memory delaysConfig_ = _generateValidDelays();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);

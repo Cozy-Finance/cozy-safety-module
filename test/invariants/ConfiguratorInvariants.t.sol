@@ -28,6 +28,9 @@ import {
 
 abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBaseWithStateTransitions {
   function invariant_updateConfigsUpdatesLastConfigUpdate() public syncCurrentTimestamp(safetyModuleHandler) {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
     ConfigUpdateMetadata memory expectedConfigUpdateMetadata_ = ConfigUpdateMetadata({
       queuedConfigUpdateHash: keccak256(
@@ -58,6 +61,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
   }
 
   function invariant_updateConfigRevertsForNonOwner() public syncCurrentTimestamp(safetyModuleHandler) {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory currentConfig_ = _copyCurrentConfig();
 
     address nonOwner_ = _randomAddress();
@@ -69,6 +75,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
   }
 
   function invariant_updateConfigRevertsTooManyReservePools() public syncCurrentTimestamp(safetyModuleHandler) {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory currentConfig_ = _copyCurrentConfig();
 
     ICozySafetyModuleManager manager_ = safetyModule.cozySafetyModuleManager();
@@ -95,6 +104,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
   }
 
   function invariant_updateConfigRevertsInvalidConfigUpdateDelay() public syncCurrentTimestamp(safetyModuleHandler) {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory currentConfig_ = _copyCurrentConfig();
 
     Delays memory delaysConfig_ = _generateValidDelays();
@@ -112,6 +124,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
   }
 
   function invariant_updateConfigRevertsInvalidMaxSlashPercentage() public syncCurrentTimestamp(safetyModuleHandler) {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _copyCurrentConfig();
     ReservePoolConfig[] memory updatedReservePoolConfigs_ = updatedConfig_.reservePoolConfigs;
     updatedReservePoolConfigs_[_randomUint256() % (updatedReservePoolConfigs_.length)].maxSlashPercentage =
@@ -124,6 +139,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
   }
 
   function invariant_updateConfigRevertsRemovesExistingReservePool() public syncCurrentTimestamp(safetyModuleHandler) {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _copyCurrentConfig();
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](numReservePools - 1);
     for (uint8 i = 0; i < numReservePools - 1; i++) {
@@ -140,6 +158,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _copyCurrentConfig();
     ReservePoolConfig[] memory updatedReservePoolConfigs_ = updatedConfig_.reservePoolConfigs;
     updatedReservePoolConfigs_[_randomUint256() % updatedReservePoolConfigs_.length].asset = IERC20(address(0xBEEF));
@@ -151,6 +172,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
   }
 
   function invariant_updateConfigRevertsUpdatesTriggeredTrigger() public syncCurrentTimestamp(safetyModuleHandler) {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     ITrigger[] memory triggeredTriggers_ = safetyModuleHandler.getTriggeredTriggers();
     if (triggeredTriggers_.length == 0) return;
     ITrigger triggeredTrigger_ = triggeredTriggers_[_randomUint256() % triggeredTriggers_.length];
@@ -173,6 +197,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
   }
 
   function invariant_finalizeUpdateConfigsSucceeds() public syncCurrentTimestamp(safetyModuleHandler) {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
 
     vm.startPrank(safetyModule.owner());
@@ -219,6 +246,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
 
     vm.startPrank(safetyModule.owner());
@@ -240,6 +270,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
 
     vm.startPrank(safetyModule.owner());
@@ -261,6 +294,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
 
     vm.startPrank(safetyModule.owner());
@@ -286,6 +322,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
 
     vm.startPrank(safetyModule.owner());
@@ -310,6 +349,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
 
     vm.startPrank(safetyModule.owner());
@@ -340,6 +382,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
     if (updatedConfig_.triggerConfigUpdates.length == 0) return;
 
@@ -367,6 +412,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     public
     syncCurrentTimestamp(safetyModuleHandler)
   {
+    // Cannot update configs if the safety module is triggered.
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) return;
+
     UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
 
     TriggerConfig[] memory triggerConfigs_ = updatedConfig_.triggerConfigUpdates;
@@ -393,6 +441,31 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
 
     vm.prank(_randomAddress());
     safetyModule.finalizeUpdateConfigs(updatedConfig_);
+  }
+
+  function invariant_cannotQueueConfigUpdatesIfTriggered() public syncCurrentTimestamp(safetyModuleHandler) {
+    if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) {
+      UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
+      vm.prank(safetyModule.owner());
+      vm.expectRevert(ICommonErrors.InvalidState.selector);
+      safetyModule.updateConfigs(updatedConfig_);
+    }
+  }
+
+  function invariant_queuedConfigUpdatesAreResetWhenSafetyModulePaused()
+    public
+    syncCurrentTimestamp(safetyModuleHandler)
+  {
+    if (safetyModule.safetyModuleState() != SafetyModuleState.TRIGGERED) return;
+
+    vm.prank(safetyModule.owner());
+    safetyModule.pause();
+
+    ConfigUpdateMetadata memory lastConfigUpdate_ = safetyModule.lastConfigUpdate();
+    require(
+      lastConfigUpdate_.configUpdateDeadline == 0,
+      "Invariant Violated: Queued config update deadline must be reset to zero when the SafetyModule transitions to paused from triggered."
+    );
   }
 
   function _createValidConfigUpdate() internal view returns (UpdateConfigsCalldataParams memory) {
