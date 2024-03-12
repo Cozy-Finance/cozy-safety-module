@@ -68,8 +68,8 @@ contract StateChangerPauseTest is StateChangerUnitTest {
   function _testPauseSuccess(ComponentParams memory testParams_, TestCaller testCaller_) internal {
     (TestableStateChanger component_, address caller_) = _initializeComponentAndCaller(testParams_, testCaller_);
 
-    uint64 queuedConfigUpdateDeadline_ = _randomUint64();
-    component_.mockSetQueuedConfigUpdateDeadline(queuedConfigUpdateDeadline_);
+    bytes32 queuedConfigUpdateHash_ = _randomBytes32();
+    component_.mockSetQueuedConfigUpdateHash(queuedConfigUpdateHash_);
 
     _expectEmit();
     emit DripFeesCalled();
@@ -83,9 +83,9 @@ contract StateChangerPauseTest is StateChangerUnitTest {
 
     // The queued config update hash should be reset to 0 if the Safety Module was triggered before pausing.
     if (testParams_.initialState == SafetyModuleState.TRIGGERED) {
-      assertEq(component_.getQueuedConfigUpdateDeadline(), 0);
+      assertEq(component_.getQueuedConfigUpdateHash(), bytes32(0));
     } else {
-      assertEq(component_.getQueuedConfigUpdateDeadline(), queuedConfigUpdateDeadline_);
+      assertEq(component_.getQueuedConfigUpdateHash(), queuedConfigUpdateHash_);
     }
   }
 
@@ -402,8 +402,8 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     triggerData[trigger_] = triggerData_;
   }
 
-  function mockSetQueuedConfigUpdateDeadline(uint64 deadline_) external {
-    lastConfigUpdate.configUpdateDeadline = deadline_;
+  function mockSetQueuedConfigUpdateHash(bytes32 hash_) external {
+    lastConfigUpdate.queuedConfigUpdateHash = hash_;
   }
 
   // -------- Mock getters --------
@@ -415,8 +415,8 @@ contract TestableStateChanger is StateChanger, StateChangerTestMockEvents {
     return triggerData[trigger_];
   }
 
-  function getQueuedConfigUpdateDeadline() external view returns (uint64) {
-    return lastConfigUpdate.configUpdateDeadline;
+  function getQueuedConfigUpdateHash() external view returns (bytes32) {
+    return lastConfigUpdate.queuedConfigUpdateHash;
   }
 
   // -------- Overridden abstract function placeholders --------

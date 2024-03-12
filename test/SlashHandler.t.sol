@@ -69,7 +69,7 @@ contract SlashHandlerTest is TestBase {
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: depositAmount_}));
     mockAsset.mint(address(component), depositAmount_);
 
-    component.mockSetQueuedConfigUpdateDeadline(_randomUint64());
+    component.mockSetQueuedConfigUpdateHash(_randomBytes32());
 
     Slash[] memory slashes_ = new Slash[](1);
     slashes_[0] = Slash({reservePoolId: 0, amount: slashAmount_});
@@ -101,7 +101,7 @@ contract SlashHandlerTest is TestBase {
     assertEq(component.payoutHandlerNumPendingSlashes(mockPayoutHandler), 0);
     assertEq(component.safetyModuleState(), SafetyModuleState.ACTIVE);
     // The queued config update hash should be reset when the SafetyModule becomes active from triggered.
-    assertEq(component.getQueuedConfigUpdateDeadline(), 0);
+    assertEq(component.getQueuedConfigUpdateHash(), bytes32(0));
   }
 
   function test_slash_entireReservePool() public {
@@ -172,8 +172,8 @@ contract SlashHandlerTest is TestBase {
     // Mint safety module rewards.
     mockAsset.mint(address(component), 3 * depositAmount_);
 
-    uint64 queuedConfigUpdateDeadline_ = _randomUint64();
-    component.mockSetQueuedConfigUpdateDeadline(queuedConfigUpdateDeadline_);
+    bytes32 queuedConfigUpdateHash_ = _randomBytes32();
+    component.mockSetQueuedConfigUpdateHash(queuedConfigUpdateHash_);
 
     Slash[] memory slashes_ = new Slash[](3);
     slashes_[0] = Slash({reservePoolId: 0, amount: slashAmountA_});
@@ -223,7 +223,7 @@ contract SlashHandlerTest is TestBase {
     // Still triggered because there are pending slashes.
     assertEq(component.safetyModuleState(), SafetyModuleState.TRIGGERED);
     // The queued config update hash is not reset because the SafetyModule is still triggered.
-    assertEq(component.getQueuedConfigUpdateDeadline(), queuedConfigUpdateDeadline_);
+    assertEq(component.getQueuedConfigUpdateHash(), queuedConfigUpdateHash_);
   }
 
   function test_slash_revert_noPendingSlashes() public {
@@ -375,8 +375,8 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
     return assetPools[asset_];
   }
 
-  function getQueuedConfigUpdateDeadline() external view returns (uint64) {
-    return lastConfigUpdate.configUpdateDeadline;
+  function getQueuedConfigUpdateHash() external view returns (bytes32) {
+    return lastConfigUpdate.queuedConfigUpdateHash;
   }
 
   // -------- Mock setters --------
@@ -401,8 +401,8 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
     assetPools[asset_] = assetPool_;
   }
 
-  function mockSetQueuedConfigUpdateDeadline(uint64 deadline_) external {
-    lastConfigUpdate.configUpdateDeadline = deadline_;
+  function mockSetQueuedConfigUpdateHash(bytes32 hash_) external {
+    lastConfigUpdate.queuedConfigUpdateHash = hash_;
   }
 
   // -------- Overridden common abstract functions --------

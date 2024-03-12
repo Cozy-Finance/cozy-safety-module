@@ -139,8 +139,8 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     if (safetyModule.safetyModuleState() == SafetyModuleState.ACTIVE) {
       ConfigUpdateMetadata memory lastConfigUpdate_ = safetyModule.lastConfigUpdate();
       require(
-        lastConfigUpdate_.configUpdateDeadline == 0,
-        "Invariant failed: The queued config update deadline must be reset to zero when the Safety Module returns to the ACTIVE state after slashing."
+        lastConfigUpdate_.queuedConfigUpdateHash == bytes32(0),
+        "Invariant failed: The queued config update hash must be reset to zero when the Safety Module returns to the ACTIVE state after slashing."
       );
     }
   }

@@ -463,8 +463,8 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
 
     ConfigUpdateMetadata memory lastConfigUpdate_ = safetyModule.lastConfigUpdate();
     require(
-      lastConfigUpdate_.configUpdateDeadline == 0,
-      "Invariant Violated: Queued config update deadline must be reset to zero when the SafetyModule transitions to paused from triggered."
+      lastConfigUpdate_.queuedConfigUpdateHash == bytes32(0),
+      "Invariant Violated: Queued config update hash must be reset to zero when the SafetyModule transitions to paused from triggered."
     );
   }
 

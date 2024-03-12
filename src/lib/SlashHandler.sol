@@ -38,7 +38,7 @@ abstract contract SlashHandler is SafetyModuleCommon, ISlashHandlerErrors, ISlas
       // from accruing config delay time while triggered, which would result in the possibility of finalizing config
       // updates when the SafetyModule returns to active, before users have sufficient time to react to the queued
       // update.
-      lastConfigUpdate.configUpdateDeadline = 0;
+      lastConfigUpdate.queuedConfigUpdateHash = bytes32(0);
 
       safetyModuleState = SafetyModuleState.ACTIVE;
       emit IStateChangerEvents.SafetyModuleStateUpdated(SafetyModuleState.ACTIVE);
