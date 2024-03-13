@@ -31,7 +31,7 @@ library RedemptionLib {
   //   115_792_089_237_316_195_423_570_985_008_687_907_853_269_984_665_640_564_039_457;
   // When a new accumulator value exceeds this threshold, a new entry should be used.
   // When this value is multiplied by INF_INV_SCALING_FACTOR, it should be <= MAX_SAFE_ACCUM_INV_SCALING_FACTOR_VALUE
-  // Equiv to MAX_SAFE_ACCUM_INV_SCALING_FACTOR_VALUE.mulWadUp / ((INF_INV_SCALING_FACTOR + WAD-1) / WAD)
+  // Equiv to MAX_SAFE_ACCUM_INV_SCALING_FACTOR_VALUE / ((INF_INV_SCALING_FACTOR + WAD-1) / WAD)
   uint256 internal constant NEW_ACCUM_INV_SCALING_FACTOR_THRESHOLD =
     115_792_089_237_316_195_307_778_895_771_371_712_545_491;
   // The maximum value an accumulator should ever actually hold, if everything is working correctly.
