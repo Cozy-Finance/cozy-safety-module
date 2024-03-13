@@ -7,6 +7,7 @@ import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceip
 import {SafetyModuleState} from "./SafetyModuleStates.sol";
 import {ICozySafetyModuleManager} from "../interfaces/ICozySafetyModuleManager.sol";
 import {ITrigger} from "../interfaces/ITrigger.sol";
+import {ConfigUpdateMetadata} from "./structs/Configs.sol";
 import {ReservePool, AssetPool} from "./structs/Pools.sol";
 import {Trigger} from "./structs/Trigger.sol";
 import {Delays} from "./structs/Delays.sol";
@@ -31,6 +32,9 @@ abstract contract SafetyModuleBaseStorage {
 
   /// @notice Config, withdrawal and unstake delays.
   Delays public delays;
+
+  /// @notice Metadata about the most recently queued configuration update.
+  ConfigUpdateMetadata public lastConfigUpdate;
 
   /// @notice The state of this SafetyModule.
   SafetyModuleState public safetyModuleState;

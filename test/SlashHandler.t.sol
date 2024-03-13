@@ -69,6 +69,8 @@ contract SlashHandlerTest is TestBase {
     component.mockAddAssetPool(IERC20(address(mockAsset)), AssetPool({amount: depositAmount_}));
     mockAsset.mint(address(component), depositAmount_);
 
+    component.mockSetQueuedConfigUpdateHash(_randomBytes32());
+
     Slash[] memory slashes_ = new Slash[](1);
     slashes_[0] = Slash({reservePoolId: 0, amount: slashAmount_});
 
@@ -98,6 +100,8 @@ contract SlashHandlerTest is TestBase {
     assertEq(component.numPendingSlashes(), 0);
     assertEq(component.payoutHandlerNumPendingSlashes(mockPayoutHandler), 0);
     assertEq(component.safetyModuleState(), SafetyModuleState.ACTIVE);
+    // The queued config update hash should be reset when the SafetyModule becomes active from triggered.
+    assertEq(component.getQueuedConfigUpdateHash(), bytes32(0));
   }
 
   function test_slash_entireReservePool() public {
@@ -168,6 +172,9 @@ contract SlashHandlerTest is TestBase {
     // Mint safety module rewards.
     mockAsset.mint(address(component), 3 * depositAmount_);
 
+    bytes32 queuedConfigUpdateHash_ = _randomBytes32();
+    component.mockSetQueuedConfigUpdateHash(queuedConfigUpdateHash_);
+
     Slash[] memory slashes_ = new Slash[](3);
     slashes_[0] = Slash({reservePoolId: 0, amount: slashAmountA_});
     slashes_[1] = Slash({reservePoolId: 1, amount: slashAmountB_});
@@ -213,8 +220,10 @@ contract SlashHandlerTest is TestBase {
     assertEq(mockAsset.balanceOf(receiver_), slashAmountA_ + slashAmountB_ + slashAmountC_);
     assertEq(component.numPendingSlashes(), 5);
     assertEq(component.payoutHandlerNumPendingSlashes(mockPayoutHandler), 2);
-    assertEq(component.safetyModuleState(), SafetyModuleState.TRIGGERED); // Still triggered because there are pending
-      // slashes.
+    // Still triggered because there are pending slashes.
+    assertEq(component.safetyModuleState(), SafetyModuleState.TRIGGERED);
+    // The queued config update hash is not reset because the SafetyModule is still triggered.
+    assertEq(component.getQueuedConfigUpdateHash(), queuedConfigUpdateHash_);
   }
 
   function test_slash_revert_noPendingSlashes() public {
@@ -366,6 +375,10 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
     return assetPools[asset_];
   }
 
+  function getQueuedConfigUpdateHash() external view returns (bytes32) {
+    return lastConfigUpdate.queuedConfigUpdateHash;
+  }
+
   // -------- Mock setters --------
 
   function mockSetSafetyModuleState(SafetyModuleState safetyModuleState_) public {
@@ -386,6 +399,10 @@ contract TestableSlashHandler is SlashHandler, Redeemer {
 
   function mockAddAssetPool(IERC20 asset_, AssetPool memory assetPool_) external {
     assetPools[asset_] = assetPool_;
+  }
+
+  function mockSetQueuedConfigUpdateHash(bytes32 hash_) external {
+    lastConfigUpdate.queuedConfigUpdateHash = hash_;
   }
 
   // -------- Overridden common abstract functions --------

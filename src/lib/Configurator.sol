@@ -11,9 +11,6 @@ import {ConfigUpdateMetadata, ReservePoolConfig, UpdateConfigsCalldataParams} fr
 import {TriggerConfig} from "./structs/Trigger.sol";
 
 abstract contract Configurator is SafetyModuleCommon, Governable {
-  /// @notice Metadata about the most recently queued configuration update.
-  ConfigUpdateMetadata public lastConfigUpdate;
-
   /// @notice Signal an update to the safety module configs. Existing queued updates are overwritten.
   /// @param configUpdates_ The new configs. Includes:
   /// - reservePoolConfigs: The array of new reserve pool configs, sorted by associated ID. The array may also
@@ -23,11 +20,13 @@ abstract contract Configurator is SafetyModuleCommon, Governable {
   /// - delaysConfig: The new delays config.
   function updateConfigs(UpdateConfigsCalldataParams calldata configUpdates_) external onlyOwner {
     ConfiguratorLib.updateConfigs(
-      lastConfigUpdate, reservePools, triggerData, delays, configUpdates_, cozySafetyModuleManager
+      lastConfigUpdate, safetyModuleState, reservePools, triggerData, delays, configUpdates_, cozySafetyModuleManager
     );
   }
 
   /// @notice Execute queued updates to the safety module configs.
+  /// @dev If the SafetyModule becomes triggered before the queued update is applied, the queued update is cancelled
+  /// and can be requeued by the owner when the SafetyModule returns to the active or paused states.
   /// @param configUpdates_ The new configs. Includes:
   /// - reservePoolConfigs: The array of new reserve pool configs, sorted by associated ID. The array may also
   /// include config for new reserve pools.
