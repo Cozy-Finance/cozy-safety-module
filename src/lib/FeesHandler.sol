@@ -118,7 +118,7 @@ abstract contract FeesHandler is SafetyModuleCommon {
     override
     returns (uint256)
   {
-    uint256 dripFactor_ = dripModel_.dripFactor(lastDripTime_);
+    uint256 dripFactor_ = dripModel_.dripFactor(lastDripTime_, totalBaseAmount_);
     if (dripFactor_ > MathConstants.WAD) revert InvalidDripFactor();
 
     return totalBaseAmount_.mulWadDown(dripFactor_);
