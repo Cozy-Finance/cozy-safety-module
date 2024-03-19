@@ -14,6 +14,7 @@ remappings = [
   "cozy-safety-module-models/=lib/cozy-safety-module-models/src",
   "cozy-safety-module-triggers/=lib/cozy-safety-module-triggers",
   "cozy-safety-module-shared/=lib/cozy-safety-module-shared/src",
+  "cozy-safety-module-rewards-manager/=lib/cozy-safety-module-rewards-manager/src",
 ]
 fs_permissions = [{ access = "read", path = "./script/input"}]
 

@@ -9,6 +9,8 @@ import {IStETH} from "./interfaces/IStETH.sol";
 import {IWstETH} from "./interfaces/IWstETH.sol";
 import {IUMATriggerFactory} from "./interfaces/IUMATriggerFactory.sol";
 import {CozyRouterCommon} from "./lib/router/CozyRouterCommon.sol";
+import {DripModelDeploymentHelpers} from "./lib/router/DripModelDeploymentHelpers.sol";
+import {RewardsManagerDeploymentHelpers} from "./lib/router/RewardsManagerDeploymentHelpers.sol";
 import {SafetyModuleDeploymentHelpers} from "./lib/router/SafetyModuleDeploymentHelpers.sol";
 import {SafetyModuleActions} from "./lib/router/SafetyModuleActions.sol";
 import {TokenHelpers} from "./lib/router/TokenHelpers.sol";
@@ -17,6 +19,8 @@ import {TriggerDeploymentHelpers} from "./lib/router/TriggerDeploymentHelpers.so
 contract CozyRouter is
   CozyRouterCommon,
   SafetyModuleDeploymentHelpers,
+  RewardsManagerDeploymentHelpers,
+  DripModelDeploymentHelpers,
   SafetyModuleActions,
   TokenHelpers,
   TriggerDeploymentHelpers

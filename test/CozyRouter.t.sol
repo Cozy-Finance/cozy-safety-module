@@ -2,8 +2,21 @@
 pragma solidity 0.8.22;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {DripModelConstant} from "cozy-safety-module-models/DripModelConstant.sol";
+import {DripModelConstantFactory} from "cozy-safety-module-models/DripModelConstantFactory.sol";
+import {CozyManager} from "cozy-safety-module-rewards-manager/CozyManager.sol";
+import {RewardsManager} from "cozy-safety-module-rewards-manager/RewardsManager.sol";
+import {RewardsManagerFactory} from "cozy-safety-module-rewards-manager/RewardsManagerFactory.sol";
+import {StkReceiptToken} from "cozy-safety-module-rewards-manager/StkReceiptToken.sol";
+import {StakePoolConfig, RewardPoolConfig} from "cozy-safety-module-rewards-manager/lib/structs/Configs.sol";
+import {ICozyManager} from "cozy-safety-module-rewards-manager/interfaces/ICozyManager.sol";
+import {IRewardsManager} from "cozy-safety-module-rewards-manager/interfaces/IRewardsManager.sol";
+import {ReceiptToken} from "cozy-safety-module-shared/ReceiptToken.sol";
+import {ReceiptTokenFactory} from "cozy-safety-module-shared/ReceiptTokenFactory.sol";
 import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
+import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
+import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
 import {MathConstants} from "cozy-safety-module-shared/lib/MathConstants.sol";
 import {Ownable} from "cozy-safety-module-shared/lib/Ownable.sol";
 import {ChainlinkTriggerFactory} from "cozy-safety-module-triggers/src/ChainlinkTriggerFactory.sol";
@@ -1074,6 +1087,14 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
 contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
   IERC20 mockToken = IERC20(address(new MockERC20("Mock UMA Reward Token", "MOCK", 6)));
 
+  RewardsManagerFactory rmFactory;
+  StkReceiptToken stkTokenLogic;
+  IRewardsManager rmLogic;
+  ICozyManager rmCozyManager;
+
+  uint16 constant ALLOWED_NUM_STAKE_POOLS = 100;
+  uint16 constant ALLOWED_NUM_REWARD_POOLS = 100;
+
   struct ChainlinkTriggerParams {
     AggregatorV3Interface truthOracle;
     AggregatorV3Interface trackingOracle;
@@ -1094,6 +1115,37 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     address refundRecipient;
     uint256 bondAmount;
     uint256 proposalDisputeWindow;
+  }
+
+  constructor() {
+    super.setUp();
+    uint256 nonce_ = vm.getNonce(address(this));
+    IRewardsManager computedAddrRewardsManagerLogic_ = IRewardsManager(vm.computeCreateAddress(address(this), nonce_));
+    IReceiptToken depositReceiptTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 2));
+    IReceiptToken stkReceiptTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 3));
+    IReceiptTokenFactory computedAddrReceiptTokenFactory_ =
+      IReceiptTokenFactory(vm.computeCreateAddress(address(this), nonce_ + 4));
+    ICozyManager computedAddrCozyManager_ = ICozyManager(vm.computeCreateAddress(address(this), nonce_ + 5));
+
+    rmLogic = IRewardsManager(
+      address(
+        new RewardsManager(
+          ICozyManager(computedAddrCozyManager_),
+          computedAddrReceiptTokenFactory_,
+          ALLOWED_NUM_STAKE_POOLS,
+          ALLOWED_NUM_REWARD_POOLS
+        )
+      )
+    );
+    rmLogic.initialize(owner, pauser, new StakePoolConfig[](0), new RewardPoolConfig[](0));
+    rmFactory = new RewardsManagerFactory(computedAddrCozyManager_, computedAddrRewardsManagerLogic_);
+
+    depositReceiptTokenLogic = new ReceiptToken();
+    stkTokenLogic = new StkReceiptToken();
+    depositReceiptTokenLogic.initialize(address(0), "", "", 0);
+    stkTokenLogic.initialize(address(0), "", "", 0);
+    receiptTokenFactory = new ReceiptTokenFactory(depositReceiptTokenLogic_, stkReceiptTokenLogic_);
+    rmCozyManager = new CozyManager(owner, pauser, rmFactory);
   }
 
   function test_deployChainlinkTrigger() public {
@@ -1343,5 +1395,79 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
       address(safetyModule),
       IMetadataRegistry.Metadata("Safety Module", "A safety module", "https://via.placeholder.com/150", "")
     );
+  }
+
+  function test_deployRewardsManager() public {
+    bytes32 baseSalt_ = _randomBytes32();
+
+    IERC20 asset_ = IERC20(address(new MockERC20("MockAsset", "MOCK", 18)));
+    StakePoolConfig[] memory stakePoolConfigs_ = new StakePoolConfig[](1);
+    stakePoolConfigs_[0] = StakePoolConfig({asset: asset_, rewardsWeight: uint16(MathConstants.ZOC)});
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
+    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(new MockDripModel(1e18)))});
+
+    address expectedRewardsManagerAddr_ = rmCozyManager.computeRewardsManagerAddress(address(router), baseSalt_);
+    IRewardsManager rewardsManager_ = router.deployRewardsManager(
+      ICozyManager(address(rmCozyManager)), owner, pauser, stakePoolConfigs_, rewardPoolConfigs_, baseSalt_
+    );
+
+    // Loosely validate.
+    assertEq(address(rewardsManager_), expectedRewardsManagerAddr_);
+    assertEq(rewardsManager_.owner(), owner);
+    assertEq(rewardsManager_.pauser(), pauser);
+  }
+
+  function test_deployDripModelConstant() public {
+    DripModelConstantFactory dripModelConstantFactory = new DripModelConstantFactory();
+    uint256 amountPerSecond_ = _randomUint256();
+    bytes32 baseSalt_ = _randomBytes32();
+
+    address expectedDripModelAddr_ =
+      dripModelConstantFactory.computeAddress(address(router), owner, amountPerSecond_, baseSalt_);
+
+    DripModelConstant dripModel_ =
+      router.deployDripModelConstant(dripModelConstantFactory, owner, amountPerSecond_, baseSalt_);
+
+    assertEq(address(dripModel_), expectedDripModelAddr_);
+  }
+
+  function test_aggregateDeployDripModelConstantAndRewardsManager() public {
+    DripModelConstantFactory dripModelConstantFactory_ = new DripModelConstantFactory();
+    uint256 amountPerSecond_ = _randomUint256();
+    bytes32 baseSalt_ = _randomBytes32();
+    address expectedDripModelAddr_ =
+      dripModelConstantFactory_.computeAddress(address(router), owner, amountPerSecond_, baseSalt_);
+
+    IERC20 asset_ = IERC20(address(new MockERC20("MockAsset", "MOCK", 18)));
+    StakePoolConfig[] memory stakePoolConfigs_ = new StakePoolConfig[](1);
+    stakePoolConfigs_[0] = StakePoolConfig({asset: asset_, rewardsWeight: uint16(MathConstants.ZOC)});
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
+    rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(expectedDripModelAddr_)});
+    address expectedRewardsManagerAddr_ = rmCozyManager.computeRewardsManagerAddress(address(router), baseSalt_);
+
+    {
+      bytes[] memory calls_ = new bytes[](2);
+      calls_[0] = abi.encodeWithSelector(
+        router.deployDripModelConstant.selector, dripModelConstantFactory_, owner, amountPerSecond_, baseSalt_
+      );
+      calls_[1] = abi.encodeWithSelector(
+        router.deployRewardsManager.selector,
+        ICozyManager(address(rmCozyManager)),
+        owner,
+        pauser,
+        stakePoolConfigs_,
+        rewardPoolConfigs_,
+        baseSalt_
+      );
+
+      // If this doesn't revert, the batch of calls was successful.
+      // We also pass some ETH to ensure it doesn't revert for batches that require ETH to be sent.
+      deal(address(this), 1e18);
+      router.aggregate(calls_);
+    }
+
+    // Loosely validate.
+    assertEq(DripModelConstant(expectedDripModelAddr_).owner(), owner);
+    assertEq(RewardsManager(expectedRewardsManagerAddr_).owner(), owner);
   }
 }
