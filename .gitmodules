@@ -19,3 +19,6 @@
 [submodule "lib/cozy-safety-module-shared"]
 	path = lib/cozy-safety-module-shared
 	url = https://github.com/Cozy-Finance/cozy-safety-module-shared
+[submodule "lib/cozy-safety-module-rewards-manager"]
+	path = lib/cozy-safety-module-rewards-manager
+	url = https://github.com/Cozy-Finance/cozy-safety-module-rewards-manager
