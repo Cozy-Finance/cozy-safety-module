@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
+import {ICozyManager} from "cozy-safety-module-rewards-manager/interfaces/ICozyManager.sol";
+import {IDripModelConstantFactory} from "cozy-safety-module-models/interfaces/IDripModelConstantFactory.sol";
 import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
@@ -14,6 +16,7 @@ import {SafetyModule} from "../src/SafetyModule.sol";
 import {SafetyModuleFactory} from "../src/SafetyModuleFactory.sol";
 import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
+import {TriggerFactories} from "../src/lib/structs/TriggerFactories.sol";
 import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
 import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
 import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";
@@ -72,14 +75,16 @@ contract DeployProtocol is ScriptUtils {
   IStETH stEth;
   IWstETH wstEth;
   IWeth weth;
+  ICozyManager rewardsManagerCozyManager;
   IChainlinkTriggerFactory chainlinkTriggerFactory;
   IOwnableTriggerFactory ownableTriggerFactory;
   IUMATriggerFactory umaTriggerFactory;
+  IDripModelConstantFactory dripModelConstantFactory;
   IDripModel feeDripModel;
   IReceiptTokenFactory receiptTokenFactory;
 
   // Core contracts to deploy.
-  CozySafetyModuleManager manager;
+  CozySafetyModuleManager safetyModuleCozyManager;
   SafetyModule safetyModuleLogic;
   SafetyModuleFactory safetyModuleFactory;
 
@@ -112,10 +117,16 @@ contract DeployProtocol is ScriptUtils {
     console2.log("Using WETH at", address(weth));
     console2.log("Using USDC at", address(asset));
 
+    // -------- Rewards Manager Cozy Manager --------
+    rewardsManagerCozyManager = ICozyManager(json_.readAddress(".rewardsManagerCozyManager"));
+
     // -------- Trigger Factories --------
     chainlinkTriggerFactory = IChainlinkTriggerFactory(json_.readAddress(".chainlinkTriggerFactory"));
     ownableTriggerFactory = IOwnableTriggerFactory(json_.readAddress(".ownableTriggerFactory"));
     umaTriggerFactory = IUMATriggerFactory(json_.readAddress(".umaTriggerFactory"));
+
+    // -------- Drip Model Factories --------
+    dripModelConstantFactory = IDripModelConstantFactory(json_.readAddress(".dripModelConstantFactory"));
 
     // -------- Fee Drip Model --------
     feeDripModel = IDripModel(json_.readAddress(".feeDripModel"));
@@ -144,10 +155,10 @@ contract DeployProtocol is ScriptUtils {
 
     // -------- Deploy: CozySafetyModuleManager --------
     vm.broadcast();
-    manager =
+    safetyModuleCozyManager =
       new CozySafetyModuleManager(owner, pauser, computedAddrSafetyModuleFactory_, feeDripModel, allowedReservePools);
-    console2.log("CozySafetyModuleManager deployed:", address(manager));
-    require(address(manager) == address(computedAddrManager_), "CozySafetyModuleManager address mismatch");
+    console2.log("CozySafetyModuleManager deployed:", address(safetyModuleCozyManager));
+    require(address(safetyModuleCozyManager) == address(computedAddrManager_), "CozySafetyModuleManager address mismatch");
 
     // -------- Deploy: SafetyModule Logic --------
     vm.broadcast();
@@ -183,7 +194,17 @@ contract DeployProtocol is ScriptUtils {
     // -------- Deploy: CozyRouter --------
     vm.broadcast();
     router = new CozyRouter(
-      computedAddrManager_, weth, stEth, wstEth, chainlinkTriggerFactory, ownableTriggerFactory, umaTriggerFactory
+      computedAddrManager_,
+      rewardsManagerCozyManager,
+      weth,
+      stEth,
+      wstEth,
+      TriggerFactories({
+        chainlinkTriggerFactory: chainlinkTriggerFactory,
+        ownableTriggerFactory: ownableTriggerFactory,
+        umaTriggerFactory: umaTriggerFactory
+      }),
+      dripModelConstantFactory
     );
     console2.log("CozyRouter deployed", address(router));
   }

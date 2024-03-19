@@ -7,9 +7,15 @@ import {StakePoolConfig, RewardPoolConfig} from "cozy-safety-module-rewards-mana
 import {CozyRouterCommon} from "./CozyRouterCommon.sol";
 
 abstract contract RewardsManagerDeploymentHelpers is CozyRouterCommon {
+  /// @notice The Cozy Rewards Manager Cozy Manager address.
+  ICozyManager public immutable rewardsManagerCozyManager;
+
+  constructor(ICozyManager rewardsManagerCozyManager_) {
+    rewardsManagerCozyManager = rewardsManagerCozyManager_;
+  }
+
   /// @notice Deploys a new Rewards Manager.
   function deployRewardsManager(
-    ICozyManager rewardsManagerCozyManager_,
     address owner_,
     address pauser_,
     StakePoolConfig[] calldata stakePoolConfigs_,
@@ -17,6 +23,6 @@ abstract contract RewardsManagerDeploymentHelpers is CozyRouterCommon {
     bytes32 salt_
   ) external payable returns (IRewardsManager rewardsManager_) {
     rewardsManager_ =
-      rewardsManagerCozyManager_.createRewardsManager(owner_, pauser_, stakePoolConfigs_, rewardPoolConfigs_, salt_);
+      rewardsManagerCozyManager.createRewardsManager(owner_, pauser_, stakePoolConfigs_, rewardPoolConfigs_, salt_);
   }
 }

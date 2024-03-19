@@ -34,6 +34,7 @@ import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../
 import {Delays} from "../src/lib/structs/Delays.sol";
 import {ReservePool} from "../src/lib/structs/Pools.sol";
 import {TriggerMetadata} from "../src/lib/structs/Trigger.sol";
+import {TriggerFactories} from "../src/lib/structs/TriggerFactories.sol";
 import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
 import {IMetadataRegistry} from "../src/interfaces/IMetadataRegistry.sol";
 import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";
@@ -130,8 +131,19 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
       )
     );
 
-    router =
-      new CozyRouter(manager, weth, stEth, wstEth, chainlinkTriggerFactory, ownableTriggerFactory, umaTriggerFactory);
+    router = new CozyRouter(
+      manager,
+      ICozyManager(address(0)),
+      weth,
+      stEth,
+      wstEth,
+      TriggerFactories({
+        chainlinkTriggerFactory: chainlinkTriggerFactory,
+        ownableTriggerFactory: ownableTriggerFactory,
+        umaTriggerFactory: umaTriggerFactory
+      }),
+      IDripModelConstantFactory(address(0))
+    );
   }
 }
 
@@ -306,8 +318,19 @@ contract CozyRouterWrapStEthSetup is CozyRouterTestSetup {
     vm.label(address(wstEth), "wstETH");
 
     // We need to redeploy the router because it's not on mainnet.
-    router =
-      new CozyRouter(manager, weth, stEth, wstEth, chainlinkTriggerFactory, ownableTriggerFactory, umaTriggerFactory);
+    router = new CozyRouter(
+      manager,
+      ICozyManager(address(0)),
+      weth,
+      stEth,
+      wstEth,
+      TriggerFactories({
+        chainlinkTriggerFactory: chainlinkTriggerFactory,
+        ownableTriggerFactory: ownableTriggerFactory,
+        umaTriggerFactory: umaTriggerFactory
+      }),
+      IDripModelConstantFactory(address(9))
+    );
 
     // Rather than redeploying *all* of Cozy Safety Module on mainnet for this fork test, we can get by with just this
     // mock safety module.
@@ -1119,7 +1142,7 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     uint256 proposalDisputeWindow;
   }
 
-  constructor() {
+  function setUp() public virtual override {
     super.setUp();
     uint256 nonce_ = vm.getNonce(address(this));
     IRewardsManager computedAddrRewardsManagerLogic_ = IRewardsManager(vm.computeCreateAddress(address(this), nonce_));
@@ -1148,6 +1171,20 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     stkTokenLogic.initialize(address(0), "", "", 0);
     receiptTokenFactory = new ReceiptTokenFactory(depositReceiptTokenLogic_, stkReceiptTokenLogic_);
     rmCozyManager = new CozyManager(owner, pauser, rmFactory);
+
+    router = new CozyRouter(
+      manager,
+      rmCozyManager,
+      weth,
+      stEth,
+      wstEth,
+      TriggerFactories({
+        chainlinkTriggerFactory: chainlinkTriggerFactory,
+        ownableTriggerFactory: ownableTriggerFactory,
+        umaTriggerFactory: umaTriggerFactory
+      }),
+      IDripModelConstantFactory(address(dripModelConstantFactory))
+    );
   }
 
   function test_deployChainlinkTrigger() public {
@@ -1409,9 +1446,8 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(new MockDripModel(1e18)))});
 
     address expectedRewardsManagerAddr_ = rmCozyManager.computeRewardsManagerAddress(address(router), baseSalt_);
-    IRewardsManager rewardsManager_ = router.deployRewardsManager(
-      ICozyManager(address(rmCozyManager)), owner, pauser, stakePoolConfigs_, rewardPoolConfigs_, baseSalt_
-    );
+    IRewardsManager rewardsManager_ =
+      router.deployRewardsManager(owner, pauser, stakePoolConfigs_, rewardPoolConfigs_, baseSalt_);
 
     // Loosely validate.
     assertEq(address(rewardsManager_), expectedRewardsManagerAddr_);
@@ -1426,9 +1462,7 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     address expectedDripModelAddr_ =
       dripModelConstantFactory.computeAddress(address(router), owner, amountPerSecond_, baseSalt_);
 
-    IDripModel dripModel_ = router.deployDripModelConstant(
-      IDripModelConstantFactory(address(dripModelConstantFactory)), owner, amountPerSecond_, baseSalt_
-    );
+    IDripModel dripModel_ = router.deployDripModelConstant(owner, amountPerSecond_, baseSalt_);
 
     assertEq(address(dripModel_), expectedDripModelAddr_);
   }
@@ -1448,21 +1482,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
 
     {
       bytes[] memory calls_ = new bytes[](2);
-      calls_[0] = abi.encodeWithSelector(
-        router.deployDripModelConstant.selector,
-        IDripModelConstantFactory(address(dripModelConstantFactory)),
-        owner,
-        amountPerSecond_,
-        baseSalt_
-      );
+      calls_[0] = abi.encodeWithSelector(router.deployDripModelConstant.selector, owner, amountPerSecond_, baseSalt_);
       calls_[1] = abi.encodeWithSelector(
-        router.deployRewardsManager.selector,
-        ICozyManager(address(rmCozyManager)),
-        owner,
-        pauser,
-        stakePoolConfigs_,
-        rewardPoolConfigs_,
-        baseSalt_
+        router.deployRewardsManager.selector, owner, pauser, stakePoolConfigs_, rewardPoolConfigs_, baseSalt_
       );
 
       // If this doesn't revert, the batch of calls was successful.

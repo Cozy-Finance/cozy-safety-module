@@ -15,7 +15,7 @@ abstract contract SafetyModuleDeploymentHelpers is CozyRouterCommon {
     UpdateConfigsCalldataParams calldata configs_,
     bytes32 salt_
   ) external payable returns (ISafetyModule safetyModule_) {
-    safetyModule_ = manager.createSafetyModule(owner_, pauser_, configs_, salt_);
+    safetyModule_ = safetyModuleCozyManager.createSafetyModule(owner_, pauser_, configs_, salt_);
   }
 
   /// @notice Update metadata for a safety module.
