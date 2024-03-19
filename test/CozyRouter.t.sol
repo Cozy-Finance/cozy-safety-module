@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {DripModelConstant} from "cozy-safety-module-models/DripModelConstant.sol";
 import {DripModelConstantFactory} from "cozy-safety-module-models/DripModelConstantFactory.sol";
+import {IDripModelConstantFactory} from "cozy-safety-module-models/interfaces/IDripModelConstantFactory.sol";
 import {CozyManager} from "cozy-safety-module-rewards-manager/CozyManager.sol";
 import {RewardsManager} from "cozy-safety-module-rewards-manager/RewardsManager.sol";
 import {RewardsManagerFactory} from "cozy-safety-module-rewards-manager/RewardsManagerFactory.sol";
@@ -1091,6 +1092,7 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
   StkReceiptToken stkTokenLogic;
   IRewardsManager rmLogic;
   ICozyManager rmCozyManager;
+  DripModelConstantFactory dripModelConstantFactory = new DripModelConstantFactory();
 
   uint16 constant ALLOWED_NUM_STAKE_POOLS = 100;
   uint16 constant ALLOWED_NUM_REWARD_POOLS = 100;
@@ -1418,25 +1420,24 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
   }
 
   function test_deployDripModelConstant() public {
-    DripModelConstantFactory dripModelConstantFactory = new DripModelConstantFactory();
     uint256 amountPerSecond_ = _randomUint256();
     bytes32 baseSalt_ = _randomBytes32();
 
     address expectedDripModelAddr_ =
       dripModelConstantFactory.computeAddress(address(router), owner, amountPerSecond_, baseSalt_);
 
-    DripModelConstant dripModel_ =
-      router.deployDripModelConstant(dripModelConstantFactory, owner, amountPerSecond_, baseSalt_);
+    IDripModel dripModel_ = router.deployDripModelConstant(
+      IDripModelConstantFactory(address(dripModelConstantFactory)), owner, amountPerSecond_, baseSalt_
+    );
 
     assertEq(address(dripModel_), expectedDripModelAddr_);
   }
 
   function test_aggregateDeployDripModelConstantAndRewardsManager() public {
-    DripModelConstantFactory dripModelConstantFactory_ = new DripModelConstantFactory();
     uint256 amountPerSecond_ = _randomUint256();
     bytes32 baseSalt_ = _randomBytes32();
     address expectedDripModelAddr_ =
-      dripModelConstantFactory_.computeAddress(address(router), owner, amountPerSecond_, baseSalt_);
+      dripModelConstantFactory.computeAddress(address(router), owner, amountPerSecond_, baseSalt_);
 
     IERC20 asset_ = IERC20(address(new MockERC20("MockAsset", "MOCK", 18)));
     StakePoolConfig[] memory stakePoolConfigs_ = new StakePoolConfig[](1);
@@ -1448,7 +1449,11 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     {
       bytes[] memory calls_ = new bytes[](2);
       calls_[0] = abi.encodeWithSelector(
-        router.deployDripModelConstant.selector, dripModelConstantFactory_, owner, amountPerSecond_, baseSalt_
+        router.deployDripModelConstant.selector,
+        IDripModelConstantFactory(address(dripModelConstantFactory)),
+        owner,
+        amountPerSecond_,
+        baseSalt_
       );
       calls_[1] = abi.encodeWithSelector(
         router.deployRewardsManager.selector,
