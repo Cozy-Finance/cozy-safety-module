@@ -1,22 +1,26 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-import {IChainlinkTriggerFactory} from "src/interfaces/IChainlinkTriggerFactory.sol";
+import {ICozyManager} from "cozy-safety-module-rewards-manager/interfaces/ICozyManager.sol";
+import {IDripModelConstantFactory} from "cozy-safety-module-models/interfaces/IDripModelConstantFactory.sol";
 import {ICozySafetyModuleManager} from "./interfaces/ICozySafetyModuleManager.sol";
-import {IOwnableTriggerFactory} from "./interfaces/IOwnableTriggerFactory.sol";
 import {IWeth} from "./interfaces/IWeth.sol";
 import {IStETH} from "./interfaces/IStETH.sol";
 import {IWstETH} from "./interfaces/IWstETH.sol";
-import {IUMATriggerFactory} from "./interfaces/IUMATriggerFactory.sol";
 import {CozyRouterCommon} from "./lib/router/CozyRouterCommon.sol";
+import {DripModelDeploymentHelpers} from "./lib/router/DripModelDeploymentHelpers.sol";
+import {RewardsManagerDeploymentHelpers} from "./lib/router/RewardsManagerDeploymentHelpers.sol";
 import {SafetyModuleDeploymentHelpers} from "./lib/router/SafetyModuleDeploymentHelpers.sol";
 import {SafetyModuleActions} from "./lib/router/SafetyModuleActions.sol";
 import {TokenHelpers} from "./lib/router/TokenHelpers.sol";
 import {TriggerDeploymentHelpers} from "./lib/router/TriggerDeploymentHelpers.sol";
+import {TriggerFactories} from "./lib/structs/TriggerFactories.sol";
 
 contract CozyRouter is
   CozyRouterCommon,
   SafetyModuleDeploymentHelpers,
+  RewardsManagerDeploymentHelpers,
+  DripModelDeploymentHelpers,
   SafetyModuleActions,
   TokenHelpers,
   TriggerDeploymentHelpers
@@ -25,17 +29,19 @@ contract CozyRouter is
   error CallFailed(uint256 index, bytes returnData);
 
   constructor(
-    ICozySafetyModuleManager manager_,
+    ICozySafetyModuleManager safetyModuleCozyManager_,
+    ICozyManager rewardsManagerCozyManager_,
     IWeth weth_,
     IStETH stEth_,
     IWstETH wstEth_,
-    IChainlinkTriggerFactory chainlinkTriggerFactory_,
-    IOwnableTriggerFactory ownableTriggerFactory_,
-    IUMATriggerFactory umaTriggerFactory_
+    TriggerFactories memory triggerFactories_,
+    IDripModelConstantFactory dripModelConstantFactory_
   )
-    CozyRouterCommon(manager_)
+    CozyRouterCommon(safetyModuleCozyManager_)
     TokenHelpers(weth_, stEth_, wstEth_)
-    TriggerDeploymentHelpers(chainlinkTriggerFactory_, ownableTriggerFactory_, umaTriggerFactory_)
+    DripModelDeploymentHelpers(dripModelConstantFactory_)
+    RewardsManagerDeploymentHelpers(rewardsManagerCozyManager_)
+    TriggerDeploymentHelpers(triggerFactories_)
   {}
 
   receive() external payable {}

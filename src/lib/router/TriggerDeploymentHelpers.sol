@@ -10,6 +10,7 @@ import {IChainlinkTriggerFactory} from "../../interfaces/IChainlinkTriggerFactor
 import {IOwnableTriggerFactory} from "../../interfaces/IOwnableTriggerFactory.sol";
 import {IUMATriggerFactory} from "../../interfaces/IUMATriggerFactory.sol";
 import {CozyRouterCommon} from "./CozyRouterCommon.sol";
+import {TriggerFactories} from "../structs/TriggerFactories.sol";
 
 abstract contract TriggerDeploymentHelpers is CozyRouterCommon {
   using SafeERC20 for IERC20;
@@ -20,14 +21,10 @@ abstract contract TriggerDeploymentHelpers is CozyRouterCommon {
 
   IUMATriggerFactory public immutable umaTriggerFactory;
 
-  constructor(
-    IChainlinkTriggerFactory chainlinkTriggerFactory_,
-    IOwnableTriggerFactory ownableTriggerFactory_,
-    IUMATriggerFactory umaTriggerFactory_
-  ) {
-    chainlinkTriggerFactory = chainlinkTriggerFactory_;
-    ownableTriggerFactory = ownableTriggerFactory_;
-    umaTriggerFactory = umaTriggerFactory_;
+  constructor(TriggerFactories memory triggerFactories_) {
+    chainlinkTriggerFactory = triggerFactories_.chainlinkTriggerFactory;
+    ownableTriggerFactory = triggerFactories_.ownableTriggerFactory;
+    umaTriggerFactory = triggerFactories_.umaTriggerFactory;
   }
 
   /// @notice Deploys a new ChainlinkTrigger.
@@ -86,7 +83,7 @@ abstract contract TriggerDeploymentHelpers is CozyRouterCommon {
     payable
     returns (ITrigger trigger_)
   {
-    trigger_ = ownableTriggerFactory.deployTrigger(owner_, metadata_, salt_);
+    trigger_ = ownableTriggerFactory.deployTrigger(owner_, metadata_, computeSalt(msg.sender, salt_));
   }
 
   /// @notice Deploys a new UMATrigger.
