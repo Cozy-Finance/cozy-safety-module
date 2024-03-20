@@ -1260,8 +1260,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
 
   function test_deployOwnableTrigger() public {
     address owner_ = _randomAddress();
-    bytes32 salt_ = _randomBytes32();
-    address expectedTriggerAddress_ = ownableTriggerFactory.computeTriggerAddress(owner_, salt_);
+    bytes32 baseSalt_ = _randomBytes32();
+    address expectedTriggerAddress_ =
+      ownableTriggerFactory.computeTriggerAddress(owner_, router.computeSalt(address(this), baseSalt_));
     ITrigger trigger_ = router.deployOwnableTrigger(
       owner_,
       TriggerMetadata(
@@ -1270,7 +1271,7 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
         "https://via.placeholder.com/150",
         "$category: Protocol"
       ),
-      salt_
+      baseSalt_
     );
     assertEq(address(trigger_), expectedTriggerAddress_);
     assertEq(Ownable(address(trigger_)).owner(), owner_);
@@ -1315,8 +1316,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
 
   function test_aggregateDeployTriggersAndSafetyModule() public {
     OwnableTriggerParams memory ownableTriggerParams_ = OwnableTriggerParams(_randomAddress(), _randomBytes32());
-    address triggerA_ =
-      ownableTriggerFactory.computeTriggerAddress(ownableTriggerParams_.owner, ownableTriggerParams_.salt);
+    address triggerA_ = ownableTriggerFactory.computeTriggerAddress(
+      ownableTriggerParams_.owner, router.computeSalt(address(this), ownableTriggerParams_.salt)
+    );
 
     UMATriggerParams memory umaTriggerParams_ =
       UMATriggerParams("Has Protocol been hacked?", mockToken, 10e6, _randomAddress(), 100e6, 604_800);
@@ -1445,7 +1447,8 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
     rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(address(new MockDripModel(1e18)))});
 
-    address expectedRewardsManagerAddr_ = rmCozyManager.computeRewardsManagerAddress(address(router), baseSalt_);
+    address expectedRewardsManagerAddr_ =
+      rmCozyManager.computeRewardsManagerAddress(address(router), router.computeSalt(address(this), baseSalt_));
     IRewardsManager rewardsManager_ =
       router.deployRewardsManager(owner, pauser, stakePoolConfigs_, rewardPoolConfigs_, baseSalt_);
 
@@ -1459,8 +1462,9 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     uint256 amountPerSecond_ = _randomUint256();
     bytes32 baseSalt_ = _randomBytes32();
 
-    address expectedDripModelAddr_ =
-      dripModelConstantFactory.computeAddress(address(router), owner, amountPerSecond_, baseSalt_);
+    address expectedDripModelAddr_ = dripModelConstantFactory.computeAddress(
+      address(router), owner, amountPerSecond_, router.computeSalt(address(this), baseSalt_)
+    );
 
     IDripModel dripModel_ = router.deployDripModelConstant(owner, amountPerSecond_, baseSalt_);
 
@@ -1470,15 +1474,17 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
   function test_aggregateDeployDripModelConstantAndRewardsManager() public {
     uint256 amountPerSecond_ = _randomUint256();
     bytes32 baseSalt_ = _randomBytes32();
-    address expectedDripModelAddr_ =
-      dripModelConstantFactory.computeAddress(address(router), owner, amountPerSecond_, baseSalt_);
+    address expectedDripModelAddr_ = dripModelConstantFactory.computeAddress(
+      address(router), owner, amountPerSecond_, router.computeSalt(address(this), baseSalt_)
+    );
 
     IERC20 asset_ = IERC20(address(new MockERC20("MockAsset", "MOCK", 18)));
     StakePoolConfig[] memory stakePoolConfigs_ = new StakePoolConfig[](1);
     stakePoolConfigs_[0] = StakePoolConfig({asset: asset_, rewardsWeight: uint16(MathConstants.ZOC)});
     RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
     rewardPoolConfigs_[0] = RewardPoolConfig({asset: asset_, dripModel: IDripModel(expectedDripModelAddr_)});
-    address expectedRewardsManagerAddr_ = rmCozyManager.computeRewardsManagerAddress(address(router), baseSalt_);
+    address expectedRewardsManagerAddr_ =
+      rmCozyManager.computeRewardsManagerAddress(address(router), router.computeSalt(address(this), baseSalt_));
 
     {
       bytes[] memory calls_ = new bytes[](2);

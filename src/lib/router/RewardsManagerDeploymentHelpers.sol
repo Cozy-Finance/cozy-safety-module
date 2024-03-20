@@ -22,7 +22,8 @@ abstract contract RewardsManagerDeploymentHelpers is CozyRouterCommon {
     RewardPoolConfig[] calldata rewardPoolConfigs_,
     bytes32 salt_
   ) external payable returns (IRewardsManager rewardsManager_) {
-    rewardsManager_ =
-      rewardsManagerCozyManager.createRewardsManager(owner_, pauser_, stakePoolConfigs_, rewardPoolConfigs_, salt_);
+    rewardsManager_ = rewardsManagerCozyManager.createRewardsManager(
+      owner_, pauser_, stakePoolConfigs_, rewardPoolConfigs_, computeSalt(msg.sender, salt_)
+    );
   }
 }

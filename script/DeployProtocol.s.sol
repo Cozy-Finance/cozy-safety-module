@@ -158,7 +158,9 @@ contract DeployProtocol is ScriptUtils {
     safetyModuleCozyManager =
       new CozySafetyModuleManager(owner, pauser, computedAddrSafetyModuleFactory_, feeDripModel, allowedReservePools);
     console2.log("CozySafetyModuleManager deployed:", address(safetyModuleCozyManager));
-    require(address(safetyModuleCozyManager) == address(computedAddrManager_), "CozySafetyModuleManager address mismatch");
+    require(
+      address(safetyModuleCozyManager) == address(computedAddrManager_), "CozySafetyModuleManager address mismatch"
+    );
 
     // -------- Deploy: SafetyModule Logic --------
     vm.broadcast();

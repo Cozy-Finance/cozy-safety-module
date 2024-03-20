@@ -16,6 +16,15 @@ contract CozyRouterCommon {
     safetyModuleCozyManager = safetyModuleCozyManager_;
   }
 
+  /// @notice Given a `caller_` and `baseSalt_`, return the salt used to compute the address of a deployed contract
+  /// using a deployment helper function on this `CozyRouter`.
+  /// @param caller_ The caller of the deployment helper function on this `CozyRouter`.
+  /// @param baseSalt_ Used to compute the deployment salt.
+  function computeSalt(address caller_, bytes32 baseSalt_) public pure returns (bytes32) {
+    // To avoid front-running of factory deploys using a salt, msg.sender is used to compute the deploy salt.
+    return keccak256(abi.encodePacked(baseSalt_, caller_));
+  }
+
   function _assertIsValidSafetyModule(address safetyModule_) internal view {
     if (!safetyModuleCozyManager.isSafetyModule(ISafetyModule(safetyModule_))) revert InvalidAddress();
   }

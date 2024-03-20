@@ -19,6 +19,6 @@ abstract contract DripModelDeploymentHelpers is CozyRouterCommon {
     payable
     returns (IDripModel dripModel_)
   {
-    dripModel_ = dripModelConstantFactory.deployModel(owner_, amountPerSecond_, baseSalt_);
+    dripModel_ = dripModelConstantFactory.deployModel(owner_, amountPerSecond_, computeSalt(msg.sender, baseSalt_));
   }
 }

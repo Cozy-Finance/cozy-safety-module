@@ -83,7 +83,7 @@ abstract contract TriggerDeploymentHelpers is CozyRouterCommon {
     payable
     returns (ITrigger trigger_)
   {
-    trigger_ = ownableTriggerFactory.deployTrigger(owner_, metadata_, salt_);
+    trigger_ = ownableTriggerFactory.deployTrigger(owner_, metadata_, computeSalt(msg.sender, salt_));
   }
 
   /// @notice Deploys a new UMATrigger.
