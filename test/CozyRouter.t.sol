@@ -1144,31 +1144,6 @@ contract CozyRouterRewardsManagerUnstakeAndRedeemTest is CozyRouterTestSetup {
 
   IRewardsManager rewardsManager;
 
-  uint16 constant ALLOWED_NUM_STAKE_POOLS = 100;
-  uint16 constant ALLOWED_NUM_REWARD_POOLS = 100;
-
-  struct ChainlinkTriggerParams {
-    AggregatorV3Interface truthOracle;
-    AggregatorV3Interface trackingOracle;
-    uint256 priceTolerance;
-    uint256 truthFrequencyTolerance;
-    uint256 trackingFrequencyTolerance;
-  }
-
-  struct OwnableTriggerParams {
-    address owner;
-    bytes32 salt;
-  }
-
-  struct UMATriggerParams {
-    string query;
-    IERC20 rewardToken;
-    uint256 rewardAmount;
-    address refundRecipient;
-    uint256 bondAmount;
-    uint256 proposalDisputeWindow;
-  }
-
   function setUp() public virtual override {
     super.setUp();
     uint256 nonce_ = vm.getNonce(address(this));
