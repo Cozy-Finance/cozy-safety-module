@@ -82,11 +82,36 @@ abstract contract CozyRouterTestSetup is MockDeployProtocol {
   // 9116094774
   uint256 constant DECAY_RATE_PER_SECOND = 9_116_094_774; // Per-second decay rate of 25% annually.
 
+  uint16 constant ALLOWED_NUM_STAKE_POOLS = 100;
+  uint16 constant ALLOWED_NUM_REWARD_POOLS = 100;
+
   uint8 wethReservePoolId;
   uint8 wethRewardPoolId;
 
   /// @dev Emitted by ERC20s when `amount` tokens are moved from `from` to `to`.
   event Transfer(address indexed from, address indexed to, uint256 amount);
+
+  struct ChainlinkTriggerParams {
+    AggregatorV3Interface truthOracle;
+    AggregatorV3Interface trackingOracle;
+    uint256 priceTolerance;
+    uint256 truthFrequencyTolerance;
+    uint256 trackingFrequencyTolerance;
+  }
+
+  struct OwnableTriggerParams {
+    address owner;
+    bytes32 salt;
+  }
+
+  struct UMATriggerParams {
+    string query;
+    IERC20 rewardToken;
+    uint256 rewardAmount;
+    address refundRecipient;
+    uint256 bondAmount;
+    uint256 proposalDisputeWindow;
+  }
 
   function setUp() public virtual override {
     super.setUp();
@@ -1108,6 +1133,150 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
   // }
 }
 
+contract CozyRouterRewardsManagerUnstakeAndRedeemTest is CozyRouterTestSetup {
+  IERC20 mockRewardToken = IERC20(address(new MockERC20("Mock Reward Token", "MOCK", 6)));
+
+  RewardsManagerFactory rmFactory;
+  StkReceiptToken stkTokenLogic;
+  IRewardsManager rmLogic;
+  ICozyManager rmCozyManager;
+  DripModelConstantFactory dripModelConstantFactory = new DripModelConstantFactory();
+
+  IRewardsManager rewardsManager;
+
+  function setUp() public virtual override {
+    super.setUp();
+    uint256 nonce_ = vm.getNonce(address(this));
+    IRewardsManager computedAddrRewardsManagerLogic_ = IRewardsManager(vm.computeCreateAddress(address(this), nonce_));
+    IReceiptToken depositReceiptTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 2));
+    IReceiptToken stkReceiptTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 3));
+    IReceiptTokenFactory computedAddrReceiptTokenFactory_ =
+      IReceiptTokenFactory(vm.computeCreateAddress(address(this), nonce_ + 4));
+    ICozyManager computedAddrCozyManager_ = ICozyManager(vm.computeCreateAddress(address(this), nonce_ + 5));
+
+    rmLogic = IRewardsManager(
+      address(
+        new RewardsManager(
+          ICozyManager(computedAddrCozyManager_),
+          computedAddrReceiptTokenFactory_,
+          ALLOWED_NUM_STAKE_POOLS,
+          ALLOWED_NUM_REWARD_POOLS
+        )
+      )
+    );
+    rmLogic.initialize(owner, pauser, new StakePoolConfig[](0), new RewardPoolConfig[](0));
+    rmFactory = new RewardsManagerFactory(computedAddrCozyManager_, computedAddrRewardsManagerLogic_);
+
+    depositReceiptTokenLogic = new ReceiptToken();
+    stkTokenLogic = new StkReceiptToken();
+    depositReceiptTokenLogic.initialize(address(0), "", "", 0);
+    stkTokenLogic.initialize(address(0), "", "", 0);
+    receiptTokenFactory = new ReceiptTokenFactory(depositReceiptTokenLogic_, stkReceiptTokenLogic_);
+    rmCozyManager = new CozyManager(owner, pauser, rmFactory);
+
+    router = new CozyRouter(
+      manager,
+      rmCozyManager,
+      weth,
+      stEth,
+      wstEth,
+      TriggerFactories({
+        chainlinkTriggerFactory: chainlinkTriggerFactory,
+        ownableTriggerFactory: ownableTriggerFactory,
+        umaTriggerFactory: umaTriggerFactory
+      }),
+      IDripModelConstantFactory(address(dripModelConstantFactory))
+    );
+
+    bytes32 baseSalt_ = _randomBytes32();
+    IERC20 asset_ = IERC20(safetyModule.reservePools(0).depositReceiptToken);
+    StakePoolConfig[] memory stakePoolConfigs_ = new StakePoolConfig[](1);
+    stakePoolConfigs_[0] = StakePoolConfig({asset: asset_, rewardsWeight: uint16(MathConstants.ZOC)});
+    RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
+    rewardPoolConfigs_[0] =
+      RewardPoolConfig({asset: mockRewardToken, dripModel: IDripModel(address(new MockDripModel(1e18)))});
+    rewardsManager = router.deployRewardsManager(owner, pauser, stakePoolConfigs_, rewardPoolConfigs_, baseSalt_);
+  }
+
+  function test_UnstakeStakeReceiptTokensAndRedeem() public {
+    // Deposit some rewards.
+    uint256 rewardAssetAmount_ = 5e6;
+    MockERC20(address(mockRewardToken)).mint(address(this), 5e6);
+    mockRewardToken.approve(address(router), 5e6);
+    router.depositRewardAssets(rewardsManager, 0, rewardAssetAmount_, address(this));
+
+    // Deposit reserve assets and stake.
+    uint256 reserveAssetAmount_ = 10e6;
+    MockERC20(address(reserveAssetA)).mint(address(this), 10e6);
+    reserveAssetA.approve(address(router), 10e6);
+    uint256 stakeReceiptTokenAmount_ =
+      router.depositReserveAssetsAndStake(safetyModule, rewardsManager, 0, 0, reserveAssetAmount_, address(this));
+
+    // Skip time so the reward assets drip (100% drip rate per second).
+    // Reserve fees also drip (50% drip rate per second).
+    skip(1);
+
+    // Unstake and redeem.
+    address receiver_ = address(0xBEEF);
+    rewardsManager.stakePools(0).stkReceiptToken.approve(address(router), stakeReceiptTokenAmount_);
+    assertEq(rewardsManager.stakePools(0).stkReceiptToken.balanceOf(address(this)), stakeReceiptTokenAmount_);
+    (uint64 redemptionId_,) =
+      router.unstakeStakeReceiptTokensAndRedeem(safetyModule, rewardsManager, 0, 0, stakeReceiptTokenAmount_, receiver_);
+
+    skip(2 days); // Withdraw delay.
+    router.completeRedemption(safetyModule, redemptionId_);
+
+    // 100% rewards drip.
+    assertEq(mockRewardToken.balanceOf(receiver_), rewardAssetAmount_);
+    // 50% fee drip.
+    assertEq(reserveAssetA.balanceOf(receiver_), reserveAssetAmount_ / 2);
+  }
+
+  function test_UnstakeReserveAssetsAndWithdraw() public {
+    // Deposit some rewards.
+    uint256 rewardAssetAmount_ = 5e6;
+    MockERC20(address(mockRewardToken)).mint(address(this), 5e6);
+    mockRewardToken.approve(address(router), 5e6);
+    router.depositRewardAssets(rewardsManager, 0, rewardAssetAmount_, address(this));
+
+    // Deposit reserve assets and stake.
+    uint256 reserveAssetAmount_ = 10e6;
+    MockERC20(address(reserveAssetA)).mint(address(this), 10e6);
+    reserveAssetA.approve(address(router), 10e6);
+    uint256 stakeReceiptTokenAmount_ =
+      router.depositReserveAssetsAndStake(safetyModule, rewardsManager, 0, 0, reserveAssetAmount_, address(this));
+
+    // Skip time so the reward assets drip (100% drip rate per second).
+    // Reserve fees also drip (50% drip rate per second).
+    skip(1);
+
+    // Unstake and redeem.
+    address receiver_ = address(0xBEEF);
+    rewardsManager.stakePools(0).stkReceiptToken.approve(address(router), stakeReceiptTokenAmount_);
+    assertEq(rewardsManager.stakePools(0).stkReceiptToken.balanceOf(address(this)), stakeReceiptTokenAmount_);
+    (uint64 redemptionId_,) =
+      router.unstakeReserveAssetsAndWithdraw(safetyModule, rewardsManager, 0, 0, reserveAssetAmount_ / 2, receiver_);
+
+    skip(2 days); // Withdraw delay.
+    router.completeRedemption(safetyModule, redemptionId_);
+
+    // 100% rewards drip.
+    assertEq(mockRewardToken.balanceOf(receiver_), rewardAssetAmount_);
+    // 50% fee drip.
+    assertEq(reserveAssetA.balanceOf(receiver_), reserveAssetAmount_ / 2);
+  }
+
+  function test_UnstakeStakeReceiptTokensAndRedeem_RevertsZeroAddress() public {
+    vm.expectRevert(Ownable.InvalidAddress.selector);
+    router.unstakeStakeReceiptTokensAndRedeem(safetyModule, rewardsManager, 0, 0, 10, address(0));
+  }
+
+  function test_UnstakeReserveAssetsAndWithdrawReceiver_RevertsZeroAddress() public {
+    vm.expectRevert(Ownable.InvalidAddress.selector);
+    router.unstakeReserveAssetsAndWithdraw(safetyModule, rewardsManager, 0, 0, 10, address(0));
+  }
+}
+
 contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
   IERC20 mockToken = IERC20(address(new MockERC20("Mock UMA Reward Token", "MOCK", 6)));
 
@@ -1116,31 +1285,6 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
   IRewardsManager rmLogic;
   ICozyManager rmCozyManager;
   DripModelConstantFactory dripModelConstantFactory = new DripModelConstantFactory();
-
-  uint16 constant ALLOWED_NUM_STAKE_POOLS = 100;
-  uint16 constant ALLOWED_NUM_REWARD_POOLS = 100;
-
-  struct ChainlinkTriggerParams {
-    AggregatorV3Interface truthOracle;
-    AggregatorV3Interface trackingOracle;
-    uint256 priceTolerance;
-    uint256 truthFrequencyTolerance;
-    uint256 trackingFrequencyTolerance;
-  }
-
-  struct OwnableTriggerParams {
-    address owner;
-    bytes32 salt;
-  }
-
-  struct UMATriggerParams {
-    string query;
-    IERC20 rewardToken;
-    uint256 rewardAmount;
-    address refundRecipient;
-    uint256 bondAmount;
-    uint256 proposalDisputeWindow;
-  }
 
   function setUp() public virtual override {
     super.setUp();

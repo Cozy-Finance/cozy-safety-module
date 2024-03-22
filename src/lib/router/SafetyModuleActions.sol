@@ -1,10 +1,10 @@
   // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
+import {IRewardsManager} from "cozy-safety-module-rewards-manager/interfaces/IRewardsManager.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
 import {SafeERC20} from "cozy-safety-module-shared/lib/SafeERC20.sol";
 import {IConnector} from "../../interfaces/IConnector.sol";
-import {IRewardsManager} from "../../interfaces/IRewardsManager.sol";
 import {ISafetyModule} from "../../interfaces/ISafetyModule.sol";
 import {CozyRouterCommon} from "./CozyRouterCommon.sol";
 
@@ -297,7 +297,11 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
     // Exchange rate between rewards manager stake tokens and safety module deposit receipt tokens is 1:1.
     stakeReceiptTokenAmount_ = safetyModule_.convertToReceiptTokenAmount(reservePoolId_, reserveAssetAmount_);
 
-    unstake(rewardsManager_, stakePoolId_, stakeReceiptTokenAmount_, address(this));
+    // The stake receipt tokens are transferred to this router because RewardsManager.claimRewards must be called by
+    // the owner of the stake receipt tokens.
+    _transferStakeTokensAndClaimRewards(rewardsManager_, stakePoolId_, stakeReceiptTokenAmount_, receiver_);
+
+    rewardsManager_.unstake(stakePoolId_, stakeReceiptTokenAmount_, address(this), address(this));
     (redemptionId_,) = safetyModule_.redeem(reservePoolId_, stakeReceiptTokenAmount_, receiver_, address(this));
   }
 
@@ -307,6 +311,7 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
   /// reserve pool's underlying tokens to the `receiver_`. If the safety module is PAUSED, withdrawal/redemption
   /// can be completed immediately, otherwise this queues  a redemption which can be completed once sufficient delay
   /// has elapsed. This also claims any outstanding rewards that the user is entitled to for the stake pool.
+  /// @dev Caller must first approve the CozyRouter to spend the rewards manager stake tokens.
   function unstakeStakeReceiptTokensAndRedeem(
     ISafetyModule safetyModule_,
     IRewardsManager rewardsManager_,
@@ -317,10 +322,13 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
   ) external payable returns (uint64 redemptionId_, uint256 reserveAssetAmount_) {
     _assertAddressNotZero(receiver_);
 
-    // Caller must first approve the CozyRouter to spend the rewards manager stake tokens.
-    unstake(rewardsManager_, stakePoolId_, stakeReceiptTokenAmount_, address(this));
+    // The stake receipt tokens are transferred to this router because RewardsManager.claimRewards must be called by
+    // the owner of the stake receipt tokens.
+    _transferStakeTokensAndClaimRewards(rewardsManager_, stakePoolId_, stakeReceiptTokenAmount_, receiver_);
 
-    // Exchange rate between rewards manager stake tokens and safety module deposit receipt tokens is 1:1.
+    rewardsManager_.unstake(stakePoolId_, stakeReceiptTokenAmount_, address(this), address(this));
+
+    // // Exchange rate between rewards manager stake tokens and safety module deposit receipt tokens is 1:1.
     (redemptionId_, reserveAssetAmount_) =
       safetyModule_.redeem(reservePoolId_, stakeReceiptTokenAmount_, receiver_, address(this));
   }
@@ -364,5 +372,18 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
   {
     connector_.baseAsset().safeTransferFrom(msg.sender, address(connector_), baseAssetAmount_);
     depositAssetAmount_ = connector_.wrapBaseAsset(receiver_, baseAssetAmount_);
+  }
+
+  /// @dev Caller must first approve the CozyRouter to spend the stake tokens.
+  function _transferStakeTokensAndClaimRewards(
+    IRewardsManager rewardsManager_,
+    uint16 stakePoolId_,
+    uint256 stakeReceiptTokenAmount_,
+    address receiver_
+  ) internal {
+    IERC20(rewardsManager_.stakePools(stakePoolId_).stkReceiptToken).safeTransferFrom(
+      msg.sender, address(this), stakeReceiptTokenAmount_
+    );
+    rewardsManager_.claimRewards(stakePoolId_, receiver_);
   }
 }
