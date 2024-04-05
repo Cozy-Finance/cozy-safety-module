@@ -104,7 +104,7 @@ contract DeployProtocol is ScriptUtils {
     pauser = json_.readAddress(".pauser");
 
     // -------- Token Setup --------
-    if (block.chainid == 10 || block.chainid == 42161) {
+    if (block.chainid == 10 || block.chainid == 42161 || block.chainid == 1) {
       asset = IERC20(json_.readAddress(".usdc"));
       assertToken(asset, "USD Coin", 6);
 
