@@ -1,60 +1,34 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.22;
 
-import {ICozyManager} from "cozy-safety-module-rewards-manager/interfaces/ICozyManager.sol";
-import {IDripModelConstantFactory} from "cozy-safety-module-models/interfaces/IDripModelConstantFactory.sol";
-import {IDripModel} from "cozy-safety-module-shared/interfaces/IDripModel.sol";
 import {IERC20} from "cozy-safety-module-shared/interfaces/IERC20.sol";
-import {IReceiptToken} from "cozy-safety-module-shared/interfaces/IReceiptToken.sol";
-import {IReceiptTokenFactory} from "cozy-safety-module-shared/interfaces/IReceiptTokenFactory.sol";
 import {console2} from "forge-std/console2.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {ScriptUtils} from "./utils/ScriptUtils.sol";
 import {CozyRouter} from "../src/CozyRouter.sol";
-import {CozySafetyModuleManager} from "../src/CozySafetyModuleManager.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
-import {SafetyModuleFactory} from "../src/SafetyModuleFactory.sol";
-import {ReservePoolConfig, TriggerConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
+import {ReservePoolConfig, UpdateConfigsCalldataParams} from "../src/lib/structs/Configs.sol";
 import {Delays} from "../src/lib/structs/Delays.sol";
-import {TriggerFactories} from "../src/lib/structs/TriggerFactories.sol";
 import {TriggerConfig, TriggerMetadata} from "../src/lib/structs/Trigger.sol";
-import {IChainlinkTriggerFactory} from "../src/interfaces/IChainlinkTriggerFactory.sol";
-import {ICozySafetyModuleManager} from "../src/interfaces/ICozySafetyModuleManager.sol";
-import {IOwnableTriggerFactory} from "../src/interfaces/IOwnableTriggerFactory.sol";
 import {ISafetyModule} from "../src/interfaces/ISafetyModule.sol";
-import {ISafetyModuleFactory} from "../src/interfaces/ISafetyModuleFactory.sol";
-import {IStETH} from "../src/interfaces/IStETH.sol";
-import {IUMATriggerFactory} from "../src/interfaces/IUMATriggerFactory.sol";
-import {IWeth} from "../src/interfaces/IWeth.sol";
-import {IWstETH} from "../src/interfaces/IWstETH.sol";
+import {ITrigger} from "../src/interfaces/ITrigger.sol";
 
 /**
- * @dev Deploy procedure is below. Numbers in parenthesis represent the transaction count which can be used
- * to infer the nonce of that deploy.
- *   1. Pre-compute addresses.
- *   2. Deploy the core protocol:
- *        1. (0)  Deploy: Manager
- *        2. (1)  Deploy: SafetyModule logic
- *        3. (2)  Transaction: SafetyModule logic initialization
- *        4. (3)  Deploy: SafetyModuleFactory
- *   3. Deploy all peripheral contracts:
- *        1. (4)  Deploy: CozyRouter
- *
- * To run this script:
+ * @dev To run this script:
  *
  * ```sh
  * # Start anvil, forking from the current state of the desired chain.
- * anvil --fork-url $OPTIMISM_RPC_URL
+ * anvil --fork-url $ETH_RPC_URL
  *
  * # In a separate terminal, perform a dry run the script.
- * forge script script/DeployProtocol.s.sol \
- *   --sig "run(string)" "deploy-protocol-<test or production>"
+ * forge script script/DeployUnionSafetyModule.s.sol \
+ *   --sig "run(string)" "deploy-union-safety-module-<test or production>"
  *   --rpc-url "http://127.0.0.1:8545" \
  *   -vvvv
  *
  * # Or, to broadcast transactions.
- * forge script script/DeployProtocol.s.sol \
- *   --sig "run(string)" "deploy-protocol-<test or production>"
+ * forge script script/DeployUnionSafetyModule.s.sol \
+ *   --sig "run(string)" "deploy-union-safety-module-<test or production>"
  *   --rpc-url "http://127.0.0.1:8545" \
  *   --private-key $OWNER_PRIVATE_KEY \
  *   --broadcast \
@@ -64,49 +38,9 @@ import {IWstETH} from "../src/interfaces/IWstETH.sol";
 contract DeployUnionSafetyModule is ScriptUtils {
   using stdJson for string;
 
-  CozyRouter router = CozyRouter(address(0));
-  ITrigger deployedTrigger;
+  CozyRouter router = CozyRouter(payable(address(0x707C39F1AaA7c8051287b3b231BccAa8CD72138f)));
 
-  struct TriggerMetadata {
-    // A human-readable description of the trigger.
-    string description;
-    // Any extra data that should be included in the trigger's metadata.
-    string extraData;
-    // The URI of a logo image to represent the trigger.
-    string logoURI;
-    // The name that should be used for SafetyModules that use the trigger.
-    string name;
-  }
-
-  function deployTrigger(string memory fileName_) public virtual {
-    // -------- Load json --------
-    string memory json_ = readInput(fileName_);
-
-    // -------------------------------------
-    // ----------- Deploy Trigger ----------
-    // -------------------------------------
-    address triggerOwner_ = json_.readAddress(".triggerOwner");
-    TriggerMetadata memory triggerMetadata_ = abi.decode(_json.parseRaw(".triggerMetadata"), (TriggerMetadata));
-    bytes32 triggerSalt_ = json_.readBytes32(".triggerSalt");
-
-    console2.log("Deploying OwnableTrigger...");
-    console2.log("    triggerOwner", triggerOwner_);
-    console2.log("    triggerDescription", triggerMetadata_.description);
-    console2.log("    triggerExtraData", triggerMetadata_.extraData);
-    console2.log("    triggerLogoURI", triggerMetadata_.logoURI);
-    console2.log("    triggerName", triggerMetadata_.name);
-    console2.log("    triggerSalt", triggerSalt_);
-
-    require(triggerOwner_ != address(0), "Trigger owner cannot be zero address");
-
-    vm.broadcast();
-    deployedTrigger = router.deployOwnableTrigger(triggerOwner_, triggerMetadata_, triggerSalt_);
-
-    console2.log("OwnableTrigger deployed", address(deployedTrigger));
-    console2.log("========");
-  }
-
-  function deploySafetyModule(string memory fileName_) public virtual {
+  function run(string memory fileName_) public virtual {
     // -------- Load json --------
     string memory json_ = readInput(fileName_);
 
@@ -122,26 +56,31 @@ contract DeployUnionSafetyModule is ScriptUtils {
     ReservePoolConfig[] memory reservePoolConfigs_ = new ReservePoolConfig[](1);
     reservePoolConfigs_[0] = ReservePoolConfig(reservePoolMaxSlashPercentage_, IERC20(reservePoolAsset_));
 
-    address payoutHandler_ = json_.readAddress(".payoutHandler");
+    address payoutHandler_ = json_.readAddress(".payoutHandlerAddress");
+    address trigger_ = json_.readAddress(".triggerAddress");
     TriggerConfig[] memory triggerConfigs_ = new TriggerConfig[](1);
-    triggerConfigs_[0] = TriggerConfig(deployedTrigger, payoutHandler_, true);
+    triggerConfigs_[0] = TriggerConfig(ITrigger(trigger_), payoutHandler_, true);
 
-    Delays memory delays_ = abi.decode(_json.parseRaw(".delays"), (Delays));
+    Delays memory delays_ = Delays(
+      uint64(json_.readUint(".delaysConfigUpdateDelay")),
+      uint64(json_.readUint(".delaysConfigUpdateGracePeriod")),
+      uint64(json_.readUint(".delaysWithdrawalDelay"))
+    );
 
     UpdateConfigsCalldataParams memory configs_ =
       UpdateConfigsCalldataParams(reservePoolConfigs_, triggerConfigs_, delays_);
 
-    console.log("Deploying SafetyModule...");
+    console2.log("========");
+    console2.log("Deploying SafetyModule...");
     console2.log("    safetyModuleOwner", safetyModuleOwner_);
     console2.log("    safetyModulePauser", safetyModulePauser_);
     console2.log("    reservePoolAsset", reservePoolAsset_);
     console2.log("    reservePoolMaxSlashPercentage", reservePoolMaxSlashPercentage_);
     console2.log("    triggerPayoutHandler", payoutHandler_);
-    console2.log("    triggerAddress", address(deployedTrigger));
+    console2.log("    triggerAddress", trigger_);
     console2.log("    delaysConfigUpdateDelay", delays_.configUpdateDelay);
     console2.log("    delaysConfigUpdateGracePeriod", delays_.configUpdateGracePeriod);
     console2.log("    delaysWithdrawDelay", delays_.withdrawDelay);
-    console2.log("    safetyModuleSalt", safetyModuleSalt_);
 
     vm.broadcast();
     ISafetyModule safetyModule =

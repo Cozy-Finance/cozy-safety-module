@@ -1,22 +1,12 @@
 {
-    "triggerOwner": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8",
-    "triggerMetadata":
-        {
-          "description": "",
-          "extraData": "",
-          "logoURI": "",
-          "name": ""
-        },
-    "triggerSalt": "",
-    "safetyModuleOwner": "x",
-    "safetyModulePauser": "x",
-    "safetyModuleSalt": "0x010",
+    "safetyModuleOwner": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8",
+    "safetyModulePauser": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8",
     "reservePoolMaxSlashPercentage": "3000",
     "reservePoolAsset": "0x3a2819b07981234f825e952f32cf977db5edbf7c",
-    "delays": {
-        "configUpdateDelay": "1814400",
-        "configUpdateGracePeriod": "1814400",
-        "withdrawalDelay": "1209600"
-    },
-    "payoutHandlerAddress": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8"
+    "delaysConfigUpdateDelay": "1814400",
+    "delaysConfigUpdateGracePeriod": "1814400",
+    "delaysWithdrawalDelay": "1209600",
+    "triggerAddress": "0xb99B3C8228Bf494045FC8E1e40410Ce29B7d5058",
+    "payoutHandlerAddress": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8",
+    "safetyModuleSalt": "0x0100000000000000000000000000000000000000000000000000000000000000"
 }
