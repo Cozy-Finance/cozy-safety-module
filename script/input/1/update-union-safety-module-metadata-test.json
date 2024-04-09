@@ -1,0 +1,7 @@
+{
+    "safetyModuleAddress": "0x5927fC5ec0D9Ec40F1e5593E19F1F3AFd3839fDB",
+    "name": "Union Safety Module",
+    "description": "",
+    "logoURI": "",
+    "extraData": "{\"protectionCapAmountUsd\":\"\",\"shortfallDistributionMethod\":\"Prorata\"}"
+}
