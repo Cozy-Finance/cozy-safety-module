@@ -1,0 +1,22 @@
+{
+    "triggerOwner": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8",
+    "triggerMetadata":
+        {
+          "description": "",
+          "extraData": "",
+          "logoURI": "",
+          "name": ""
+        },
+    "triggerSalt": "",
+    "safetyModuleOwner": "x",
+    "safetyModulePauser": "x",
+    "safetyModuleSalt": "0x010",
+    "reservePoolMaxSlashPercentage": "3000",
+    "reservePoolAsset": "0x3a2819b07981234f825e952f32cf977db5edbf7c",
+    "delays": {
+        "configUpdateDelay": "1814400",
+        "configUpdateGracePeriod": "1814400",
+        "withdrawalDelay": "1209600"
+    },
+    "payoutHandlerAddress": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8"
+}
