@@ -21,6 +21,11 @@ import {IMetadataRegistry} from "../src/interfaces/IMetadataRegistry.sol";
  * # Start anvil, forking from the current state of the desired chain.
  * anvil --fork-url $ETH_RPC_URL
  *
+ * # Impersonate the Union DAO address and fund address
+ * cast rpc --rpc-url "http://127.0.0.1:8545" anvil_impersonateAccount 0xBBD3321f377742c4b3fe458b270c2F271d3294D8
+ * cast rpc --rpc-url "http://127.0.0.1:8545" anvil_setBalance 0xBBD3321f377742c4b3fe458b270c2F271d3294D8
+ * 1000000000000000000
+ *
  * # In a separate terminal, perform a dry run the script.
  * forge script script/UpdateUnionSafetyModuleMetadata.s.sol \
  *   --sig "run(string)" "update-union-safety-module-metadata-<test or production>"
@@ -45,10 +50,6 @@ contract UpdateUnionSafetyModuleMetadata is ScriptUtils {
   function run(string memory fileName_) public virtual {
     // -------- Load json --------
     string memory json_ = readInput(fileName_);
-
-    // -------------------------------------
-    // ------ Deploy SafetyModule ----------
-    // -------------------------------------
     address safetyModule_ = json_.readAddress(".safetyModuleAddress");
     IMetadataRegistry.Metadata memory metadata_ = IMetadataRegistry.Metadata(
       json_.readString(".name"),
@@ -57,6 +58,22 @@ contract UpdateUnionSafetyModuleMetadata is ScriptUtils {
       json_.readString(".extraData")
     );
 
+    // -------------------------------------
+    // ----------- Generate Calldata -------
+    // -------------------------------------
+    address targetContract_ = address(router);
+    uint256 value_ = 0;
+    bytes memory callData_ =
+      abi.encodeWithSelector(router.updateSafetyModuleMetadata.selector, metadataRegistry, safetyModule_, metadata_);
+
+    console2.log("targetContract", targetContract_);
+    console2.log("value", value_);
+    console2.log("calldata:");
+    console2.logBytes(callData_);
+
+    // -------------------------------------
+    // ------ Deploy SafetyModule ----------
+    // -------------------------------------
     console2.log("========");
     console2.log("Updating SafetyModule Metadata...");
     console2.log("    SafetyModule", safetyModule_);

@@ -16,6 +16,11 @@ import {ITrigger} from "../src/interfaces/ITrigger.sol";
  * # Start anvil, forking from the current state of the desired chain.
  * anvil --fork-url $ETH_RPC_URL
  *
+ * # Impersonate the Union DAO address and fund address
+ * cast rpc --rpc-url "http://127.0.0.1:8545" anvil_impersonateAccount 0xBBD3321f377742c4b3fe458b270c2F271d3294D8
+ * cast rpc --rpc-url "http://127.0.0.1:8545" anvil_setBalance 0xBBD3321f377742c4b3fe458b270c2F271d3294D8
+ * 1000000000000000000
+ *
  * # In a separate terminal, perform a dry run the script.
  * forge script script/DeployUnionTrigger.s.sol \
  *   --sig "run(string)" "deploy-union-trigger-<test or production>"
@@ -40,9 +45,6 @@ contract DeployUnionTrigger is ScriptUtils {
     // -------- Load json --------
     string memory json_ = readInput(fileName_);
 
-    // -------------------------------------
-    // ----------- Deploy Trigger ----------
-    // -------------------------------------
     address triggerOwner_ = json_.readAddress(".triggerOwner");
     bytes32 triggerSalt_ = json_.readBytes32(".triggerSalt");
     TriggerMetadata memory triggerMetadata_ = TriggerMetadata(
@@ -52,6 +54,28 @@ contract DeployUnionTrigger is ScriptUtils {
       json_.readString(".triggerExtraData")
     );
 
+    // -------------------------------------
+    // ----------- Generate Calldata -------
+    // -------------------------------------
+    address targetContract_ = address(router);
+    uint256 value_ = 0;
+    bytes memory callData_ = abi.encodeWithSelector(
+      router.deployOwnableTrigger.selector,
+      triggerOwner_,
+      TriggerMetadata(
+        triggerMetadata_.description, triggerMetadata_.extraData, triggerMetadata_.logoURI, triggerMetadata_.name
+      ),
+      triggerSalt_
+    );
+
+    console2.log("targetContract", targetContract_);
+    console2.log("value", value_);
+    console2.log("calldata:");
+    console2.logBytes(callData_);
+
+    // -------------------------------------
+    // ----------- Deploy Trigger ----------
+    // -------------------------------------
     console2.log("========");
     console2.log("Deploying OwnableTrigger...");
     console2.log("    triggerOwner", triggerOwner_);

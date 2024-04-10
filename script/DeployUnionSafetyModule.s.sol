@@ -20,6 +20,11 @@ import {ITrigger} from "../src/interfaces/ITrigger.sol";
  * # Start anvil, forking from the current state of the desired chain.
  * anvil --fork-url $ETH_RPC_URL
  *
+ * # Impersonate the Union DAO address and fund address
+ * cast rpc --rpc-url "http://127.0.0.1:8545" anvil_impersonateAccount 0xBBD3321f377742c4b3fe458b270c2F271d3294D8
+ * cast rpc --rpc-url "http://127.0.0.1:8545" anvil_setBalance 0xBBD3321f377742c4b3fe458b270c2F271d3294D8
+ * 1000000000000000000
+ *
  * # In a separate terminal, perform a dry run the script.
  * forge script script/DeployUnionSafetyModule.s.sol \
  *   --sig "run(string)" "deploy-union-safety-module-<test or production>"
@@ -44,9 +49,6 @@ contract DeployUnionSafetyModule is ScriptUtils {
     // -------- Load json --------
     string memory json_ = readInput(fileName_);
 
-    // -------------------------------------
-    // ------ Deploy SafetyModule ----------
-    // -------------------------------------
     address safetyModuleOwner_ = json_.readAddress(".safetyModuleOwner");
     address safetyModulePauser_ = json_.readAddress(".safetyModulePauser");
     bytes32 safetyModuleSalt_ = json_.readBytes32(".safetyModuleSalt");
@@ -70,6 +72,23 @@ contract DeployUnionSafetyModule is ScriptUtils {
     UpdateConfigsCalldataParams memory configs_ =
       UpdateConfigsCalldataParams(reservePoolConfigs_, triggerConfigs_, delays_);
 
+    // -------------------------------------
+    // ----------- Generate Calldata -------
+    // -------------------------------------
+    address targetContract_ = address(router);
+    uint256 value_ = 0;
+    bytes memory callData_ = abi.encodeWithSelector(
+      router.deploySafetyModule.selector, safetyModuleOwner_, safetyModulePauser_, configs_, safetyModuleSalt_
+    );
+
+    console2.log("targetContract", targetContract_);
+    console2.log("value", value_);
+    console2.log("calldata:");
+    console2.logBytes(callData_);
+
+    // -------------------------------------
+    // ------ Deploy SafetyModule ----------
+    // -------------------------------------
     console2.log("========");
     console2.log("Deploying SafetyModule...");
     console2.log("    safetyModuleOwner", safetyModuleOwner_);
