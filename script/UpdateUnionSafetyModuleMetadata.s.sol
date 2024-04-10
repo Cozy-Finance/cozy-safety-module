@@ -23,14 +23,15 @@ import {IMetadataRegistry} from "../src/interfaces/IMetadataRegistry.sol";
  *
  * # Impersonate the Union DAO address and fund address
  * cast rpc --rpc-url "http://127.0.0.1:8545" anvil_impersonateAccount 0xBBD3321f377742c4b3fe458b270c2F271d3294D8
- * cast rpc --rpc-url "http://127.0.0.1:8545" anvil_setBalance 0xBBD3321f377742c4b3fe458b270c2F271d3294D8
- * 1000000000000000000
+ * cast rpc --rpc-url "http://127.0.0.1:8545" anvil_setBalance 0xBBD3321f377742c4b3fe458b270c2F271d3294D8 1000000000000000000
  *
  * # In a separate terminal, perform a dry run the script.
  * forge script script/UpdateUnionSafetyModuleMetadata.s.sol \
  *   --sig "run(string)" "update-union-safety-module-metadata-<test or production>"
  *   --rpc-url "http://127.0.0.1:8545" \
- *   -vvvv
+ *   -vvvv \
+ *   --sender 0xBBD3321f377742c4b3fe458b270c2F271d3294D8 \
+ *   --unlocked
  *
  * # Or, to broadcast transactions.
  * forge script script/UpdateUnionSafetyModuleMetadata.s.sol \
@@ -38,7 +39,9 @@ import {IMetadataRegistry} from "../src/interfaces/IMetadataRegistry.sol";
  *   --rpc-url "http://127.0.0.1:8545" \
  *   --private-key $OWNER_PRIVATE_KEY \
  *   --broadcast \
- *   -vvvv
+ *   -vvvv \
+ *   --sender 0xBBD3321f377742c4b3fe458b270c2F271d3294D8 \
+ *   --unlocked
  * ```
  */
 contract UpdateUnionSafetyModuleMetadata is ScriptUtils {

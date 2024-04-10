@@ -6,7 +6,7 @@
     "delaysConfigUpdateDelay": "1814400",
     "delaysConfigUpdateGracePeriod": "1814400",
     "delaysWithdrawalDelay": "1209600",
-    "triggerAddress": "0xb99B3C8228Bf494045FC8E1e40410Ce29B7d5058",
+    "triggerAddress": "0x6C306E34A8CF50f12A70596Cd83c65be9DF51157",
     "payoutHandlerAddress": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8",
     "safetyModuleSalt": "0x0100000000000000000000000000000000000000000000000000000000000000"
 }
