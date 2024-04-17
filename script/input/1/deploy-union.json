@@ -1,0 +1,21 @@
+{
+    "triggerOwner": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8",
+    "triggerDescription": "",
+    "triggerExtraData": "",
+    "triggerName": "",
+    "triggerLogoURI": "",
+    "triggerSalt": "0x0100000000000000000000000000000000000000000000000000000000000000",
+    "safetyModuleOwner": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8",
+    "safetyModulePauser": "0xD83b4686e434B402c2Ce92f4794536962b2BE3E8",
+    "reservePoolMaxSlashPercentage": "3000",
+    "reservePoolAsset": "0x3a2819b07981234f825e952f32cf977db5edbf7c",
+    "delaysConfigUpdateDelay": "1814400",
+    "delaysConfigUpdateGracePeriod": "1814400",
+    "delaysWithdrawalDelay": "1209600",
+    "payoutHandlerAddress": "0xBBD3321f377742c4b3fe458b270c2F271d3294D8",
+    "safetyModuleSalt": "0x0100000000000000000000000000000000000000000000000000000000000000",
+    "name": "Union Safety Module",
+    "description": "This safety module protects Union users against significant hacks, bugs, or malfeasance.",
+    "logoURI": "https://assets.coingecko.com/coins/images/30556/standard/Mark.png?1712560901",
+    "extraData": "{\"protectionCapAmountUsd\":\"\",\"shortfallDistributionMethod\":\"Prorata\"}"
+}
