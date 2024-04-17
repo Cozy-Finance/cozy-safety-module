@@ -92,7 +92,14 @@ contract DeployUnion is ScriptUtils {
     // -------------------------------------
     address targetContract_ = address(router);
     uint256 value_ = 0;
-    bytes memory callData_ = abi.encodeWithSelector(
+    bytes memory calldata_ = abi.encode(
+      triggerOwner_,
+      TriggerMetadata(
+        triggerMetadata_.description, triggerMetadata_.extraData, triggerMetadata_.logoURI, triggerMetadata_.name
+      ),
+      triggerSalt_
+    );
+    bytes memory payload_ = abi.encodeWithSelector(
       router.deployOwnableTrigger.selector,
       triggerOwner_,
       TriggerMetadata(
@@ -100,11 +107,16 @@ contract DeployUnion is ScriptUtils {
       ),
       triggerSalt_
     );
+    string memory signature_ = "deployOwnableTrigger(address,(string,string,string,string),bytes32)";
 
     console2.log("targetContract", targetContract_);
     console2.log("value", value_);
+    console2.log("signature", signature_);
     console2.log("calldata:");
-    console2.logBytes(callData_);
+    console2.logBytes(calldata_);
+    console2.log("payload:");
+    console2.logBytes(payload_);
+    assert(keccak256(payload_) == keccak256(abi.encodePacked(bytes4(keccak256(bytes(signature_))), calldata_)));
 
     // -------------------------------------
     // ----------- Deploy Trigger ----------
@@ -163,14 +175,21 @@ contract DeployUnion is ScriptUtils {
     // -------------------------------------
     address targetContract_ = address(router);
     uint256 value_ = 0;
-    bytes memory callData_ = abi.encodeWithSelector(
+    bytes memory calldata_ = abi.encode(safetyModuleOwner_, safetyModulePauser_, configs_, safetyModuleSalt_);
+    bytes memory payload_ = abi.encodeWithSelector(
       router.deploySafetyModule.selector, safetyModuleOwner_, safetyModulePauser_, configs_, safetyModuleSalt_
     );
+    string memory signature_ =
+      "deploySafetyModule(address,address,((uint256,address)[],(address,address,bool)[],(uint64,uint64,uint64)),bytes32)";
 
     console2.log("targetContract", targetContract_);
     console2.log("value", value_);
+    console2.log("signature", signature_);
     console2.log("calldata:");
-    console2.logBytes(callData_);
+    console2.logBytes(calldata_);
+    console2.log("payload:");
+    console2.logBytes(payload_);
+    assert(keccak256(payload_) == keccak256(abi.encodePacked(bytes4(keccak256(bytes(signature_))), calldata_)));
 
     // -------------------------------------
     // ------ Deploy SafetyModule ----------
@@ -211,14 +230,20 @@ contract DeployUnion is ScriptUtils {
     // -------------------------------------
     address targetContract_ = address(router);
     uint256 value_ = 0;
-    bytes memory callData_ = abi.encodeWithSelector(
+    bytes memory calldata_ = abi.encode(metadataRegistry, deployedSafetyModule_, metadata_);
+    bytes memory payload_ = abi.encodeWithSelector(
       router.updateSafetyModuleMetadata.selector, metadataRegistry, deployedSafetyModule_, metadata_
     );
+    string memory signature_ = "updateSafetyModuleMetadata(address,address,(string,string,string,string))";
 
     console2.log("targetContract", targetContract_);
     console2.log("value", value_);
+    console2.log("signature", signature_);
     console2.log("calldata:");
-    console2.logBytes(callData_);
+    console2.logBytes(calldata_);
+    console2.log("payload:");
+    console2.logBytes(payload_);
+    assert(keccak256(payload_) == keccak256(abi.encodePacked(bytes4(keccak256(bytes(signature_))), calldata_)));
 
     // -------------------------------------
     // ------ Deploy SafetyModule ----------
