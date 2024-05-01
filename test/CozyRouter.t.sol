@@ -52,7 +52,6 @@ import {MockDripModel} from "./utils/MockDripModel.sol";
 import {MockMetadataRegistry} from "./utils/MockMetadataRegistry.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
 import {MockUMAOracle} from "./utils/MockUMAOracle.sol";
-import {console2} from "forge-std/console2.sol";
 
 abstract contract CozyRouterTestSetup is MockDeployProtocol {
   CozyRouter router;

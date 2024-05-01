@@ -33,13 +33,13 @@ import {IWstETH} from "../src/interfaces/IWstETH.sol";
  * anvil --fork-url $OPTIMISM_RPC_URL
  *
  * # In a separate terminal, perform a dry run the script.
- * forge script script/DeployTimelockController.s.sol \
+ * forge script script/DeployCozyRouter.s.sol \
  *   --sig "run(string)" "deploy-router-<test or production>" \
  *   --rpc-url "http://127.0.0.1:8545" \
  *   -vvvv
  *
  * # Or, to broadcast transactions with etherscan verification.
- * forge script script/DeployTimelockController.s.sol \
+ * forge script script/DeployCozyRouter.s.sol \
  *   --sig "run(string)" "deploy-router-<test or production>" \
  *   --rpc-url "http://127.0.0.1:8545" \
  *   --private-key $OWNER_PRIVATE_KEY \
@@ -49,7 +49,7 @@ import {IWstETH} from "../src/interfaces/IWstETH.sol";
  *   -vvvv
  * ```
  */
-contract DeployProtocol is ScriptUtils {
+contract DeployCozyRouter is ScriptUtils {
   using stdJson for string;
 
   // Contracts to define per-network.
