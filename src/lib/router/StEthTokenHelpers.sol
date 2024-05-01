@@ -27,22 +27,20 @@ abstract contract StEthTokenHelpers is TokenHelpers {
     if (address(stEth) != address(0)) IERC20(address(stEth)).safeIncreaseAllowance(address(wstEth), type(uint256).max);
   }
 
-  /// @notice Wraps caller's entire balance of stETH as wstETH and transfers to `safetyModule_`.
+  /// @notice Wraps caller's entire balance of stETH as wstETH and transfers to `receiver_`.
   /// Requires pre-approval of the router to transfer the caller's stETH.
   /// @dev This function should be `aggregate` called with deposit or stake without transfer functions.
-  function wrapStEth(address safetyModule_) external {
-    _assertIsValidSafetyModule(safetyModule_);
-    wrapStEth(safetyModule_, stEth.balanceOf(msg.sender));
+  function wrapStEth(address receiver_) external {
+    wrapStEth(receiver_, stEth.balanceOf(msg.sender));
   }
 
-  /// @notice Wraps `amount_` of stETH as wstETH and transfers to `safetyModule_`.
+  /// @notice Wraps `amount_` of stETH as wstETH and transfers to `receiver_`.
   /// Requires pre-approval of the router to transfer the caller's stETH.
   /// @dev This function should be `aggregate` called with deposit or stake without transfer functions.
-  function wrapStEth(address safetyModule_, uint256 amount_) public {
-    _assertIsValidSafetyModule(safetyModule_);
+  function wrapStEth(address receiver_, uint256 amount_) public {
     IERC20(address(stEth)).safeTransferFrom(msg.sender, address(this), amount_);
     uint256 wstEthAmount_ = wstEth.wrap(stEth.balanceOf(address(this)));
-    IERC20(address(wstEth)).safeTransfer(safetyModule_, wstEthAmount_);
+    IERC20(address(wstEth)).safeTransfer(receiver_, wstEthAmount_);
   }
 
   /// @notice Unwraps router's balance of wstETH into stETH and transfers to `recipient_`.

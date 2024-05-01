@@ -399,16 +399,6 @@ contract CozyRouterWrapStEthTest is CozyRouterWrapStEthSetup {
     assertEq(stEth.allowance(address(router), address(router.wstEth())), type(uint256).max);
   }
 
-  function test_WrapStEthRevertsIfRecipientIsNotValidSafetyModule() public {
-    vm.mockCall(address(manager), abi.encodeWithSelector(manager.isSafetyModule.selector), abi.encode(false));
-
-    vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.wrapStEth(address(0));
-
-    vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.wrapStEth(address(0), 10);
-  }
-
   function _testWrapStEth(uint256 approvalAmount_, bool shouldRevert_) public {
     // deal(stETh, address, uint) won't work here because stETH is a proxy and deal isn't able to correctly infer the
     // storage location of the balance it needs to update.
@@ -484,14 +474,6 @@ contract CozyRouterWrapWethTest is CozyRouterTestSetup {
     assertEq(address(router).balance, ethAmount_ / 2);
     assertEq(weth.balanceOf(address(router)), 0);
     assertEq(weth.balanceOf(address(safetyModule)), ethAmount_ / 2);
-  }
-
-  function test_WrapsWethRevertsIfRecipientIsNotValidSafetyModule() public {
-    vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.wrapNativeToken(_randomAddress());
-
-    vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.wrapNativeToken(_randomAddress(), 10);
   }
 }
 
@@ -1693,10 +1675,7 @@ contract CozyRouterAvaxTest is MockDeployProtocol {
       IDripModelConstantFactory(address(9))
     );
 
-    // Rather than redeploying *all* of Cozy Safety Module on mainnet for this fork test, we can get by with just this
-    // mock safety module.
     safetyModule = ISafetyModule(address(0xBEEF));
-    vm.mockCall(address(manager), abi.encodeWithSelector(manager.isSafetyModule.selector), abi.encode(true));
   }
 
   function test_wrapWavaxAllAvaxHeldByRouter() public {
@@ -1723,15 +1702,5 @@ contract CozyRouterAvaxTest is MockDeployProtocol {
     assertEq(address(router).balance, avaxAmount_ / 2);
     assertEq(wavax.balanceOf(address(router)), 0);
     assertEq(wavax.balanceOf(address(safetyModule)), avaxAmount_ / 2);
-  }
-
-  function test_WrapsWavaxRevertsIfRecipientIsNotValidSafetyModule() public {
-    vm.mockCall(address(manager), abi.encodeWithSelector(manager.isSafetyModule.selector), abi.encode(false));
-
-    vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.wrapNativeToken(_randomAddress());
-
-    vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.wrapNativeToken(_randomAddress(), 10);
   }
 }

@@ -20,24 +20,22 @@ abstract contract WethTokenHelpers is TokenHelpers {
   }
 
   /// @notice Wraps all native tokens held by this contact into the wrapped native token and sends them to the
-  /// `safetyModule_`.
+  /// `receiver_`.
   /// @dev This function should be `aggregate` called with deposit or stake without transfer functions.
-  function wrapNativeToken(address safetyModule_) external payable {
-    _assertIsValidSafetyModule(safetyModule_);
+  function wrapNativeToken(address receiver_) external payable {
     uint256 amount_ = address(this).balance;
     wrappedNativeToken.deposit{value: amount_}();
-    IERC20(address(wrappedNativeToken)).safeTransfer(safetyModule_, amount_);
+    IERC20(address(wrappedNativeToken)).safeTransfer(receiver_, amount_);
   }
 
   /// @notice Wraps the specified `amount_` of native tokens from this contact into wrapped native tokens and sends them
-  /// to the `safetyModule_`.
+  /// to the `receiver_`.
   /// @dev This function should be `aggregate` called with deposit or stake without transfer functions.
-  function wrapNativeToken(address safetyModule_, uint256 amount_) external payable {
-    _assertIsValidSafetyModule(safetyModule_);
+  function wrapNativeToken(address receiver_, uint256 amount_) external payable {
     // Using msg.value in a multicall is dangerous, so we avoid it.
     if (address(this).balance < amount_) revert InsufficientBalance();
     wrappedNativeToken.deposit{value: amount_}();
-    IERC20(address(wrappedNativeToken)).safeTransfer(safetyModule_, amount_);
+    IERC20(address(wrappedNativeToken)).safeTransfer(receiver_, amount_);
   }
 
   /// @notice Unwraps all wrapped native tokens held by this contact and sends native tokens to the `recipient_`.
