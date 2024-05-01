@@ -1117,7 +1117,7 @@ contract CozyRouterExcessPayment is CozyRouterTestSetup {
   // }
 }
 
-contract CozyRouterRewardsManagerUnstakeAndRedeemTest is CozyRouterTestSetup {
+contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
   IERC20 mockRewardToken = IERC20(address(new MockERC20("Mock Reward Token", "MOCK", 6)));
 
   RewardsManagerFactory rmFactory;
@@ -1173,9 +1173,15 @@ contract CozyRouterRewardsManagerUnstakeAndRedeemTest is CozyRouterTestSetup {
     );
 
     bytes32 baseSalt_ = _randomBytes32();
-    IERC20 asset_ = IERC20(safetyModule.reservePools(0).depositReceiptToken);
-    StakePoolConfig[] memory stakePoolConfigs_ = new StakePoolConfig[](1);
-    stakePoolConfigs_[0] = StakePoolConfig({asset: asset_, rewardsWeight: uint16(MathConstants.ZOC)});
+    StakePoolConfig[] memory stakePoolConfigs_ = new StakePoolConfig[](2);
+    stakePoolConfigs_[0] = StakePoolConfig({
+      asset: IERC20(safetyModule.reservePools(0).depositReceiptToken),
+      rewardsWeight: uint16(MathConstants.ZOC)
+    });
+    stakePoolConfigs_[1] = StakePoolConfig({
+      asset: IERC20(safetyModule.reservePools(wethReservePoolId).depositReceiptToken),
+      rewardsWeight: 0
+    });
     RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
     rewardPoolConfigs_[0] =
       RewardPoolConfig({asset: mockRewardToken, dripModel: IDripModel(address(new MockDripModel(1e18)))});
@@ -1258,6 +1264,23 @@ contract CozyRouterRewardsManagerUnstakeAndRedeemTest is CozyRouterTestSetup {
   function test_UnstakeReserveAssetsAndWithdrawReceiver_RevertsZeroAddress() public {
     vm.expectRevert(Ownable.InvalidAddress.selector);
     router.unstakeReserveAssetsAndWithdraw(safetyModule, rewardsManager, 0, 0, 10, address(0));
+  }
+
+  function test_DepositReserveAssetsWithoutTransferAndStake() public {
+    uint256 nativeTokenAmount_ = 10e6;
+    deal(address(router), nativeTokenAmount_); // Simulate sending native tokens to the router before wrapNativeToken.
+
+    _expectEmit();
+    emit Transfer(address(router), address(safetyModule), nativeTokenAmount_);
+    router.wrapNativeToken(address(safetyModule));
+    assertEq(address(router).balance, 0);
+    assertEq(weth.balanceOf(address(router)), 0);
+    assertEq(weth.balanceOf(address(safetyModule)), nativeTokenAmount_);
+
+    uint256 stakeReceiptTokenAmount_ = router.depositReserveAssetsWithoutTransferAndStake(
+      safetyModule, rewardsManager, 1, 1, nativeTokenAmount_, address(this)
+    );
+    assertEq(stakeReceiptTokenAmount_, nativeTokenAmount_);
   }
 }
 
