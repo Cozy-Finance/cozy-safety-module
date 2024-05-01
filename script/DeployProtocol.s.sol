@@ -11,6 +11,7 @@ import {console2} from "forge-std/console2.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {ScriptUtils} from "./utils/ScriptUtils.sol";
 import {CozyRouter} from "../src/CozyRouter.sol";
+import {CozyRouterAvax} from "../src/CozyRouterAvax.sol";
 import {CozySafetyModuleManager} from "../src/CozySafetyModuleManager.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
 import {SafetyModuleFactory} from "../src/SafetyModuleFactory.sol";
@@ -71,10 +72,9 @@ contract DeployProtocol is ScriptUtils {
   uint8 allowedReservePools;
 
   // Contracts to define per-network.
-  IERC20 asset;
   IStETH stEth;
   IWstETH wstEth;
-  IWeth weth;
+  address wrappedNativeToken;
   ICozyManager rewardsManagerCozyManager;
   IChainlinkTriggerFactory chainlinkTriggerFactory;
   IOwnableTriggerFactory ownableTriggerFactory;
@@ -89,7 +89,7 @@ contract DeployProtocol is ScriptUtils {
   SafetyModuleFactory safetyModuleFactory;
 
   // Peripheral contracts to deploy.
-  CozyRouter router;
+  address router;
 
   function run(string memory fileName_) public virtual {
     // -------------------------------
@@ -104,18 +104,17 @@ contract DeployProtocol is ScriptUtils {
     pauser = json_.readAddress(".pauser");
 
     // -------- Token Setup --------
-    if (block.chainid == 10) {
-      asset = IERC20(json_.readAddress(".usdc"));
-      assertToken(asset, "USD Coin", 6);
-
-      weth = IWeth(json_.readAddress(".weth"));
-      assertToken(IERC20(address(weth)), "Wrapped Ether", 18);
+    if (block.chainid == 10 || block.chainid == 42_161 || block.chainid == 1) {
+      wrappedNativeToken = json_.readAddress(".weth");
+      assertToken(IERC20(wrappedNativeToken), "Wrapped Ether", 18);
+      console2.log("Using WETH at", address(wrappedNativeToken));
+    } else if (block.chainid == 43_114) {
+      wrappedNativeToken = json_.readAddress(".wavax");
+      assertToken(IERC20(wrappedNativeToken), "Wrapped AVAX", 18);
+      console2.log("Using WAVAX at", address(wrappedNativeToken));
     } else {
       revert("Unsupported chain ID");
     }
-
-    console2.log("Using WETH at", address(weth));
-    console2.log("Using USDC at", address(asset));
 
     // -------- Rewards Manager Cozy Manager --------
     rewardsManagerCozyManager = ICozyManager(json_.readAddress(".rewardsManagerCozyManager"));
@@ -194,20 +193,42 @@ contract DeployProtocol is ScriptUtils {
     // ----------------------------------------
 
     // -------- Deploy: CozyRouter --------
-    vm.broadcast();
-    router = new CozyRouter(
-      computedAddrManager_,
-      rewardsManagerCozyManager,
-      weth,
-      stEth,
-      wstEth,
-      TriggerFactories({
-        chainlinkTriggerFactory: chainlinkTriggerFactory,
-        ownableTriggerFactory: ownableTriggerFactory,
-        umaTriggerFactory: umaTriggerFactory
-      }),
-      dripModelConstantFactory
-    );
-    console2.log("CozyRouter deployed", address(router));
+    // Different chains use different native tokens that may need to be wrapped, so we have chain specific router
+    // contracts.
+    if (block.chainid == 43_114) {
+      vm.broadcast();
+      router = address(
+        new CozyRouterAvax(
+          computedAddrManager_,
+          rewardsManagerCozyManager,
+          IWeth(wrappedNativeToken), // WAVAX conforms to the same interface as WETH.
+          TriggerFactories({
+            chainlinkTriggerFactory: chainlinkTriggerFactory,
+            ownableTriggerFactory: ownableTriggerFactory,
+            umaTriggerFactory: umaTriggerFactory
+          }),
+          dripModelConstantFactory
+        )
+      );
+      console2.log("CozyRouterAvax deployed", router);
+    } else {
+      vm.broadcast();
+      router = address(
+        new CozyRouter(
+          computedAddrManager_,
+          rewardsManagerCozyManager,
+          IWeth(wrappedNativeToken),
+          stEth,
+          wstEth,
+          TriggerFactories({
+            chainlinkTriggerFactory: chainlinkTriggerFactory,
+            ownableTriggerFactory: ownableTriggerFactory,
+            umaTriggerFactory: umaTriggerFactory
+          }),
+          dripModelConstantFactory
+        )
+      );
+      console2.log("CozyRouter deployed", router);
+    }
   }
 }

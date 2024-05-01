@@ -26,6 +26,7 @@ import {OptimisticOracleV2Interface} from "cozy-safety-module-triggers/src/inter
 import {UMATriggerFactory} from "cozy-safety-module-triggers/src/UMATriggerFactory.sol";
 import {MockChainlinkOracle} from "cozy-safety-module-triggers/test/utils/MockChainlinkOracle.sol";
 import {CozyRouter} from "../src/CozyRouter.sol";
+import {CozyRouterAvax} from "../src/CozyRouterAvax.sol";
 import {TokenHelpers} from "../src/lib/router/TokenHelpers.sol";
 import {CozyRouterCommon} from "../src/lib/router/CozyRouterCommon.sol";
 import {SafetyModule} from "../src/SafetyModule.sol";
@@ -51,6 +52,7 @@ import {MockDripModel} from "./utils/MockDripModel.sol";
 import {MockMetadataRegistry} from "./utils/MockMetadataRegistry.sol";
 import {MockTrigger} from "./utils/MockTrigger.sol";
 import {MockUMAOracle} from "./utils/MockUMAOracle.sol";
+import {console2} from "forge-std/console2.sol";
 
 abstract contract CozyRouterTestSetup is MockDeployProtocol {
   CozyRouter router;
@@ -182,7 +184,7 @@ contract CozyRouterAggregateTest is CozyRouterTestSetup {
     bytes[] memory calls_ = new bytes[](2);
     uint8 reservePoolId_ = 1; // The weth reserve pool ID.
 
-    calls_[0] = abi.encodeWithSelector(bytes4(keccak256(bytes("wrapWeth(address)"))), (address(safetyModule)));
+    calls_[0] = abi.encodeWithSelector(bytes4(keccak256(bytes("wrapNativeToken(address)"))), (address(safetyModule)));
     calls_[1] = abi.encodeWithSelector(
       router.depositReserveAssetsWithoutTransfer.selector,
       address(safetyModule),
@@ -460,12 +462,12 @@ contract CozyRouterUnwrapStEthTest is CozyRouterWrapStEthSetup {
 contract CozyRouterWrapWethTest is CozyRouterTestSetup {
   function test_wrapWethAllEthHeldByRouter() public {
     uint256 ethAmount_ = 1 ether;
-    deal(address(router), ethAmount_); // Simulate sending eth to the router before wrapWeth.
+    deal(address(router), ethAmount_); // Simulate sending eth to the router before wrapNativeToken.
 
     vm.prank(alice);
     _expectEmit();
     emit Transfer(address(router), address(safetyModule), ethAmount_);
-    router.wrapWeth(address(safetyModule));
+    router.wrapNativeToken(address(safetyModule));
     assertEq(address(router).balance, 0);
     assertEq(weth.balanceOf(address(router)), 0);
     assertEq(weth.balanceOf(address(safetyModule)), ethAmount_);
@@ -473,12 +475,12 @@ contract CozyRouterWrapWethTest is CozyRouterTestSetup {
 
   function test_wrapWethSomeEthHeldByRouter() public {
     uint256 ethAmount_ = 1 ether;
-    deal(address(router), ethAmount_); // Simulate sending eth to the router before wrapWeth.
+    deal(address(router), ethAmount_); // Simulate sending eth to the router before wrapNativeToken.
 
     vm.prank(alice);
     _expectEmit();
     emit Transfer(address(router), address(safetyModule), ethAmount_ / 2);
-    router.wrapWeth(address(safetyModule), ethAmount_ / 2);
+    router.wrapNativeToken(address(safetyModule), ethAmount_ / 2);
     assertEq(address(router).balance, ethAmount_ / 2);
     assertEq(weth.balanceOf(address(router)), 0);
     assertEq(weth.balanceOf(address(safetyModule)), ethAmount_ / 2);
@@ -486,10 +488,10 @@ contract CozyRouterWrapWethTest is CozyRouterTestSetup {
 
   function test_WrapsWethRevertsIfRecipientIsNotValidSafetyModule() public {
     vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.wrapWeth(_randomAddress());
+    router.wrapNativeToken(_randomAddress());
 
     vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.wrapWeth(_randomAddress(), 10);
+    router.wrapNativeToken(_randomAddress(), 10);
   }
 }
 
@@ -502,7 +504,7 @@ contract CozyRouterUnwrapWethTest is CozyWEthHelperTest {
     dealAndDepositEth(depositAmount_);
     withdrawAmount_ = uint128(bound(withdrawAmount_, 0, depositAmount_));
 
-    router.unwrapWeth(address(alice), withdrawAmount_);
+    router.unwrapNativeToken(address(alice), withdrawAmount_);
     assertEq(weth.balanceOf(address(router)), depositAmount_ - withdrawAmount_);
     assertEq(alice.balance, withdrawAmount_);
   }
@@ -514,7 +516,7 @@ contract CozyRouterUnwrapWethTest is CozyWEthHelperTest {
   function testFuzz_UnwrapsMaxWeth(uint128 amount_) public {
     dealAndDepositEth(amount_);
 
-    router.unwrapWeth(address(alice));
+    router.unwrapNativeToken(address(alice));
     assertEq(weth.balanceOf(address(router)), 0);
     assertEq(alice.balance, amount_);
   }
@@ -524,10 +526,10 @@ contract CozyRouterUnwrapWethTest is CozyWEthHelperTest {
 
   function test_UnwrapsWethRevertsIfRecipientIsZeroAddress() public {
     vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.unwrapWeth(address(0));
+    router.unwrapNativeToken(address(0));
 
     vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.unwrapWeth(address(0), 10);
+    router.unwrapNativeToken(address(0), 10);
   }
 }
 
@@ -1646,5 +1648,90 @@ contract CozyRouterDeploymentHelpersTest is CozyRouterTestSetup {
     // Loosely validate.
     assertEq(DripModelConstant(expectedDripModelAddr_).owner(), owner);
     assertEq(RewardsManager(expectedRewardsManagerAddr_).owner(), owner);
+  }
+}
+
+contract CozyRouterAvaxTest is MockDeployProtocol {
+  uint256 forkId;
+
+  CozyRouterAvax router;
+  IWeth wavax; // WAVAX conforms to the same interface as WETH.
+  ISafetyModule safetyModule;
+
+  address alice = address(0xABCD);
+  address bob = address(0xDCBA);
+  address self = address(this);
+
+  /// @dev Emitted by ERC20s when `amount` tokens are moved from `from` to `to`.
+  event Transfer(address indexed from, address indexed to, uint256 amount);
+
+  function setUp() public virtual override {
+    super.setUp();
+
+    // The AVAX C Chain block number at the time this test was written.
+    forkId = vm.createSelectFork(vm.envString("AVAX_RPC_URL"), 44_902_119);
+
+    wavax = IWeth(0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7);
+    vm.label(address(wavax), "WAVAX");
+
+    IChainlinkTriggerFactory chainlinkTriggerFactory_ = IChainlinkTriggerFactory(address(new ChainlinkTriggerFactory()));
+    IOwnableTriggerFactory ownableTriggerFactory_ = IOwnableTriggerFactory(address(new OwnableTriggerFactory()));
+    OptimisticOracleV2Interface umaOracle_ = OptimisticOracleV2Interface(address(new MockUMAOracle())); // Mock for
+      // tests.
+    IUMATriggerFactory umaTriggerFactory_ = IUMATriggerFactory(address(new UMATriggerFactory(umaOracle_)));
+
+    // We need to redeploy the router because it's not on avax.
+    router = new CozyRouterAvax(
+      manager,
+      ICozyManager(address(0)),
+      wavax,
+      TriggerFactories({
+        chainlinkTriggerFactory: chainlinkTriggerFactory_,
+        ownableTriggerFactory: ownableTriggerFactory_,
+        umaTriggerFactory: umaTriggerFactory_
+      }),
+      IDripModelConstantFactory(address(9))
+    );
+
+    // Rather than redeploying *all* of Cozy Safety Module on mainnet for this fork test, we can get by with just this
+    // mock safety module.
+    safetyModule = ISafetyModule(address(0xBEEF));
+    vm.mockCall(address(manager), abi.encodeWithSelector(manager.isSafetyModule.selector), abi.encode(true));
+  }
+
+  function test_wrapWavaxAllAvaxHeldByRouter() public {
+    uint256 avaxAmount_ = 1 ether;
+    deal(address(router), avaxAmount_); // Simulate sending avax to the router before wrapNativeToken.
+
+    vm.prank(alice);
+    _expectEmit();
+    emit Transfer(address(router), address(safetyModule), avaxAmount_);
+    router.wrapNativeToken(address(safetyModule));
+    assertEq(address(router).balance, 0);
+    assertEq(wavax.balanceOf(address(router)), 0);
+    assertEq(wavax.balanceOf(address(safetyModule)), avaxAmount_);
+  }
+
+  function test_wrapWavaxSomeAvaxHeldByRouter() public {
+    uint256 avaxAmount_ = 1 ether;
+    deal(address(router), avaxAmount_); // Simulate sending avax to the router before wrapNativeToken.
+
+    vm.prank(alice);
+    _expectEmit();
+    emit Transfer(address(router), address(safetyModule), avaxAmount_ / 2);
+    router.wrapNativeToken(address(safetyModule), avaxAmount_ / 2);
+    assertEq(address(router).balance, avaxAmount_ / 2);
+    assertEq(wavax.balanceOf(address(router)), 0);
+    assertEq(wavax.balanceOf(address(safetyModule)), avaxAmount_ / 2);
+  }
+
+  function test_WrapsWavaxRevertsIfRecipientIsNotValidSafetyModule() public {
+    vm.mockCall(address(manager), abi.encodeWithSelector(manager.isSafetyModule.selector), abi.encode(false));
+
+    vm.expectRevert(Ownable.InvalidAddress.selector);
+    router.wrapNativeToken(_randomAddress());
+
+    vm.expectRevert(Ownable.InvalidAddress.selector);
+    router.wrapNativeToken(_randomAddress(), 10);
   }
 }

@@ -5,25 +5,21 @@ import {ICozyManager} from "cozy-safety-module-rewards-manager/interfaces/ICozyM
 import {IDripModelConstantFactory} from "cozy-safety-module-models/interfaces/IDripModelConstantFactory.sol";
 import {ICozySafetyModuleManager} from "./interfaces/ICozySafetyModuleManager.sol";
 import {IWeth} from "./interfaces/IWeth.sol";
-import {IStETH} from "./interfaces/IStETH.sol";
-import {IWstETH} from "./interfaces/IWstETH.sol";
 import {CozyRouterCommon} from "./lib/router/CozyRouterCommon.sol";
 import {DripModelDeploymentHelpers} from "./lib/router/DripModelDeploymentHelpers.sol";
 import {RewardsManagerDeploymentHelpers} from "./lib/router/RewardsManagerDeploymentHelpers.sol";
 import {SafetyModuleDeploymentHelpers} from "./lib/router/SafetyModuleDeploymentHelpers.sol";
 import {SafetyModuleActions} from "./lib/router/SafetyModuleActions.sol";
-import {StEthTokenHelpers} from "./lib/router/StEthTokenHelpers.sol";
-import {WethTokenHelpers} from "./lib/router/WethTokenHelpers.sol";
 import {TriggerDeploymentHelpers} from "./lib/router/TriggerDeploymentHelpers.sol";
 import {TriggerFactories} from "./lib/structs/TriggerFactories.sol";
+import {WethTokenHelpers} from "./lib/router/WethTokenHelpers.sol";
 
-contract CozyRouter is
+contract CozyRouterAvax is
   CozyRouterCommon,
   SafetyModuleDeploymentHelpers,
   RewardsManagerDeploymentHelpers,
   DripModelDeploymentHelpers,
   SafetyModuleActions,
-  StEthTokenHelpers,
   WethTokenHelpers,
   TriggerDeploymentHelpers
 {
@@ -33,15 +29,13 @@ contract CozyRouter is
   constructor(
     ICozySafetyModuleManager safetyModuleCozyManager_,
     ICozyManager rewardsManagerCozyManager_,
-    IWeth weth_,
-    IStETH stEth_,
-    IWstETH wstEth_,
+    IWeth wavax_,
     TriggerFactories memory triggerFactories_,
     IDripModelConstantFactory dripModelConstantFactory_
   )
     CozyRouterCommon(safetyModuleCozyManager_)
-    StEthTokenHelpers(stEth_, wstEth_)
-    WethTokenHelpers(weth_)
+    // WAVAX uses the same interface as WETH.
+    WethTokenHelpers(IWeth(wavax_))
     DripModelDeploymentHelpers(dripModelConstantFactory_)
     RewardsManagerDeploymentHelpers(rewardsManagerCozyManager_)
     TriggerDeploymentHelpers(triggerFactories_)
@@ -54,7 +48,7 @@ contract CozyRouter is
   // ---------------------------
 
   /// @notice Enables batching of multiple router calls into a single transaction.
-  /// @dev All methods in this contract must be payable to support sending ETH with a batch call.
+  /// @dev All methods in this contract must be payable to support sending AVAX with a batch call.
   /// @param calls_ Array of ABI encoded calls to be performed.
   function aggregate(bytes[] calldata calls_) external payable returns (bytes[] memory returnData_) {
     returnData_ = new bytes[](calls_.length);
