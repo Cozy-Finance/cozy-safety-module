@@ -1128,6 +1128,9 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
 
   IRewardsManager rewardsManager;
 
+  uint16 wethStakePoolId;
+  uint16 mockStakePoolId;
+
   function setUp() public virtual override {
     super.setUp();
     uint256 nonce_ = vm.getNonce(address(this));
@@ -1182,6 +1185,15 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
       asset: IERC20(safetyModule.reservePools(wethReservePoolId).depositReceiptToken),
       rewardsWeight: 0
     });
+    sortStakePoolConfigs(stakePoolConfigs_);
+    if (stakePoolConfigs_[0].asset == IERC20(safetyModule.reservePools(wethReservePoolId).depositReceiptToken)) {
+      wethStakePoolId = 0;
+      mockStakePoolId = 1;
+    } else {
+      wethStakePoolId = 1;
+      mockStakePoolId = 0;
+    }
+
     RewardPoolConfig[] memory rewardPoolConfigs_ = new RewardPoolConfig[](1);
     rewardPoolConfigs_[0] =
       RewardPoolConfig({asset: mockRewardToken, dripModel: IDripModel(address(new MockDripModel(1e18)))});
@@ -1199,8 +1211,9 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
     uint256 reserveAssetAmount_ = 10e6;
     MockERC20(address(reserveAssetA)).mint(address(this), 10e6);
     reserveAssetA.approve(address(router), 10e6);
-    uint256 stakeReceiptTokenAmount_ =
-      router.depositReserveAssetsAndStake(safetyModule, rewardsManager, 0, 0, reserveAssetAmount_, address(this));
+    uint256 stakeReceiptTokenAmount_ = router.depositReserveAssetsAndStake(
+      safetyModule, rewardsManager, 0, mockStakePoolId, reserveAssetAmount_, address(this)
+    );
 
     // Skip time so the reward assets drip (100% drip rate per second).
     // Reserve fees also drip (50% drip rate per second).
@@ -1210,8 +1223,9 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
     address receiver_ = address(0xBEEF);
     rewardsManager.stakePools(0).stkReceiptToken.approve(address(router), stakeReceiptTokenAmount_);
     assertEq(rewardsManager.stakePools(0).stkReceiptToken.balanceOf(address(this)), stakeReceiptTokenAmount_);
-    (uint64 redemptionId_,) =
-      router.unstakeStakeReceiptTokensAndRedeem(safetyModule, rewardsManager, 0, 0, stakeReceiptTokenAmount_, receiver_);
+    (uint64 redemptionId_,) = router.unstakeStakeReceiptTokensAndRedeem(
+      safetyModule, rewardsManager, 0, mockStakePoolId, stakeReceiptTokenAmount_, receiver_
+    );
 
     skip(2 days); // Withdraw delay.
     router.completeRedemption(safetyModule, redemptionId_);
@@ -1233,8 +1247,9 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
     uint256 reserveAssetAmount_ = 10e6;
     MockERC20(address(reserveAssetA)).mint(address(this), 10e6);
     reserveAssetA.approve(address(router), 10e6);
-    uint256 stakeReceiptTokenAmount_ =
-      router.depositReserveAssetsAndStake(safetyModule, rewardsManager, 0, 0, reserveAssetAmount_, address(this));
+    uint256 stakeReceiptTokenAmount_ = router.depositReserveAssetsAndStake(
+      safetyModule, rewardsManager, 0, mockStakePoolId, reserveAssetAmount_, address(this)
+    );
 
     // Skip time so the reward assets drip (100% drip rate per second).
     // Reserve fees also drip (50% drip rate per second).
@@ -1244,8 +1259,9 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
     address receiver_ = address(0xBEEF);
     rewardsManager.stakePools(0).stkReceiptToken.approve(address(router), stakeReceiptTokenAmount_);
     assertEq(rewardsManager.stakePools(0).stkReceiptToken.balanceOf(address(this)), stakeReceiptTokenAmount_);
-    (uint64 redemptionId_,) =
-      router.unstakeReserveAssetsAndWithdraw(safetyModule, rewardsManager, 0, 0, reserveAssetAmount_ / 2, receiver_);
+    (uint64 redemptionId_,) = router.unstakeReserveAssetsAndWithdraw(
+      safetyModule, rewardsManager, 0, mockStakePoolId, reserveAssetAmount_ / 2, receiver_
+    );
 
     skip(2 days); // Withdraw delay.
     router.completeRedemption(safetyModule, redemptionId_);
@@ -1258,15 +1274,15 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
 
   function test_UnstakeStakeReceiptTokensAndRedeem_RevertsZeroAddress() public {
     vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.unstakeStakeReceiptTokensAndRedeem(safetyModule, rewardsManager, 0, 0, 10, address(0));
+    router.unstakeStakeReceiptTokensAndRedeem(safetyModule, rewardsManager, 0, mockStakePoolId, 10, address(0));
   }
 
   function test_UnstakeReserveAssetsAndWithdrawReceiver_RevertsZeroAddress() public {
     vm.expectRevert(Ownable.InvalidAddress.selector);
-    router.unstakeReserveAssetsAndWithdraw(safetyModule, rewardsManager, 0, 0, 10, address(0));
+    router.unstakeReserveAssetsAndWithdraw(safetyModule, rewardsManager, 0, mockStakePoolId, 10, address(0));
   }
 
-  function test_DepositReserveAssetsWithoutTransferAndStake() public {
+  function test_WrapNativeTokenAndDepositReserveAssetsWithoutTransferAndStake() public {
     uint256 nativeTokenAmount_ = 10e6;
     deal(address(router), nativeTokenAmount_); // Simulate sending native tokens to the router before wrapNativeToken.
 
@@ -1278,7 +1294,7 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
     assertEq(weth.balanceOf(address(safetyModule)), nativeTokenAmount_);
 
     uint256 stakeReceiptTokenAmount_ = router.depositReserveAssetsWithoutTransferAndStake(
-      safetyModule, rewardsManager, 1, 1, nativeTokenAmount_, address(this)
+      safetyModule, rewardsManager, wethReservePoolId, 1, nativeTokenAmount_, address(this)
     );
     assertEq(stakeReceiptTokenAmount_, nativeTokenAmount_);
   }
