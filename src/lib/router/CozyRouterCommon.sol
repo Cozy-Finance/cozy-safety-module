@@ -25,10 +25,6 @@ contract CozyRouterCommon {
     return keccak256(abi.encodePacked(baseSalt_, caller_));
   }
 
-  function _assertIsValidSafetyModule(address safetyModule_) internal view {
-    if (!safetyModuleCozyManager.isSafetyModule(ISafetyModule(safetyModule_))) revert InvalidAddress();
-  }
-
   /// @dev Revert if the address is the zero address.
   function _assertAddressNotZero(address address_) internal pure {
     if (address_ == address(0)) revert InvalidAddress();

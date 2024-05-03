@@ -107,6 +107,26 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
     stakeWithoutTransfer(rewardsManager_, stakePoolId_, receiptTokenAmount_, receiver_);
   }
 
+  /// @notice Deposits assets into a `safetyModule_` reserve pool and stakes the resulting deposit tokens into a
+  /// `rewardsManager_` stake pool.
+  /// @dev This method is a convenience method that combines `depositReserveAssetsWithoutTransfer` and
+  /// `stakeWithoutTransfer`. Useful in cases where the SM asset is wrapped + transferred to the SM beforehand via
+  /// aggregate call, e.g. with CozyRouter.wrapNativeToken.
+  function depositReserveAssetsWithoutTransferAndStake(
+    ISafetyModule safetyModule_,
+    IRewardsManager rewardsManager_,
+    uint8 reservePoolId_,
+    uint16 stakePoolId_,
+    uint256 reserveAssetAmount_,
+    address receiver_
+  ) external payable returns (uint256 receiptTokenAmount_) {
+    // The stake receipt token amount received from staking is 1:1 with the amount of Safety Module receipt tokens
+    // received from depositing into reserves.
+    receiptTokenAmount_ =
+      depositReserveAssetsWithoutTransfer(safetyModule_, reservePoolId_, reserveAssetAmount_, address(rewardsManager_));
+    stakeWithoutTransfer(rewardsManager_, stakePoolId_, receiptTokenAmount_, receiver_);
+  }
+
   /// @notice Deposits assets into a `safetyModule_` reserve pool via a connector and stakes the resulting deposit
   /// tokens into a `rewardsManager_` stake pool.
   /// @dev This method is a convenience method that combines `wrapBaseAssetViaConnectorAndDepositReserveAssets` and

@@ -1,0 +1,9 @@
+{
+  "weth": "0x4200000000000000000000000000000000000006",
+  "safetyModuleCozyManager": "0x1Abe07E17caf416FFC6798B4798b8f05401485CA",
+  "rewardsManagerCozyManager": "0xa1a890482Cd26cD7f92de07A7717d077A7b47C9D",
+  "chainlinkTriggerFactory": "0x0e3D652E776fA883647C8D360ad9ad77f8e1B5a7",
+  "ownableTriggerFactory": "0x9fE57a8294262ec28e2748a9ce9715680758e8F2",
+  "umaTriggerFactory": "0xBba03B061CcA848cc3E160417d05261FE5693F41",
+  "dripModelConstantFactory": "0x7dFA368409417bD078289F45c60a165FB4b73549"
+}
