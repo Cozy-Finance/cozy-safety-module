@@ -1132,6 +1132,9 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
 
   function setUp() public virtual override {
     super.setUp();
+
+    vm.warp(1);
+
     uint256 nonce_ = vm.getNonce(address(this));
     IRewardsManager computedAddrRewardsManagerLogic_ = IRewardsManager(vm.computeCreateAddress(address(this), nonce_));
     IReceiptToken depositReceiptTokenLogic_ = IReceiptToken(vm.computeCreateAddress(address(this), nonce_ + 2));
