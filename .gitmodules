@@ -4,9 +4,6 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "lib/solmate"]
-	path = lib/solmate
-	url = https://github.com/transmissions11/solmate
 [submodule "lib/cozy-safety-module-models"]
 	path = lib/cozy-safety-module-models
 	url = https://github.com/Cozy-Finance/cozy-safety-module-models
@@ -22,3 +19,6 @@
 [submodule "lib/cozy-safety-module-rewards-manager"]
 	path = lib/cozy-safety-module-rewards-manager
 	url = https://github.com/Cozy-Finance/cozy-safety-module-rewards-manager
+[submodule "lib/solmate"]
+	path = lib/solmate
+	url = https://github.com/transmissions11/solmate

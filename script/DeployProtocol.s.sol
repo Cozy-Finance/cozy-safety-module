@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Unlicensed
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.22;
 
 import {ICozyManager} from "cozy-safety-module-rewards-manager/interfaces/ICozyManager.sol";
