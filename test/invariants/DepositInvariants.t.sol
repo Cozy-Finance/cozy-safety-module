@@ -232,9 +232,10 @@ abstract contract DepositInvariants is InvariantTestBase {
     uint8 reservePoolId_ = safetyModuleHandler.pickValidReservePoolId(_randomUint256());
     address actor_ = safetyModuleHandler.pickActor(_randomUint256());
 
-    vm.prank(actor_);
+    vm.startPrank(actor_);
     vm.expectRevert(ICommonErrors.RoundsToZero.selector);
     safetyModule.depositReserveAssetsWithoutTransfer(reservePoolId_, 0, actor_);
+    vm.stopPrank();
   }
 
   function invariant_cannotDepositWithInsufficientAssets() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -242,9 +243,10 @@ abstract contract DepositInvariants is InvariantTestBase {
     address actor_ = safetyModuleHandler.pickActor(_randomUint256());
     uint256 assetAmount_ = safetyModuleHandler.boundDepositAssetAmount(_randomUint256());
 
-    vm.prank(actor_);
+    vm.startPrank(actor_);
     vm.expectRevert(IDepositorErrors.InvalidDeposit.selector);
     safetyModule.depositReserveAssetsWithoutTransfer(reservePoolId_, assetAmount_, actor_);
+    vm.stopPrank();
   }
 }
 

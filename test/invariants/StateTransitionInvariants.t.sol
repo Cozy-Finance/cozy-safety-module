@@ -116,12 +116,13 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
       vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
     }
 
-    vm.prank(caller_);
+    vm.startPrank(caller_);
     safetyModule.pause();
     require(
       safetyModule.safetyModuleState() == SafetyModuleState.PAUSED,
       "Invariant Violated: The safety module's state must be paused."
     );
+    vm.stopPrank();
   }
 
   function invariant_pauseByUnauthorizedCallerReverts() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -133,8 +134,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     }
 
     vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
-    vm.prank(caller_);
+    vm.startPrank(caller_);
     safetyModule.pause();
+    vm.stopPrank();
   }
 
   function invariant_unpauseTransitionsToExpectedSafetyModuleState() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -148,12 +150,13 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
 
     if (currentState_ != SafetyModuleState.PAUSED) vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
 
-    vm.prank(caller_);
+    vm.startPrank(caller_);
     safetyModule.unpause();
     require(
       safetyModule.safetyModuleState() == expectedState_,
       "Invariant Violated: The safety module's state does not match expected state after unpause."
     );
+    vm.stopPrank();
   }
 
   function invariant_unpauseByUnauthorizedCallerReverts() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -165,8 +168,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
 
     for (uint256 i = 0; i < callers_.length; i++) {
       vm.expectRevert(ICommonErrors.InvalidStateTransition.selector);
-      vm.prank(callers_[i]);
+      vm.startPrank(callers_[i]);
       safetyModule.unpause();
+      vm.stopPrank();
     }
   }
 
@@ -189,8 +193,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
       vm.expectRevert(IStateChangerErrors.InvalidTrigger.selector);
     }
 
-    vm.prank(selectedTriggerData_.payoutHandler);
+    vm.startPrank(selectedTriggerData_.payoutHandler);
     safetyModule.trigger(selectedTrigger_);
+    vm.stopPrank();
     require(
       safetyModule.safetyModuleState() == expectedState_,
       "Invariant Violated: The safety module's state does not match expected state after trigger."
@@ -212,8 +217,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     }
     if (shouldRevert) vm.expectRevert(IStateChangerErrors.InvalidTrigger.selector);
 
-    vm.prank(selectedTriggerData_.payoutHandler);
+    vm.startPrank(selectedTriggerData_.payoutHandler);
     safetyModule.trigger(selectedTrigger_);
+    vm.stopPrank();
     require(
       safetyModule.numPendingSlashes() == expectedNumPendingSlashes_,
       string.concat(
@@ -245,8 +251,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     // Trigger the trigger.
     MockTrigger(address(selectedTrigger_)).mockState(TriggerState.TRIGGERED);
 
-    vm.prank(selectedTriggerData_.payoutHandler);
+    vm.startPrank(selectedTriggerData_.payoutHandler);
     safetyModule.trigger(selectedTrigger_);
+    vm.stopPrank();
     require(
       safetyModule.triggerData(selectedTrigger_).triggered,
       "Invariant Violated: The trigger's triggered bool must be updated after a trigger."
@@ -276,8 +283,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     if (currentState_ != SafetyModuleState.TRIGGERED) vm.expectRevert(ICommonErrors.InvalidState.selector);
 
     // Slash the safety module.
-    vm.prank(selectedTriggerData_.payoutHandler);
+    vm.startPrank(selectedTriggerData_.payoutHandler);
     safetyModule.slash(new Slash[](0), _randomAddress());
+    vm.stopPrank();
 
     require(
       safetyModule.safetyModuleState() == expectedState_,
@@ -307,8 +315,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     }
 
     // Slash the safety module.
-    vm.prank(selectedTriggerData_.payoutHandler);
+    vm.startPrank(selectedTriggerData_.payoutHandler);
     safetyModule.slash(new Slash[](0), _randomAddress());
+    vm.stopPrank();
 
     require(
       safetyModule.numPendingSlashes() == expectedNumPendingSlashes_,
@@ -337,8 +346,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
 
     if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) {
       vm.expectRevert(ICommonErrors.InvalidState.selector);
-      vm.prank(_randomAddress());
+      vm.startPrank(_randomAddress());
       safetyModule.redeem(reservePoolId_, _randomUint256(), _randomAddress(), _randomAddress());
+      vm.stopPrank();
     }
   }
 
@@ -347,8 +357,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
 
     if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) {
       vm.expectRevert(ICommonErrors.InvalidState.selector);
-      vm.prank(_randomAddress());
+      vm.startPrank(_randomAddress());
       safetyModule.previewRedemption(reservePoolId_, _randomUint256());
+      vm.stopPrank();
     }
   }
 
@@ -360,8 +371,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
 
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       vm.expectRevert(ICommonErrors.InvalidState.selector);
-      vm.prank(_randomAddress());
+      vm.startPrank(_randomAddress());
       safetyModule.depositReserveAssetsWithoutTransfer(reservePoolId_, _randomUint256(), _randomAddress());
+      vm.stopPrank();
     }
   }
 
@@ -373,13 +385,15 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     uint256 depositAmount_ = bound(_randomUint64(), 1, type(uint64).max);
     deal(address(asset_), actor_, depositAmount_, true);
 
-    vm.prank(actor_);
+    vm.startPrank(actor_);
     asset_.approve(address(safetyModule), depositAmount_);
+    vm.stopPrank();
 
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       vm.expectRevert(ICommonErrors.InvalidState.selector);
-      vm.prank(actor_);
+      vm.startPrank(actor_);
       safetyModule.depositReserveAssets(reservePoolId_, depositAmount_, _randomAddress());
+      vm.stopPrank();
     }
   }
 

@@ -63,8 +63,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     }
 
     // Slash the safety module.
-    vm.prank(selectedTriggerData_.payoutHandler);
+    vm.startPrank(selectedTriggerData_.payoutHandler);
     safetyModule.slash(slashes_, _randomAddress());
+    vm.stopPrank();
 
     for (uint8 i = 0; i < numReservePools; i++) {
       ReservePool memory reservePool_ = safetyModule.reservePools(i);
@@ -175,11 +176,12 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     slashes_[dupedB_] = slashes_[dupedA_];
 
     // Attempt to slash the safety module.
-    vm.prank(selectedTriggerData_.payoutHandler);
+    vm.startPrank(selectedTriggerData_.payoutHandler);
     vm.expectRevert(
       abi.encodeWithSelector(ISlashHandlerErrors.AlreadySlashed.selector, slashes_[dupedA_].reservePoolId)
     );
     safetyModule.slash(slashes_, _randomAddress());
+    vm.stopPrank();
   }
 
   function invariant_cannotSlashIfSafetyModuleNotTriggered() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -195,8 +197,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
       } else {
         vm.expectRevert(ICommonErrors.InvalidState.selector);
       }
-      vm.prank(triggerData_.payoutHandler);
+      vm.startPrank(triggerData_.payoutHandler);
       safetyModule.slash(new Slash[](0), _randomAddress());
+      vm.stopPrank();
     }
   }
 
@@ -205,8 +208,9 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     if (safetyModule.payoutHandlerNumPendingSlashes(caller_) > 0) return;
 
     vm.expectRevert(Ownable.Unauthorized.selector);
-    vm.prank(caller_);
+    vm.startPrank(caller_);
     safetyModule.slash(new Slash[](0), _randomAddress());
+    vm.stopPrank();
   }
 
   function invariant_cannotSlashMoreThanMaxSlashPercentage() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -235,11 +239,12 @@ abstract contract StateTransitionInvariantsWithStateTransitions is InvariantTest
     slashes_[0] = Slash({reservePoolId: reservePoolId_, amount: amountToSlash_});
 
     // Attempt to slash the safety module.
-    vm.prank(selectedTriggerData_.payoutHandler);
+    vm.startPrank(selectedTriggerData_.payoutHandler);
     vm.expectRevert(
       abi.encodeWithSelector(ISlashHandlerErrors.ExceedsMaxSlashPercentage.selector, reservePoolId_, slashPercentage_)
     );
     safetyModule.slash(slashes_, _randomAddress());
+    vm.stopPrank();
   }
 
   function _pickSlashAmount(uint8 reservePoolId_) internal view returns (uint256) {

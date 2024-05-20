@@ -35,15 +35,16 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     ConfigUpdateMetadata memory expectedConfigUpdateMetadata_ = ConfigUpdateMetadata({
       queuedConfigUpdateHash: keccak256(
         abi.encode(updatedConfig_.reservePoolConfigs, updatedConfig_.triggerConfigUpdates, updatedConfig_.delaysConfig)
-        ),
+      ),
       configUpdateTime: uint64(block.timestamp + safetyModule.delays().configUpdateDelay),
       configUpdateDeadline: uint64(
         block.timestamp + safetyModule.delays().configUpdateDelay + safetyModule.delays().configUpdateGracePeriod
-        )
+      )
     });
 
-    vm.prank(safetyModule.owner());
+    vm.startPrank(safetyModule.owner());
     safetyModule.updateConfigs(updatedConfig_);
+    vm.stopPrank();
 
     ConfigUpdateMetadata memory actualConfigUpdateMetadata_ = safetyModule.lastConfigUpdate();
     require(
@@ -69,9 +70,10 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     address nonOwner_ = _randomAddress();
     vm.assume(safetyModule.owner() != nonOwner_);
 
-    vm.prank(nonOwner_);
+    vm.startPrank(nonOwner_);
     vm.expectRevert(Ownable.Unauthorized.selector);
     safetyModule.updateConfigs(currentConfig_);
+    vm.stopPrank();
   }
 
   function invariant_updateConfigRevertsTooManyReservePools() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -98,9 +100,10 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
       delaysConfig: currentConfig_.delaysConfig
     });
 
-    vm.prank(safetyModule.owner());
+    vm.startPrank(safetyModule.owner());
     vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
     safetyModule.updateConfigs(updatedConfig_);
+    vm.stopPrank();
   }
 
   function invariant_updateConfigRevertsInvalidConfigUpdateDelay() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -118,9 +121,10 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
       delaysConfig: delaysConfig_
     });
 
-    vm.prank(safetyModule.owner());
+    vm.startPrank(safetyModule.owner());
     vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
     safetyModule.updateConfigs(updatedConfig_);
+    vm.stopPrank();
   }
 
   function invariant_updateConfigRevertsInvalidMaxSlashPercentage() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -133,9 +137,10 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
       MathConstants.ZOC + 1;
     updatedConfig_.reservePoolConfigs = updatedReservePoolConfigs_;
 
-    vm.prank(safetyModule.owner());
+    vm.startPrank(safetyModule.owner());
     vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
     safetyModule.updateConfigs(updatedConfig_);
+    vm.stopPrank();
   }
 
   function invariant_updateConfigRevertsRemovesExistingReservePool() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -149,9 +154,10 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     }
     updatedConfig_.reservePoolConfigs = reservePoolConfigs_;
 
-    vm.prank(safetyModule.owner());
+    vm.startPrank(safetyModule.owner());
     vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
     safetyModule.updateConfigs(updatedConfig_);
+    vm.stopPrank();
   }
 
   function invariant_updateConfigRevertsChangesExistingReservePoolAsset()
@@ -166,9 +172,10 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     updatedReservePoolConfigs_[_randomUint256() % updatedReservePoolConfigs_.length].asset = IERC20(address(0xBEEF));
     updatedConfig_.reservePoolConfigs = updatedReservePoolConfigs_;
 
-    vm.prank(safetyModule.owner());
+    vm.startPrank(safetyModule.owner());
     vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
     safetyModule.updateConfigs(updatedConfig_);
+    vm.stopPrank();
   }
 
   function invariant_updateConfigRevertsUpdatesTriggeredTrigger() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -191,9 +198,10 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     });
     updatedConfig_.triggerConfigUpdates = updatedTriggerConfigs_;
 
-    vm.prank(safetyModule.owner());
+    vm.startPrank(safetyModule.owner());
     vm.expectRevert(IConfiguratorErrors.InvalidConfiguration.selector);
     safetyModule.updateConfigs(updatedConfig_);
+    vm.stopPrank();
   }
 
   function invariant_finalizeUpdateConfigsSucceeds() public syncCurrentTimestamp(safetyModuleHandler) {
@@ -262,8 +270,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
       vm.expectRevert(ICommonErrors.InvalidState.selector);
     }
 
-    vm.prank(_randomAddress());
+    vm.startPrank(_randomAddress());
     safetyModule.finalizeUpdateConfigs(updatedConfig_);
+    vm.stopPrank();
   }
 
   function invariant_finalizeUpdateConfigsRevertsAfterConfigUpdateDeadline()
@@ -286,8 +295,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
       vm.expectRevert(ICommonErrors.InvalidState.selector);
     }
 
-    vm.prank(_randomAddress());
+    vm.startPrank(_randomAddress());
     safetyModule.finalizeUpdateConfigs(updatedConfig_);
+    vm.stopPrank();
   }
 
   function invariant_finalizeUpdateConfigsRevertsQueuedConfigUpdateHashReservePoolConfigMismatch()
@@ -314,8 +324,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
       vm.expectRevert(ICommonErrors.InvalidState.selector);
     }
 
-    vm.prank(_randomAddress());
+    vm.startPrank(_randomAddress());
     safetyModule.finalizeUpdateConfigs(incorrectConfig_);
+    vm.stopPrank();
   }
 
   function invariant_finalizeUpdateConfigsRevertsQueuedConfigUpdateHashDelayConfigMismatch()
@@ -341,8 +352,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
       vm.expectRevert(ICommonErrors.InvalidState.selector);
     }
 
-    vm.prank(_randomAddress());
+    vm.startPrank(_randomAddress());
     safetyModule.finalizeUpdateConfigs(incorrectConfig_);
+    vm.stopPrank();
   }
 
   function invariant_finalizeUpdateConfigsRevertsQueuedConfigUpdateHashTriggerConfigMismatch()
@@ -374,8 +386,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
       vm.expectRevert(ICommonErrors.InvalidState.selector);
     }
 
-    vm.prank(_randomAddress());
+    vm.startPrank(_randomAddress());
     safetyModule.finalizeUpdateConfigs(incorrectConfig_);
+    vm.stopPrank();
   }
 
   function invariant_finalizeUpdateConfigsRevertsQueuedConfigUpdateTriggerAlreadyTriggered()
@@ -404,8 +417,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
       vm.expectRevert(ICommonErrors.InvalidState.selector);
     }
 
-    vm.prank(_randomAddress());
+    vm.startPrank(_randomAddress());
     safetyModule.finalizeUpdateConfigs(updatedConfig_);
+    vm.stopPrank();
   }
 
   function invariant_finalizeUpdateConfigsRevertsQueuedConfigUpdateTriggerAlreadyTriggeredSafetyModule()
@@ -439,16 +453,18 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
       vm.expectRevert(ICommonErrors.InvalidState.selector);
     }
 
-    vm.prank(_randomAddress());
+    vm.startPrank(_randomAddress());
     safetyModule.finalizeUpdateConfigs(updatedConfig_);
+    vm.stopPrank();
   }
 
   function invariant_cannotQueueConfigUpdatesIfTriggered() public syncCurrentTimestamp(safetyModuleHandler) {
     if (safetyModule.safetyModuleState() == SafetyModuleState.TRIGGERED) {
       UpdateConfigsCalldataParams memory updatedConfig_ = _createValidConfigUpdate();
-      vm.prank(safetyModule.owner());
+      vm.startPrank(safetyModule.owner());
       vm.expectRevert(ICommonErrors.InvalidState.selector);
       safetyModule.updateConfigs(updatedConfig_);
+      vm.stopPrank();
     }
   }
 
@@ -458,8 +474,9 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
   {
     if (safetyModule.safetyModuleState() != SafetyModuleState.TRIGGERED) return;
 
-    vm.prank(safetyModule.owner());
+    vm.startPrank(safetyModule.owner());
     safetyModule.pause();
+    vm.stopPrank();
 
     ConfigUpdateMetadata memory lastConfigUpdate_ = safetyModule.lastConfigUpdate();
     require(
