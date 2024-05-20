@@ -111,11 +111,19 @@ contract TestBase is Test, TestAssertions {
     copied_.lastFeesDripTime = original_.lastFeesDripTime;
   }
 
-  function sortStakePoolConfigs(StakePoolConfig[] memory stakePoolConfigs_) internal pure {
-    sortStakePoolConfigs(stakePoolConfigs_, 0);
+  function sortStakePoolConfigs(StakePoolConfig[] memory stakePoolConfigs_)
+    internal
+    pure
+    returns (StakePoolConfig[] memory)
+  {
+    return sortStakePoolConfigs(stakePoolConfigs_, 0);
   }
 
-  function sortStakePoolConfigs(StakePoolConfig[] memory stakePoolConfigs_, uint256 startIndex) internal pure {
+  function sortStakePoolConfigs(StakePoolConfig[] memory stakePoolConfigs_, uint256 startIndex)
+    internal
+    pure
+    returns (StakePoolConfig[] memory)
+  {
     uint256 n = stakePoolConfigs_.length;
 
     require(startIndex < n, "startIndex must be less than the array length");
@@ -128,5 +136,7 @@ contract TestBase is Test, TestAssertions {
         }
       }
     }
+
+    return stakePoolConfigs_;
   }
 }

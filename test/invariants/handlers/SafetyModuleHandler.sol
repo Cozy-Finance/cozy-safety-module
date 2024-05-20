@@ -195,6 +195,7 @@ contract SafetyModuleHandler is TestBase {
     SafetyModuleState state_ = safetyModule.safetyModuleState();
     if (actorDepositReceiptTokenBalance_ == 0 || state_ == SafetyModuleState.TRIGGERED) {
       invalidCalls["redeem"] += 1;
+      vm.stopPrank();
       return;
     }
     ghost_redeemAssetsPendingRedemptionChange[currentReservePoolId].before = reservePool_.pendingWithdrawalsAmount;
@@ -236,6 +237,7 @@ contract SafetyModuleHandler is TestBase {
     uint64 redemptionIndex_ = pickRedemptionIndex(seed_);
     if (redemptionIndex_ == type(uint64).max) {
       invalidCalls["completeRedemption"] += 1;
+      vm.stopPrank();
       return;
     }
     uint64 redemptionId_ = ghost_redemptions[redemptionIndex_].id;
@@ -285,6 +287,7 @@ contract SafetyModuleHandler is TestBase {
   function pause(uint256 seed_) public virtual countCall("pause") advanceTime(seed_) {
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       invalidCalls["pause"] += 1;
+      vm.stopPrank();
       return;
     }
     vm.startPrank(pauser);
@@ -295,6 +298,7 @@ contract SafetyModuleHandler is TestBase {
   function unpause(uint256 seed_) public virtual countCall("unpause") advanceTime(seed_) {
     if (safetyModule.safetyModuleState() != SafetyModuleState.PAUSED) {
       invalidCalls["unpause"] += 1;
+      vm.stopPrank();
       return;
     }
     vm.startPrank(owner);
@@ -306,6 +310,7 @@ contract SafetyModuleHandler is TestBase {
     Trigger memory triggerData_ = safetyModule.triggerData(currentTrigger);
     if (triggerData_.triggered || !triggerData_.exists) {
       invalidCalls["trigger"] += 1;
+      vm.stopPrank();
       return;
     }
     MockTrigger(address(currentTrigger)).mockState(TriggerState.TRIGGERED);
@@ -316,6 +321,7 @@ contract SafetyModuleHandler is TestBase {
   function slash(uint256 seed_) public virtual useValidPayoutHandler(seed_) countCall("slash") advanceTime(seed_) {
     if (safetyModule.numPendingSlashes() == 0 || safetyModule.safetyModuleState() != SafetyModuleState.TRIGGERED) {
       invalidCalls["slash"] += 1;
+      vm.stopPrank();
       return;
     }
 
@@ -538,6 +544,7 @@ contract SafetyModuleHandler is TestBase {
   function _depositReserveAssets(uint256 assetAmount_, string memory callName_) internal {
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       invalidCalls[callName_] += 1;
+      vm.stopPrank();
       return;
     }
     assetAmount_ = boundDepositAssetAmount(assetAmount_);
@@ -559,6 +566,7 @@ contract SafetyModuleHandler is TestBase {
   function _depositReserveAssetsWithoutTransfer(uint256 assetAmount_, string memory callName_) internal {
     if (safetyModule.safetyModuleState() == SafetyModuleState.PAUSED) {
       invalidCalls[callName_] += 1;
+      vm.stopPrank();
       return;
     }
 
