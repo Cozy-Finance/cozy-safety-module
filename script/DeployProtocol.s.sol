@@ -102,6 +102,8 @@ contract DeployProtocol is ScriptUtils {
     // -------- Authentication --------
     owner = json_.readAddress(".owner");
     pauser = json_.readAddress(".pauser");
+    console2.log("Owner:", owner);
+    console2.log("Pauser:", pauser);
 
     // -------- Token Setup --------
     if (block.chainid == 10 || block.chainid == 42_161 || block.chainid == 1) {
@@ -118,23 +120,31 @@ contract DeployProtocol is ScriptUtils {
 
     // -------- Rewards Manager Cozy Manager --------
     rewardsManagerCozyManager = ICozyManager(json_.readAddress(".rewardsManagerCozyManager"));
+    console2.log("RewardsManagerCozyManager:", address(rewardsManagerCozyManager));
 
     // -------- Trigger Factories --------
     chainlinkTriggerFactory = IChainlinkTriggerFactory(json_.readAddress(".chainlinkTriggerFactory"));
     ownableTriggerFactory = IOwnableTriggerFactory(json_.readAddress(".ownableTriggerFactory"));
     umaTriggerFactory = IUMATriggerFactory(json_.readAddress(".umaTriggerFactory"));
+    console2.log("ChainlinkTriggerFactory:", address(chainlinkTriggerFactory));
+    console2.log("OwnableTriggerFactory:", address(ownableTriggerFactory));
+    console2.log("UMATriggerFactory:", address(umaTriggerFactory));
 
     // -------- Drip Model Factories --------
     dripModelConstantFactory = IDripModelConstantFactory(json_.readAddress(".dripModelConstantFactory"));
+    console2.log("DripModelConstantFactory:", address(dripModelConstantFactory));
 
     // -------- Fee Drip Model --------
     feeDripModel = IDripModel(json_.readAddress(".feeDripModel"));
+    console2.log("FeeDripModel:", address(feeDripModel));
 
     // -------- Reserve Pool Limits --------
     allowedReservePools = uint8(json_.readUint(".allowedReservePools"));
+    console2.log("Allowed Reserve Pools:", allowedReservePools);
 
     // -------- Receipt Token Factory --------
     receiptTokenFactory = IReceiptTokenFactory(json_.readAddress(".receiptTokenFactory"));
+    console2.log("ReceiptTokenFactory:", address(receiptTokenFactory));
 
     // -------------------------------------
     // -------- Address Computation --------
@@ -151,6 +161,8 @@ contract DeployProtocol is ScriptUtils {
     // ------------------------------------------
     // -------- Core Protocol Deployment --------
     // ------------------------------------------
+
+    console2.log("-------- Deploying core protocol contracts --------");
 
     // -------- Deploy: CozySafetyModuleManager --------
     vm.broadcast();
