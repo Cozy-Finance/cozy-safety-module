@@ -87,17 +87,23 @@ contract DeployCozyRouter is ScriptUtils {
     }
     // -------- Safety Module Cozy Manager --------
     safetyModuleCozyManager = ICozySafetyModuleManager(json_.readAddress(".safetyModuleCozyManager"));
+    console2.log("safetyModuleCozyManager", address(safetyModuleCozyManager));
 
     // -------- Rewards Manager Cozy Manager --------
     rewardsManagerCozyManager = ICozyManager(json_.readAddress(".rewardsManagerCozyManager"));
+    console2.log("rewardsManagerCozyManager", address(rewardsManagerCozyManager));
 
     // -------- Trigger Factories --------
     chainlinkTriggerFactory = IChainlinkTriggerFactory(json_.readAddress(".chainlinkTriggerFactory"));
     ownableTriggerFactory = IOwnableTriggerFactory(json_.readAddress(".ownableTriggerFactory"));
     umaTriggerFactory = IUMATriggerFactory(json_.readAddress(".umaTriggerFactory"));
+    console2.log("chainlinkTriggerFactory", address(chainlinkTriggerFactory));
+    console2.log("ownableTriggerFactory", address(ownableTriggerFactory));
+    console2.log("umaTriggerFactory", address(umaTriggerFactory));
 
     // -------- Drip Model Factories --------
     dripModelConstantFactory = IDripModelConstantFactory(json_.readAddress(".dripModelConstantFactory"));
+    console2.log("dripModelConstantFactory", address(dripModelConstantFactory));
 
     // -------- Deploy: CozyRouter --------
     // Different chains have different tokens that may need to be wrapped, so we have chain specific router
