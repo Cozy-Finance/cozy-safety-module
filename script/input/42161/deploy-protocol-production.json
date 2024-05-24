@@ -1,13 +1,13 @@
 {
   "owner": "0xF2a81e2aa4231c7BAE3d9F5897C90432a584Ab34",
   "pauser": "0x032b8eAE4dA80397A596d4B9a68487bF11D6588D",
-  "receiptTokenFactory": "0x21DbEF09E0fe30FA0157C15E4A3B0C03aD2c9DE2",
+  "receiptTokenFactory": "0xEff221100E91f155316966C082F02bD80CA55F00",
   "weth": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
-  "feeDripModel": "0xa94FfD6A957D790871D2a87E8161D12b793fB73a",
-  "rewardsManagerCozyManager": "0x0c58786B45FB7Bb299Fa343261a3f0730A68A097",
-  "chainlinkTriggerFactory": "0x0018d310DDab23597c6c8d59Df1f50b10d8814b3",
-  "ownableTriggerFactory": "0xB2d7dae1Da5bc945ecA49C067a71bA8474a0D6c5",
-  "umaTriggerFactory": "0xc8f6df250941FE37De7a6E54Ea63B11E56611cE1",
-  "dripModelConstantFactory": "0x3419200de9A6521AA77839bE31f6289d0cd7C5c2",
+  "feeDripModel": "0xC15e929a7806c0F478DFfCf5A0d1b04452dD1DC5",
+  "rewardsManagerCozyManager": "0x108c5f22CA0296f6E29306F8738e4f9Ef487B803",
+  "chainlinkTriggerFactory": "0x0f026581Fa3DFbf9af5f444488110B6EA13A5835",
+  "ownableTriggerFactory": "0x1a5621A1F6FEdda754604f6CdA7F6850a4d55c05",
+  "umaTriggerFactory": "0xc0178c3a3dDc787787f717b280F4F5B444930db8",
+  "dripModelConstantFactory": "0xf911F95f84268Da745a830c5Ba51E609572F8Be6",
   "allowedReservePools": 30
 }
