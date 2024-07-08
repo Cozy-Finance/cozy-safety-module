@@ -74,8 +74,9 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
   /// Manager which are necessary for the deposit, thus the caller should ensure that a transfer to the Rewards Manager
   /// with the needed amount of assets (`rewardAssetAmount_`) of the reward pool's underlying asset (viewable with
   /// `rewardsManager.rewardPools(rewardPoolId_)`) is transferred to the Rewards Manager before calling this
-  /// method. In general, prefer using `CozyRouter.depositRewardAssets` to deposit into a Rewards Manager reward pool,
-  /// this method is here to facilitate MultiCall transactions.
+  /// method. Note that this method drips the reward pool before depositing rewards. In general, prefer using
+  /// `CozyRouter.depositRewardAssets` to deposit into a Rewards Manager reward pool, this method is here to facilitate
+  /// MultiCall transactions.
   function depositRewardAssetsWithoutTransfer(
     IRewardsManager rewardsManager_,
     uint16 rewardPoolId_,
@@ -83,6 +84,7 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
     address receiver_
   ) public payable returns (uint256 depositReceiptTokenAmount_) {
     _assertAddressNotZero(receiver_);
+    rewardsManager_.dripRewardPool(rewardPoolId_);
     depositReceiptTokenAmount_ =
       rewardsManager_.depositRewardAssetsWithoutTransfer(rewardPoolId_, rewardAssetAmount_, receiver_);
   }
