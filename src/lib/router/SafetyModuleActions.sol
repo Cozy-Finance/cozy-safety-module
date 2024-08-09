@@ -33,8 +33,7 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
       depositReserveAssetsWithoutTransfer(safetyModule_, reservePoolId_, reserveAssetAmount_, receiver_);
   }
 
-  /// @notice Deposits assets into a `rewardsManager_` reward pool. Mints `depositReceiptTokenAmount_` to `receiver_`
-  /// by depositing exactly `rewardAssetAmount_` of the reward pool's underlying tokens into the `rewardsManager_`.
+  /// @notice Deposits exactly `rewardAssetAmount_` of the reward pool's underlying tokens into the `rewardsManager_`.
   /// The specified amount of assets are transferred from the caller to the `rewardsManager_`.
   /// @dev This will revert if the router is not approved for at least `rewardAssetAmount_` of the reward pool's
   /// underlying asset.
@@ -65,20 +64,18 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
       safetyModule_.depositReserveAssetsWithoutTransfer(reservePoolId_, reserveAssetAmount_, receiver_);
   }
 
-  /// @notice Executes a deposit into `rewardsManager_` in the reward pool corresponding to `rewardPoolId_`,
-  /// sending the resulting deposit tokens to `receiver_`. This method does not transfer the assets to the Rewards
-  /// Manager which are necessary for the deposit, thus the caller should ensure that a transfer to the Rewards Manager
-  /// with the needed amount of assets (`rewardAssetAmount_`) of the reward pool's underlying asset (viewable with
+  /// @notice Executes a deposit into `rewardsManager_` in the reward pool corresponding to `rewardPoolId_`.
+  /// This method does not transfer the assets to the Rewards Manager which are necessary for the deposit, thus the
+  /// caller should ensure that a transfer to the Rewards Manager with the needed amount of assets
+  /// (`rewardAssetAmount_`) of the reward pool's underlying asset (viewable with
   /// `rewardsManager.rewardPools(rewardPoolId_)`) is transferred to the Rewards Manager before calling this
-  /// method. Note that this method drips the reward pool before depositing rewards. In general, prefer using
-  /// `CozyRouter.depositRewardAssets` to deposit into a Rewards Manager reward pool, this method is here to facilitate
-  /// MultiCall transactions.
+  /// method. In general, prefer using `CozyRouter.depositRewardAssets` to deposit into a Rewards Manager reward pool,
+  /// this method is here to facilitate MultiCall transactions.
   function depositRewardAssetsWithoutTransfer(
     IRewardsManager rewardsManager_,
     uint16 rewardPoolId_,
     uint256 rewardAssetAmount_
   ) public payable {
-    rewardsManager_.dripRewardPool(rewardPoolId_);
     rewardsManager_.depositRewardAssetsWithoutTransfer(rewardPoolId_, rewardAssetAmount_);
   }
 
