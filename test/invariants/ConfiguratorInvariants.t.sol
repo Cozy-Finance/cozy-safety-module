@@ -35,11 +35,11 @@ abstract contract ConfiguratorInvariantsWithStateTransitions is InvariantTestBas
     ConfigUpdateMetadata memory expectedConfigUpdateMetadata_ = ConfigUpdateMetadata({
       queuedConfigUpdateHash: keccak256(
         abi.encode(updatedConfig_.reservePoolConfigs, updatedConfig_.triggerConfigUpdates, updatedConfig_.delaysConfig)
-        ),
+      ),
       configUpdateTime: uint64(block.timestamp + safetyModule.delays().configUpdateDelay),
       configUpdateDeadline: uint64(
         block.timestamp + safetyModule.delays().configUpdateDelay + safetyModule.delays().configUpdateGracePeriod
-        )
+      )
     });
 
     vm.startPrank(safetyModule.owner());
