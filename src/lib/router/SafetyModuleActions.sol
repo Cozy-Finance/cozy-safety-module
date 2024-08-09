@@ -33,22 +33,17 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
       depositReserveAssetsWithoutTransfer(safetyModule_, reservePoolId_, reserveAssetAmount_, receiver_);
   }
 
-  /// @notice Deposits assets into a `rewardsManager_` reward pool. Mints `depositReceiptTokenAmount_` to `receiver_`
-  /// by depositing exactly `rewardAssetAmount_` of the reward pool's underlying tokens into the `rewardsManager_`.
+  /// @notice Deposits exactly `rewardAssetAmount_` of the reward pool's underlying tokens into the `rewardsManager_`.
   /// The specified amount of assets are transferred from the caller to the `rewardsManager_`.
   /// @dev This will revert if the router is not approved for at least `rewardAssetAmount_` of the reward pool's
   /// underlying asset.
-  function depositRewardAssets(
-    IRewardsManager rewardsManager_,
-    uint16 rewardPoolId_,
-    uint256 rewardAssetAmount_,
-    address receiver_
-  ) external payable returns (uint256 depositReceiptTokenAmount_) {
+  function depositRewardAssets(IRewardsManager rewardsManager_, uint16 rewardPoolId_, uint256 rewardAssetAmount_)
+    external
+    payable
+  {
     IERC20 asset_ = rewardsManager_.rewardPools(rewardPoolId_).asset;
     asset_.safeTransferFrom(msg.sender, address(rewardsManager_), rewardAssetAmount_);
-
-    depositReceiptTokenAmount_ =
-      depositRewardAssetsWithoutTransfer(rewardsManager_, rewardPoolId_, rewardAssetAmount_, receiver_);
+    depositRewardAssetsWithoutTransfer(rewardsManager_, rewardPoolId_, rewardAssetAmount_);
   }
 
   /// @notice Executes a deposit into `safetyModule_` in the reserve pool corresponding to `reservePoolId_`, sending
@@ -69,24 +64,19 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
       safetyModule_.depositReserveAssetsWithoutTransfer(reservePoolId_, reserveAssetAmount_, receiver_);
   }
 
-  /// @notice Executes a deposit into `rewardsManager_` in the reward pool corresponding to `rewardPoolId_`,
-  /// sending the resulting deposit tokens to `receiver_`. This method does not transfer the assets to the Rewards
-  /// Manager which are necessary for the deposit, thus the caller should ensure that a transfer to the Rewards Manager
-  /// with the needed amount of assets (`rewardAssetAmount_`) of the reward pool's underlying asset (viewable with
+  /// @notice Executes a deposit into `rewardsManager_` in the reward pool corresponding to `rewardPoolId_`.
+  /// This method does not transfer the assets to the Rewards Manager which are necessary for the deposit, thus the
+  /// caller should ensure that a transfer to the Rewards Manager with the needed amount of assets
+  /// (`rewardAssetAmount_`) of the reward pool's underlying asset (viewable with
   /// `rewardsManager.rewardPools(rewardPoolId_)`) is transferred to the Rewards Manager before calling this
-  /// method. Note that this method drips the reward pool before depositing rewards. In general, prefer using
-  /// `CozyRouter.depositRewardAssets` to deposit into a Rewards Manager reward pool, this method is here to facilitate
-  /// MultiCall transactions.
+  /// method. In general, prefer using `CozyRouter.depositRewardAssets` to deposit into a Rewards Manager reward pool,
+  /// this method is here to facilitate MultiCall transactions.
   function depositRewardAssetsWithoutTransfer(
     IRewardsManager rewardsManager_,
     uint16 rewardPoolId_,
-    uint256 rewardAssetAmount_,
-    address receiver_
-  ) public payable returns (uint256 depositReceiptTokenAmount_) {
-    _assertAddressNotZero(receiver_);
-    rewardsManager_.dripRewardPool(rewardPoolId_);
-    depositReceiptTokenAmount_ =
-      rewardsManager_.depositRewardAssetsWithoutTransfer(rewardPoolId_, rewardAssetAmount_, receiver_);
+    uint256 rewardAssetAmount_
+  ) public payable {
+    rewardsManager_.depositRewardAssetsWithoutTransfer(rewardPoolId_, rewardAssetAmount_);
   }
 
   /// @notice Deposits assets into a `safetyModule_` reserve pool and stakes the resulting deposit tokens into a
@@ -208,12 +198,10 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
     IConnector connector_,
     IRewardsManager rewardsManager_,
     uint8 reservePoolId_,
-    uint256 baseAssetAmount_,
-    address receiver_
-  ) external payable returns (uint256 depositReceiptTokenAmount_) {
+    uint256 baseAssetAmount_
+  ) external payable {
     uint256 depositAssetAmount_ = _wrapBaseAssetViaConnector(connector_, address(rewardsManager_), baseAssetAmount_);
-    depositReceiptTokenAmount_ =
-      depositRewardAssetsWithoutTransfer(rewardsManager_, reservePoolId_, depositAssetAmount_, receiver_);
+    depositRewardAssetsWithoutTransfer(rewardsManager_, reservePoolId_, depositAssetAmount_);
   }
 
   // --------------------------------------
@@ -252,41 +240,10 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
       safetyModule_.redeem(reservePoolId_, depositReceiptTokenAmount_, receiver_, msg.sender);
   }
 
-  /// @notice Removes assets from a `rewardsManager_` reward pool. Burns `depositReceiptTokenAmount_` from caller and
-  /// sends exactly `rewardAssetAmount_` of the reward pool's underlying tokens to the `receiver_`. Withdrawal of
-  /// undripped assets from reward pools can be completed instantly.
-  function withdrawRewardPoolAssets(
-    IRewardsManager rewardsManager_,
-    uint8 rewardPoolId_,
-    uint256 rewardAssetAmount_,
-    address receiver_
-  ) external payable returns (uint256 depositReceiptTokenAmount_) {
-    _assertAddressNotZero(receiver_);
-    depositReceiptTokenAmount_ =
-      rewardsManager_.convertRewardAssetToReceiptTokenAmount(rewardPoolId_, rewardAssetAmount_);
-    // Caller must first approve the CozyRouter to spend the deposit receipt tokens.
-    rewardsManager_.redeemUndrippedRewards(rewardPoolId_, depositReceiptTokenAmount_, receiver_, msg.sender);
-  }
-
-  // @notice Removes assets from a `rewardsManager_` reward pool. Burns `depositReceiptTokenAmount_` from caller and
-  /// sends exactly `rewardAssetAmount_` of the reward pool's underlying tokens to the `receiver_`. Withdrawal of
-  /// undripped assets from reward pools can be completed instantly.
-  function redeemRewardPoolDepositReceiptTokens(
-    IRewardsManager rewardsManager_,
-    uint16 rewardPoolId_,
-    uint256 depositReceiptTokenAmount_,
-    address receiver_
-  ) external payable returns (uint256 assetsReceived_) {
-    _assertAddressNotZero(receiver_);
-    // Caller must first approve the CozyRouter to spend the deposit receipt tokens.
-    assetsReceived_ =
-      rewardsManager_.redeemUndrippedRewards(rewardPoolId_, depositReceiptTokenAmount_, receiver_, msg.sender);
-  }
-
   /// @notice Unstakes exactly `stakeReceiptTokenAmount` from a `rewardsManager_` stake pool. Burns
   /// `stakeReceiptTokenAmount` from caller and sends the same amount of the stake pool's underlying
   /// tokens to the `receiver_`. This also claims any outstanding rewards that the user is entitled to for the stake
-  /// pool.
+  /// pool. The rewards are sent to the owner of the stake receipt tokens.
   /// @dev Caller must first approve the CozyRouter to spend the stake tokens.
   /// @dev The amount of underlying assets received are 1:1 with `stakeReceiptTokenAmount_`.
   function unstake(
@@ -305,7 +262,7 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
   /// and reverts if less than `minAssetsReceived_` of the reserve pool asset would be received.
   /// If the safety module is PAUSED, unstake can be completed immediately, otherwise this
   /// queues a redemption which can be completed once sufficient delay has elapsed. This also claims any outstanding
-  /// rewards that the user is entitled to.
+  /// rewards that the user is entitled to. The rewards are sent to the `receiver_`.
   /// @dev Caller must first approve the CozyRouter to spend the rewards manager stake tokens.
   function unstakeReserveAssetsAndWithdraw(
     ISafetyModule safetyModule_,
@@ -333,6 +290,7 @@ abstract contract SafetyModuleActions is CozyRouterCommon {
   /// reserve pool's underlying tokens to the `receiver_`. If the safety module is PAUSED, withdrawal/redemption
   /// can be completed immediately, otherwise this queues  a redemption which can be completed once sufficient delay
   /// has elapsed. This also claims any outstanding rewards that the user is entitled to for the stake pool.
+  /// The rewards are sent to the `receiver_`.
   /// @dev Caller must first approve the CozyRouter to spend the rewards manager stake tokens.
   function unstakeStakeReceiptTokensAndRedeem(
     ISafetyModule safetyModule_,

@@ -1208,7 +1208,7 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
     uint256 rewardAssetAmount_ = 5e6;
     MockERC20(address(mockRewardToken)).mint(address(this), 5e6);
     mockRewardToken.approve(address(router), 5e6);
-    router.depositRewardAssets(rewardsManager, 0, rewardAssetAmount_, address(this));
+    router.depositRewardAssets(rewardsManager, 0, rewardAssetAmount_);
 
     // Deposit reserve assets and stake.
     uint256 reserveAssetAmount_ = 10e6;
@@ -1246,7 +1246,7 @@ contract CozyRouterRewardsManagerTest is CozyRouterTestSetup {
     uint256 rewardAssetAmount_ = 5e6;
     MockERC20(address(mockRewardToken)).mint(address(this), rewardAssetAmount_);
     mockRewardToken.approve(address(router), rewardAssetAmount_);
-    router.depositRewardAssets(rewardsManager, 0, rewardAssetAmount_, address(this));
+    router.depositRewardAssets(rewardsManager, 0, rewardAssetAmount_);
 
     // Deposit reserve assets and stake.
     uint256 reserveAssetAmount_ = 10e6;

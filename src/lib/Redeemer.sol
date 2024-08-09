@@ -151,7 +151,7 @@ abstract contract Redeemer is SafetyModuleCommon, IRedemptionErrors {
       receiptTokenAmount: redemption_.receiptTokenAmount,
       reserveAssetAmount: _computeFinalReserveAssetsRedeemed(
         redemption_.reservePoolId, redemption_.assetAmount, redemption_.queuedAccISF, redemption_.queuedAccISFsLength
-        ),
+      ),
       owner: redemption_.owner,
       receiver: redemption_.receiver
     });
